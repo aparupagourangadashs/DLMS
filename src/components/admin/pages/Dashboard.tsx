@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { CalendarDays, CalendarOff, ChevronLeft, ChevronRight, Clock, Eye, Sparkles, Star, Users } from "lucide-react";
 import { DEMO_TODAY, addDays, type DemoSession } from "@/lib/admin/demo-data";
 import { formatDate, formatINR, formatTime } from "@/lib/format";
+import { cn } from "@/lib/cn";
+import { palette } from "@/lib/colors";
 import { useAdminUi } from "@/store/admin-ui";
 import { Badge, toneFor } from "@/components/ui/Badge";
 import { BarChart } from "@/components/ui/BarChart";
@@ -63,7 +65,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
               label="What's new"
               panelClassName="w-72"
               trigger={({ open, toggle, ref }) => (
-                <Button ref={ref} onClick={toggle} aria-expanded={open}>
+                <Button ref={ref} onClick={toggle} aria-expanded={open} variant="soft-violet">
                   <Sparkles className="size-4" aria-hidden="true" />
                   What&apos;s New
                 </Button>
@@ -80,7 +82,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
                 </div>
               )}
             </Popover>
-            <Button variant="primary" onClick={scheduleSession}>
+            <Button variant="gold" onClick={scheduleSession}>
               <CalendarDays className="size-4" aria-hidden="true" />
               Schedule Session
             </Button>
@@ -95,10 +97,10 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
           Weekly performance
         </h2>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatCard label="Avg. time spent" value="42 min" change={8} hint="vs last week" icon={<Clock className="size-4" />} />
-          <StatCard label="Total views" value="12,480" change={12} hint="vs last week" icon={<Eye className="size-4" />} />
-          <StatCard label="Avg. rating" value="4.7 / 5" change={2} hint="vs last week" icon={<Star className="size-4" />} />
-          <StatCard label="Daily active users" value="1,126" change={-3} hint="vs yesterday" icon={<Users className="size-4" />} />
+          <StatCard label="Avg. time spent" value="42 min" change={8} hint="vs last week" color="indigo" icon={<Clock />} />
+          <StatCard label="Total views" value="12,480" change={12} hint="vs last week" color="sky" icon={<Eye />} />
+          <StatCard label="Avg. rating" value="4.7 / 5" change={2} hint="vs last week" color="amber" icon={<Star />} />
+          <StatCard label="Daily active users" value="1,126" change={-3} hint="vs yesterday" color="emerald" icon={<Users />} />
         </div>
       </section>
 
@@ -160,7 +162,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
                   <ChevronRight className="size-4" aria-hidden="true" />
                 </IconButton>
               </div>
-              <Button onClick={() => setHolidayOpen(true)} disabled={active.length === 0}>
+              <Button variant="soft-warning" onClick={() => setHolidayOpen(true)} disabled={active.length === 0}>
                 <CalendarOff className="size-4" aria-hidden="true" />
                 Mark as Holiday
               </Button>
@@ -171,16 +173,21 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
           }
         />
         <dl className="grid grid-cols-2 gap-px border-b border-border bg-border sm:grid-cols-5">
-          {[
-            ["Scheduled", active.length],
-            ["Cancelled", day.length - active.length],
-            ["Sign-ins", signIns],
-            ["Not signed in", Math.max(0, active.length - signIns)],
-            ["Attendance", expected ? `${Math.round((attended / expected) * 100)}%` : "—"],
-          ].map(([label, value]) => (
-            <div key={label} className="bg-surface px-5 py-3">
-              <dt className="text-xs text-muted">{label}</dt>
-              <dd className="text-lg font-semibold tabular-nums">{value}</dd>
+          {(
+            [
+              ["Scheduled", active.length, "blue"],
+              ["Cancelled", day.length - active.length, "rose"],
+              ["Sign-ins", signIns, "emerald"],
+              ["Not signed in", Math.max(0, active.length - signIns), "amber"],
+              ["Attendance", expected ? `${Math.round((attended / expected) * 100)}%` : "—", "violet"],
+            ] as const
+          ).map(([label, value, color]) => (
+            <div key={label} className="flex items-center gap-3 bg-surface px-5 py-3">
+              <span className={cn("h-8 w-1 rounded-full", palette[color].bar)} aria-hidden="true" />
+              <div>
+                <dt className="text-xs text-muted">{label}</dt>
+                <dd className={cn("text-lg font-semibold tabular-nums", palette[color].text)}>{value}</dd>
+              </div>
             </div>
           ))}
         </dl>
@@ -190,7 +197,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
             title="No sessions on this day"
             description="Schedule a session or pick another date."
             action={
-              <Button variant="primary" onClick={scheduleSession}>
+              <Button variant="gold" onClick={scheduleSession}>
                 Schedule Session
               </Button>
             }
@@ -233,6 +240,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
                         ) : (
                           <Button
                             size="sm"
+                            variant="soft-success"
                             onClick={() => {
                               setSignedIn((prev) => new Set(prev).add(s.id));
                               toast.success("Signed in to session", { description: s.title });
@@ -259,7 +267,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
           <>
             <Button onClick={() => setHolidayOpen(false)}>Cancel</Button>
             <Button
-              variant="danger"
+              variant="warning"
               onClick={() => {
                 setSessions((prev) => prev.map((s) => (s.date === date && s.status === "Scheduled" ? { ...s, status: "Cancelled" } : s)));
                 setHolidayOpen(false);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Globe, GraduationCap, LayoutDashboard } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Logo } from "@/components/Logo";
 import { Badge } from "@/components/ui/Badge";
 import { siteConfig } from "@/lib/site";
 
@@ -30,7 +31,10 @@ export default function Home() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
-        <span className="font-serif text-xl font-semibold">{siteConfig.name}</span>
+        <Link href="/" className="flex items-center gap-3 font-serif text-xl font-semibold">
+          <Logo size={48} decorative />
+          {siteConfig.name}
+        </Link>
         <ThemeToggle />
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-16">

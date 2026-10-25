@@ -20,6 +20,13 @@ Admin screens are labelled by how well the source specification supports them:
 
 All data is synthetic, generated deterministically in `src/lib/admin/`. Creating, editing, archiving, and reviewing records works in the browser for demos, but **nothing is saved**. Changes reset when you leave the page.
 
+### Help center
+
+Every admin page has a **Help** button (or press `?`) that opens its help article at `/admin/help/<section>/<page>`. The help center at `/admin/help` has getting-started guides and a searchable list of every page.
+
+- Hand-written content (purpose, who uses it, page-specific how-tos, tips, related pages) is in `src/lib/admin/help-content.ts`.
+- For list screens, step-by-step tasks, columns, filters, and form fields are generated from the screen's config in `list-configs.ts` (see `src/lib/admin/help.ts`), so the help stays in sync when a screen changes.
+
 ## Getting started
 
 Requires a supported Node.js LTS release (developed on Node 22).

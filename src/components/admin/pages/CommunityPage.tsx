@@ -65,7 +65,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
                 <h2 className="font-serif text-2xl font-semibold">{active.name}</h2>
                 <p className="text-sm text-muted">{active.description}</p>
               </div>
-              <Button onClick={() => setTab("members")}>
+              <Button variant="soft-info" onClick={() => setTab("members")}>
                 <Users className="size-4" aria-hidden="true" />
                 Manage Members
               </Button>
@@ -95,7 +95,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
                       <p className="text-xs text-muted">Joined {m.joined}</p>
                     </div>
                     <Badge tone={m.role === "Moderator" ? "accent" : "neutral"}>{m.role}</Badge>
-                    <Button size="sm" variant="ghost" onClick={() => setRemoving(m)}>
+                    <Button size="sm" variant="soft-danger" onClick={() => setRemoving(m)}>
                       Remove
                     </Button>
                   </li>

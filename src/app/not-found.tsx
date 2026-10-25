@@ -15,7 +15,7 @@ export default function NotFound() {
             <Link href="/" className={buttonClass("secondary")}>
               All portals
             </Link>
-            <Link href="/admin" className={buttonClass("primary")}>
+            <Link href="/admin" className={buttonClass("gold")}>
               Admin dashboard
             </Link>
           </div>

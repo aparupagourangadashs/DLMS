@@ -60,7 +60,7 @@ export function Topbar() {
   const setPendingCreate = useAdminUi((s) => s.setPendingCreate);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
       <IconButton label="Open navigation" className="lg:hidden" onClick={() => setMobileNavOpen(true)}>
         <Menu className="size-5" aria-hidden="true" />
       </IconButton>
@@ -81,7 +81,7 @@ export function Topbar() {
         <Popover
           label="Quick create"
           trigger={({ open, toggle, ref }) => (
-            <button ref={ref} type="button" onClick={toggle} aria-expanded={open} className={buttonClass("primary")}>
+            <button ref={ref} type="button" onClick={toggle} aria-expanded={open} className={buttonClass("gold")}>
               <Plus className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">New</span>
             </button>

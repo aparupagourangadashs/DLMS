@@ -14,7 +14,12 @@ import { RichText, plainText } from "./RichText";
 
 const topics = adminNav.map((s) => ({
   section: s,
-  pages: s.pages.map((p) => ({ page: p, summary: helpContent[`${s.slug}/${p.slug}`]?.summary ?? p.description })),
+  pages: s.pages.map((p) => {
+    const entry = helpContent[`${s.slug}/${p.slug}`];
+    const summary = entry?.summary ?? p.description;
+    const extra = [...(entry?.tasks ?? []).flatMap((t) => [t.title, ...t.steps]), ...(entry?.tips ?? [])].map(plainText).join(" ");
+    return { page: p, summary, searchText: `${s.label} ${p.label} ${summary} ${extra}`.toLowerCase() };
+  }),
 }));
 
 export function HelpCenter() {
@@ -30,7 +35,7 @@ export function HelpCenter() {
       topics
         .map((t) => ({
           ...t,
-          pages: q ? t.pages.filter((p) => `${t.section.label} ${p.page.label} ${p.summary}`.toLowerCase().includes(q)) : t.pages,
+          pages: q ? t.pages.filter((p) => p.searchText.includes(q)) : t.pages,
         }))
         .filter((t) => t.pages.length),
     [q],

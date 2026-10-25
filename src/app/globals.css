@@ -3,9 +3,9 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --background: #fff8f0;
+  --background: #f4f6fa;
   --surface: #ffffff;
-  --surface-muted: #fbf3e8;
+  --surface-muted: #eef1f6;
   --foreground: #1a1a3e;
   --muted: #6b7280;
   --border: rgba(26, 26, 62, 0.12);

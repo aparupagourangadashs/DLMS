@@ -140,7 +140,7 @@ function Single({ known }: { known: Set<string> }) {
         </div>
       ) : null}
       <div className="flex justify-end">
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="success">
           {step === "new" ? "Register and enrol" : "Proceed"}
         </Button>
       </div>
@@ -200,7 +200,7 @@ function Bulk({ known }: { known: Set<string> }) {
       {result.invalid.length ? <p className="text-xs text-danger">Invalid: {result.invalid.slice(0, 5).join(", ")}{result.invalid.length > 5 ? "…" : ""}</p> : null}
       {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
       <div className="flex justify-end">
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="success">
           Enrol {result.valid.length || ""} learners
         </Button>
       </div>
@@ -244,7 +244,7 @@ function Registration({ known }: { known: Set<string> }) {
         </Field>
       ))}
       <div className="flex justify-end sm:col-span-2">
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="success">
           Register learner
         </Button>
       </div>
@@ -373,7 +373,7 @@ function Advanced({ known }: { known: Set<string> }) {
             </div>
             <div className="flex justify-end">
               <Button
-                variant="primary"
+                variant="success"
                 disabled={!ok.length}
                 onClick={() => {
                   toast.success(`${ok.length} learners enrolled`, { description: `${rows.length - ok.length} rows skipped. Fix them and upload again.` });

@@ -155,7 +155,7 @@ function FormBody({
       })}
       <div className="sticky bottom-0 -mx-5 mt-2 flex justify-end gap-2 border-t border-border bg-surface px-5 pt-3 pb-1">
         <Button onClick={onCancel}>Cancel</Button>
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="success">
           {submitLabel}
         </Button>
       </div>

@@ -54,7 +54,7 @@ export function SystemNotifications() {
               Reset
             </Button>
             <Button
-              variant="primary"
+              variant="success"
               disabled={!dirty}
               onClick={() => {
                 setDirty(false);

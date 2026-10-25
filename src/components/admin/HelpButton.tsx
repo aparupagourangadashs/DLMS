@@ -14,7 +14,7 @@ export function HelpButton() {
   return (
     <Link
       href={helpHref(found.section.slug, found.page.slug)}
-      className={buttonClass("secondary")}
+      className={buttonClass("soft-info")}
       aria-label={`Help for ${found.page.label}`}
       title="How to use this page (shortcut: ?)"
     >

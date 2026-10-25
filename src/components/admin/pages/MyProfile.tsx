@@ -93,12 +93,12 @@ export function MyProfile() {
         actions={
           editing ? null : (
             <>
-              <Button onClick={() => setPwOpen(true)}>
+              <Button variant="soft-violet" onClick={() => setPwOpen(true)}>
                 <KeyRound className="size-4" aria-hidden="true" />
                 Change password
               </Button>
               <Button
-                variant="primary"
+                variant="soft-info"
                 onClick={() => {
                   setDraft(saved);
                   setEditing(true);
@@ -182,7 +182,7 @@ export function MyProfile() {
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="success">
               Save changes
             </Button>
           </div>
@@ -238,7 +238,7 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
       ))}
       <div className="flex justify-end gap-2">
         <Button onClick={onDone}>Cancel</Button>
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="success">
           Update password
         </Button>
       </div>

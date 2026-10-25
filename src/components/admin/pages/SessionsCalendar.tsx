@@ -79,7 +79,7 @@ export function SessionsCalendar({ sessions: initial }: { sessions: DemoSession[
         description="Schedule and track live classes across all batches. Times are shown in IST."
         status="ready"
         actions={
-          <Button variant="primary" onClick={() => setCreateOpen(true)}>
+          <Button variant="gold" onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" aria-hidden="true" />
             Create Session
           </Button>
@@ -326,7 +326,7 @@ function ListView({
         title="No sessions in this period"
         description="Use the arrows to move to another date, or create a session."
         action={
-          <Button variant="primary" onClick={onCreate}>
+          <Button variant="gold" onClick={onCreate}>
             Create Session
           </Button>
         }

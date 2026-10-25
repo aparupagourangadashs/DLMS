@@ -10,7 +10,7 @@ export default function AdminNotFound() {
       title="Page not found"
       description="This admin page doesn't exist. Use search (Ctrl+K) or go back to the dashboard."
       action={
-        <Link href="/admin" className={buttonClass("primary")}>
+        <Link href="/admin" className={buttonClass("gold")}>
           Go to dashboard
         </Link>
       }

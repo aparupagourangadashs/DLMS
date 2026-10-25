@@ -166,7 +166,7 @@ Tailwind v3 configuration pattern.
 
 | Token | Light | Dark |
 | --- | --- | --- |
-| `--background` | `#FFF8F0` | `#0f1220` |
+| `--background` | `#F4F6FA` (cool grey; replaced cream at IBMV's request) | `#0f1220` |
 | `--surface` | `#ffffff` | `#171b2f` |
 | `--foreground` | `#1a1a3e` | `#f5efe4` |
 | `--muted` | `#6b7280` | `#b4bdd1` |

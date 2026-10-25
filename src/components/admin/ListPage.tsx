@@ -3,23 +3,31 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  Archive,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   Columns3,
+  Copy,
   Download,
   Ellipsis,
+  Eye,
   Inbox,
+  Pencil,
   Plus,
   Search,
   SearchX,
+  Trash2,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import type { ScreenStatus } from "@/lib/admin/navigation";
 import type { CellValue, Column, ListConfig, Row } from "@/lib/admin/types";
 import { cn } from "@/lib/cn";
+import { cardCycle } from "@/lib/colors";
 import { useAdminUi } from "@/store/admin-ui";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -27,7 +35,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { inputClass } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Popover } from "@/components/ui/Popover";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, statColor } from "@/components/ui/StatCard";
 import { Tabs } from "@/components/ui/Tabs";
 import { CellView, cellText } from "./CellView";
 import { FormDrawer } from "./FormDrawer";
@@ -45,6 +53,27 @@ const actionLabel: Record<Action, string> = {
   delete: "Delete",
   review: "Review",
 };
+
+const actionIcon: Record<Action, LucideIcon> = {
+  view: Eye,
+  edit: Pencil,
+  duplicate: Copy,
+  archive: Archive,
+  delete: Trash2,
+  review: ClipboardCheck,
+};
+
+// Colour by meaning: view = sky, edit = blue, duplicate = violet, archive = amber, delete = red, review = green.
+const actionColor: Record<Action, string> = {
+  view: "text-sky-600 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-500/15",
+  edit: "text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/15",
+  duplicate: "text-violet-600 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-500/15",
+  archive: "text-amber-600 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-500/15",
+  delete: "text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/15",
+  review: "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/15",
+};
+
+const inlineActions: Action[] = ["view", "edit", "delete"];
 
 function matches(value: CellValue, wanted: string) {
   return Array.isArray(value) ? value.includes(wanted) : String(value ?? "") === wanted;
@@ -185,7 +214,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
         actions={
           <>
             {config.exportable ? (
-              <Button onClick={exportCsv} disabled={filtered.length === 0}>
+              <Button variant="soft-success" onClick={exportCsv} disabled={filtered.length === 0}>
                 <Download className="size-4" aria-hidden="true" />
                 Export
               </Button>
@@ -227,7 +256,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
               </Popover>
             ) : null}
             {config.primaryAction && config.form ? (
-              <Button variant="primary" onClick={() => setEditing("new")}>
+              <Button variant="gold" onClick={() => setEditing("new")}>
                 <Plus className="size-4" aria-hidden="true" />
                 {config.primaryAction}
               </Button>
@@ -240,8 +269,8 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
 
       {config.summary ? (
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-          {config.summary.map((s) => (
-            <StatCard key={s.label} label={s.label} value={s.value} hint={s.hint} tone={s.tone} />
+          {config.summary.map((s, i) => (
+            <StatCard key={s.label} label={s.label} value={s.value} hint={s.hint} tone={s.tone} color={statColor(s.tone, cardCycle[i % cardCycle.length])} />
           ))}
         </div>
       ) : null}
@@ -353,7 +382,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
               description={`When you add ${plural(entity)} they will appear here.`}
               action={
                 config.primaryAction && config.form ? (
-                  <Button variant="primary" onClick={() => setEditing("new")}>
+                  <Button variant="gold" onClick={() => setEditing("new")}>
                     <Plus className="size-4" aria-hidden="true" />
                     {config.primaryAction}
                   </Button>
@@ -438,38 +467,63 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                     {config.rowActions?.length ? (
                       <td className="px-4 py-2 text-right">
                         {config.rowActions.length === 1 ? (
-                          <Button size="sm" onClick={() => runAction(r, config.rowActions![0])}>
-                            {actionLabel[config.rowActions[0]]}
-                          </Button>
+                          (() => {
+                            const a = config.rowActions[0];
+                            const Icon = actionIcon[a];
+                            return (
+                              <Button size="sm" variant={a === "review" ? "soft-success" : "soft-info"} onClick={() => runAction(r, a)}>
+                                <Icon className="size-3.5" aria-hidden="true" />
+                                {actionLabel[a]}
+                                <span className="sr-only"> {nameOf(r)}</span>
+                              </Button>
+                            );
+                          })()
                         ) : (
-                          <Popover
-                            label={`Actions for ${nameOf(r)}`}
-                            panelClassName="min-w-40"
-                            trigger={({ open, toggle, ref }) => (
-                              <IconButton ref={ref} label={`Actions for ${nameOf(r)}`} aria-expanded={open} onClick={toggle} className="ml-auto">
-                                <Ellipsis className="size-4" aria-hidden="true" />
-                              </IconButton>
-                            )}
-                          >
-                            {(close) =>
-                              config.rowActions!.map((a) => (
-                                <button
-                                  key={a}
-                                  type="button"
-                                  onClick={() => {
-                                    close();
-                                    runAction(r, a);
-                                  }}
-                                  className={cn(
-                                    "flex w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-accent-soft",
-                                    a === "delete" && "text-danger",
-                                  )}
-                                >
-                                  {actionLabel[a]}
-                                </button>
-                              ))
-                            }
-                          </Popover>
+                          <div className="flex items-center justify-end gap-0.5">
+                            {config.rowActions
+                              .filter((a) => inlineActions.includes(a))
+                              .map((a) => {
+                                const Icon = actionIcon[a];
+                                return (
+                                  <IconButton key={a} label={`${actionLabel[a]} ${nameOf(r)}`} onClick={() => runAction(r, a)} className={actionColor[a]}>
+                                    <Icon className="size-4" aria-hidden="true" />
+                                  </IconButton>
+                                );
+                              })}
+                            {config.rowActions.some((a) => !inlineActions.includes(a)) ? (
+                              <Popover
+                                label={`More actions for ${nameOf(r)}`}
+                                panelClassName="min-w-40"
+                                trigger={({ open, toggle, ref }) => (
+                                  <IconButton ref={ref} label={`More actions for ${nameOf(r)}`} aria-expanded={open} onClick={toggle}>
+                                    <Ellipsis className="size-4" aria-hidden="true" />
+                                  </IconButton>
+                                )}
+                              >
+                                {(close) =>
+                                  config.rowActions!
+                                    .filter((a) => !inlineActions.includes(a))
+                                    .map((a) => {
+                                      const Icon = actionIcon[a];
+                                      return (
+                                        <button
+                                          key={a}
+                                          type="button"
+                                          onClick={() => {
+                                            close();
+                                            runAction(r, a);
+                                          }}
+                                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent-soft"
+                                        >
+                                          <Icon className={cn("size-4", actionColor[a].split(" ")[0])} aria-hidden="true" />
+                                          {actionLabel[a]}
+                                        </button>
+                                      );
+                                    })
+                                }
+                              </Popover>
+                            ) : null}
+                          </div>
                         )}
                       </td>
                     ) : null}
@@ -556,7 +610,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
         footer={
           <>
             <Button onClick={() => setConfirm(null)}>Cancel</Button>
-            <Button variant={confirm?.action === "delete" ? "danger" : "primary"} onClick={applyConfirm}>
+            <Button variant={confirm?.action === "delete" ? "danger" : "warning"} onClick={applyConfirm}>
               {confirm ? cap(confirm.action) : ""}
             </Button>
           </>
@@ -681,7 +735,7 @@ function ReviewForm({ row, onCancel, onSave }: { row: Row; onCancel: () => void;
       </div>
       <div className="flex justify-end gap-2">
         <Button onClick={onCancel}>Cancel</Button>
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="success">
           Save evaluation
         </Button>
       </div>
