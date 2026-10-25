@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --background: #fff8f0;
+  --surface: #ffffff;
+  --surface-muted: #fbf3e8;
+  --foreground: #1a1a3e;
+  --muted: #6b7280;
+  --border: rgba(26, 26, 62, 0.12);
+  --accent: #4a5d8f;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(74, 93, 143, 0.1);
+  --gold: #ffd700;
+  --gold-soft: rgba(212, 160, 23, 0.14);
+  --gold-strong: #7a5d00;
+  --lotus-pink: #e8a4c8;
+  --success: #15803d;
+  --success-soft: rgba(21, 128, 61, 0.1);
+  --warning: #b45309;
+  --warning-soft: rgba(180, 83, 9, 0.1);
+  --danger: #b91c1c;
+  --danger-soft: rgba(185, 28, 28, 0.1);
+  --info: #1d4ed8;
+  --info-soft: rgba(29, 78, 216, 0.1);
+  --shadow: 0 1px 2px rgba(26, 26, 62, 0.06), 0 4px 16px rgba(26, 26, 62, 0.05);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --background: #0f1220;
+  --surface: #171b2f;
+  --surface-muted: #1d2238;
+  --foreground: #f5efe4;
+  --muted: #b4bdd1;
+  --border: rgba(226, 194, 122, 0.22);
+  --accent: #667fbe;
+  --accent-fg: #f8fbff;
+  --accent-soft: rgba(102, 127, 190, 0.18);
+  --gold: #e2c27a;
+  --gold-soft: rgba(226, 194, 122, 0.14);
+  --gold-strong: #e2c27a;
+  --lotus-pink: #d5b0c2;
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.12);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --info: #93c5fd;
+  --info-soft: rgba(147, 197, 253, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-strong: var(--gold-strong);
+  --color-lotus-pink: var(--lotus-pink);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-serif: var(--font-crimson), ui-serif, Georgia, "Times New Roman", serif;
+  --shadow-card: var(--shadow);
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
