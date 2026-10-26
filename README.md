@@ -40,7 +40,7 @@ stated otherwise. No changes are made to the reference site's records.
 | Portal | Status |
 | --- | --- |
 | Admin panel (`/admin`) | All 9 sections and 52 screens are built as a **clickable frontend with demo data**, ready for customer review |
-| Student portal | Next, after the admin screens are signed off |
+| Student portal (`/student`) | 13 core review screens plus 3 original sample-course reading previews; **public demo only**, not authenticated learner accounts |
 | Public website | Planned |
 
 Admin screens are labelled by how well the source specification supports them:
@@ -74,6 +74,42 @@ wheel, touch, and keyboard navigation still reach every menu item.
 - Hand-written content (purpose, who uses it, page-specific how-tos, tips, related pages) is in `src/lib/admin/help-content.ts`.
 - For list screens, step-by-step tasks, columns, filters, and form fields are generated from the screen's config in `list-configs.ts` (see `src/lib/admin/help.ts`), so the help stays in sync when a screen changes.
 
+### Student portal preview
+
+Open `/student` directly or choose **Student portal** on the portal selector.
+Navigation is alphabetical and shared between the desktop sidebar and mobile
+dialog. Shared dropdowns, date picker, tabs and modal components are reused.
+The student portal is **light-only**, with scoped pearl/plum/teal/gold colors,
+original gradient course artwork and reduced-motion-aware entrance/hover
+effects. It ignores (and never changes) the saved admin theme. The header
+includes Help and an illustrated demo avatar/account menu; real profile-photo
+upload is not connected.
+
+- **Home / My Learning:** featured-course controls, active/completed filters,
+  stream selection, search, read-only sample progress and course links.
+- **Reading previews:** three original sample courses with lesson selection
+  and previous/next navigation. No media or existing course text is copied;
+  viewing a lesson never changes completion.
+- **Calendar:** day/week/month navigation, date picker, current-date and demo-date
+  shortcuts, and fictional sessions. Times are explicitly Asia/Kolkata (IST).
+- **Announcements / Communities:** search, unread filtering, temporary read
+  status and detail dialogs; read-only fictional community feeds.
+- **Certificates / Purchases / Referrals:** sample detail previews, a watermarked
+  invalid certificate SVG download, clipboard error feedback and empty reward
+  history. No real credential, transaction or redeemable referral is created.
+- **Exams / Memberships:** honest empty states; assessment-taking and plan
+  management are not invented from unverified reference screens.
+- **Profile / Preferences / Help:** temporary sample edits, notification and
+  timezone controls, validation and an explicitly **unsent** support draft.
+
+All records in `src/lib/student/demo.ts` are fictional. Student changes use
+page memory only and reset on leaving/reloading that screen; no student data
+is written to browser storage or a server. This portal deliberately has an
+**Exit demo** link, not pretend sign-in/sign-out. Public-site destinations,
+verified support channels, media playback, persistent progress, exams,
+certificate eligibility/sharing, checkout and message delivery remain deferred.
+See [the student implementation matrix](copilot/STUDENT_PORTAL_SPEC.md#8-student-frontend-review-implementation).
+
 ## Getting started
 
 Requires a supported Node.js LTS release (developed on Node 22).
@@ -94,6 +130,7 @@ npm run dev        # http://localhost:3000, admin panel at /admin
 | `npx tsc --noEmit` | Type-check |
 | `node --experimental-strip-types --test src/lib/admin/editor-validation.test.mjs src/lib/admin/markdown.test.mjs` | Nine focused editor-validation and safe Markdown tests (Node 22.18+ or newer supported LTS) |
 | `node --experimental-strip-types --test src/lib/admin/navigation.test.mjs` | Alphabetical navigation, landing-page and quick-create regression tests |
+| `node --experimental-strip-types --test src/lib/student/demo.test.mjs` | Student navigation, fixture integrity, calendar periods and month-end regression tests |
 
 ## Stack
 

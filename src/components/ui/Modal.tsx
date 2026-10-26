@@ -13,12 +13,13 @@ type Props = {
   children: React.ReactNode;
   footer?: React.ReactNode;
   variant?: "drawer" | "dialog";
+  side?: "left" | "right";
   size?: "md" | "lg";
   className?: string;
 };
 
 /** Modal built on the native <dialog> element (focus trap, Esc to close, inert background). */
-export function Modal({ open, onClose, title, description, children, footer, variant = "dialog", size = "md", className }: Props) {
+export function Modal({ open, onClose, title, description, children, footer, variant = "dialog", side = "right", size = "md", className }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function Modal({ open, onClose, title, description, children, footer, var
       className={cn(
         "bg-surface text-foreground shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-[1px]",
         variant === "drawer"
-          ? cn("my-0 mr-0 ml-auto h-dvh max-h-dvh w-full border-l border-border", size === "lg" ? "max-w-2xl" : "max-w-md")
+          ? cn("my-0 h-dvh max-h-dvh w-full border-border", side === "left" ? "mr-auto ml-0 border-r" : "mr-0 ml-auto border-l", size === "lg" ? "max-w-2xl" : "max-w-md")
           : cn("m-auto w-[calc(100%-2rem)] rounded-2xl border border-border", size === "lg" ? "max-w-2xl" : "max-w-md"),
         className,
       )}

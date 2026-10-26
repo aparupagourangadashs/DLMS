@@ -19,8 +19,9 @@ const portals: Array<{ title: string; description: string; href?: string; Icon: 
   {
     title: "Student portal",
     description: "My learning, course player, calendar, exams, certificates and account.",
+    href: "/student",
     Icon: GraduationCap,
-    status: "Next after admin sign-off",
+    status: "Demo screens ready for review",
     color: "teal",
   },
   {
