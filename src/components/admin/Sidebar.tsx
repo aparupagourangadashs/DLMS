@@ -16,7 +16,7 @@ import { Logo } from "@/components/Logo";
 function Brand() {
   return (
     <Link href="/admin" className="flex items-center gap-2.5 rounded-lg px-1 py-1">
-      <Logo size={40} decorative />
+      <Logo size={40} variant="admin" decorative />
       <span className="leading-tight">
         <span className="block font-serif text-lg font-semibold">{siteConfig.shortName}</span>
         <span className="block text-[11px] tracking-wide text-muted uppercase">Admin panel</span>
@@ -105,7 +105,7 @@ export function Sidebar() {
             className="flex items-center justify-center rounded-lg p-1 transition-transform hover:scale-105"
             aria-label={`${siteConfig.name} admin home`}
           >
-            <Logo size={52} decorative />
+            <Logo size={52} variant="admin" decorative />
           </Link>
         </div>
         <ul className="admin-nav-scroll flex min-h-0 w-full flex-1 flex-col gap-0.5 overflow-y-auto px-2">

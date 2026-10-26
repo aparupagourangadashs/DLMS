@@ -27,8 +27,9 @@ const portals: Array<{ title: string; description: string; href?: string; Icon: 
   {
     title: "Public website",
     description: "Course catalogs, course details, publications, about and contact pages.",
+    href: "/website",
     Icon: Globe,
-    status: "Planned",
+    status: "Public design preview ready",
     color: "orange",
   },
 ];

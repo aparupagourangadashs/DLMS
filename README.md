@@ -41,7 +41,7 @@ stated otherwise. No changes are made to the reference site's records.
 | --- | --- |
 | Admin panel (`/admin`) | All 9 sections and 52 screens are built as a **clickable frontend with demo data**, ready for customer review |
 | Student portal (`/student`) | 13 core review screens plus 3 original sample-course reading previews; **public demo only**, not authenticated learner accounts |
-| Public website | Planned |
+| Public website (`/website`) | 144 design-preview routes: Home, six collections, 127 official course listings, publications, institutional pages, contact, access and preview notices |
 
 Admin screens are labelled by how well the source specification supports them:
 
@@ -73,6 +73,62 @@ wheel, touch, and keyboard navigation still reach every menu item.
 
 - Hand-written content (purpose, who uses it, page-specific how-tos, tips, related pages) is in `src/lib/admin/help-content.ts`.
 - For list screens, step-by-step tasks, columns, filters, and form fields are generated from the screen's config in `list-configs.ts` (see `src/lib/admin/help.ts`), so the help stays in sync when a screen changes.
+
+The admin desktop navigation and mobile drawer use the supplied navy/gold
+IBMV emblem (`public/admin-logo.png`) without dark-mode inversion. Student and
+public website branding retain their existing logo.
+
+### Public website preview
+
+Open `/website` or choose **Public website** from the portal selector. The
+original responsive design uses deep indigo/plum, warm ivory, forest teal and
+gold, with Inter/Crimson typography, named Lucide icons, finite entrance
+motion and reduced-motion support. Its light-only tokens do not change the
+saved admin theme. Desktop grouped navigation and the mobile modal drawer
+link the six collections, publications and institutional pages.
+
+- Homepage: six collection previews with 18 real course cards, swipeable rows
+  on mobile, authorized official offering banner, institution and publications.
+- Testimonials: four named portraits and short attributed excerpts linking to
+  the source. Community figures are explicitly the original site's published
+  reference figures, not live totals or counts of our imported catalog.
+- Videos: the three original IBMV video IDs, local thumbnails and the official
+  playlist. Selecting a video opens a keyboard-dismissible dialog and loads a
+  YouTube privacy-enhanced player, without autoplay. No third-party video
+  request is made before selection; a direct YouTube link is also available.
+- Refined navy/gold header, homepage section shortcuts, outside-click/Escape
+  dropdown dismissal, and a coordinated footer invitation/link hierarchy.
+  The public header uses a Vani Samputa-inspired arrangement: a larger
+  gold-ringed circular IBMV mark, two-line institutional wordmark, left-grouped
+  navigation and a separate right-aligned learner action. At the homepage hero,
+  the header blends into navy; scrolling beyond the hero reveals a white header
+  with dark text. The logo has a soft gold halo and reduced-motion-aware hover.
+  Small phones keep
+  the logo/name and menu visible; learner access remains in the drawer.
+- Six collection pages: all 127 courses from the public IBMV homepage, search,
+  language/format/teaching-team filters, reset, no-results and show-more states.
+- 127 course detail pages: actual titles/artwork, listed team and duration,
+  explicit official links and enrollment boundaries; no invented syllabus.
+- Books: all nine public IBMV titles/covers and a native-validated **unsent**
+  bulk-enquiry draft. No book stock, purchase or delivery service is implied.
+- E-Magazines, people directories and institutional pages: useful preview
+  layouts without invented issue files, staff identities or accreditation.
+- Contact/account pages distinguish official external destinations from our
+  student demo. Preview privacy/terms are not approved legal policies.
+
+There is no visitor authentication, payment, enrollment, messaging, database,
+analytics tracker or form submission backend. No fabricated endorsements,
+statistics, videos, donation destinations, prices or credentials are presented. The two
+previously authorized IBMV course images are reused; other reference sites
+informed visual principles only, without copying their assets or source.
+122 unique course artworks and nine book covers are downloaded locally and
+optimized to WebP with user permission. Course titles, grouping and available
+duration/team metadata are a public-site snapshot, not a live feed. Languages
+are classified only when explicitly named in course titles; other entries say
+not listed. Confirm current batches, fees and eligibility on the official site.
+Public preview routes are marked `noindex`. The full implementation scope and
+content still awaiting institutional approval are in
+[the website specification](copilot/WEBSITE_PORTAL.md#13-local-public-website-preview).
 
 ### Student portal preview
 

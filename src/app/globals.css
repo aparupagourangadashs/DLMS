@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *):not(:where([data-student-portal], [data-student-portal] *)));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *):not(:where([data-student-portal], [data-student-portal] *, [data-website-portal], [data-website-portal] *)));
 
 :root {
   --background: #f4f6fa;
