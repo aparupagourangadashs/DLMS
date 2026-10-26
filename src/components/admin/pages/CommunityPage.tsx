@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { MessageSquare, Pin, PinOff, Send, Users } from "lucide-react";
+import { BookOpen, ChevronRight, Clock3, HeartHandshake, MessageSquare, Pin, PinOff, Send, ShieldCheck, Users, UserRoundMinus } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { cardCycle, palette } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -24,6 +25,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
   const [draft, setDraft] = useState("");
   const [removing, setRemoving] = useState<CommunityMember | null>(null);
   const active = communities.find((c) => c.id === activeId);
+  const activeColor = palette[cardCycle[Math.max(0, communities.findIndex((c) => c.id === activeId)) % cardCycle.length]];
 
   const update = (fn: (c: Community) => Community) => setCommunities((prev) => prev.map((c) => (c.id === activeId ? fn(c) : c)));
 
@@ -36,34 +38,52 @@ export function CommunityPage({ communities: initial }: { communities: Community
     <>
       <PageHeader title="Community" description="Learner communities with members, messages and pinned posts." status="ready" />
       <DemoNotice />
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <Card className="h-fit p-2">
-          <h2 className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide text-muted uppercase">Communities</h2>
-          <ul>
-            {communities.map((c) => (
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <Card className="h-fit min-w-0 overflow-hidden">
+          <div className="community-directory-heading">
+            <HeartHandshake className="size-5" aria-hidden="true" />
+            <h2 className="flex-1 font-semibold">Your communities</h2>
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{communities.length}</span>
+          </div>
+          <ul className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-1">
+            {communities.map((c, index) => {
+              const color = palette[cardCycle[index % cardCycle.length]];
+              const Icon = index % 2 === 0 ? BookOpen : HeartHandshake;
+              return (
               <li key={c.id}>
                 <button
                   type="button"
                   onClick={() => setActiveId(c.id)}
                   aria-current={c.id === activeId ? "true" : undefined}
-                  className={cn("w-full rounded-xl px-3 py-2.5 text-left", c.id === activeId ? "bg-accent-soft" : "hover:bg-accent-soft/50")}
+                  className={cn("community-choice", c.id === activeId ? color.tile : "hover:bg-surface-muted")}
                 >
-                  <span className="block text-sm font-semibold">{c.name}</span>
-                  <span className="block text-xs text-muted">
-                    {c.members.length} members · {c.messages.length} messages
+                  <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", c.id === activeId ? color.solid : color.tile)} aria-hidden="true"><Icon className="size-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground">{c.name}</span>
+                    <span className="mt-1 block text-xs text-muted">{c.members.length} members · {c.messages.length} messages</span>
                   </span>
+                  <ChevronRight className={cn("size-4 shrink-0", color.text)} aria-hidden="true" />
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </Card>
 
         {active ? (
-          <Card>
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border p-4">
-              <div>
+          <Card className="min-w-0 overflow-hidden">
+            <div className="community-heading">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-2xl", activeColor.solid)} aria-hidden="true"><MessageSquare className="size-6" /></span>
+                <div className="min-w-0">
                 <h2 className="font-serif text-2xl font-semibold">{active.name}</h2>
-                <p className="text-sm text-muted">{active.description}</p>
+                <p className="mt-1 text-sm text-muted">{active.description}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
+                  <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", palette.teal.tile)}><Users className="size-3.5" aria-hidden="true" />{active.members.length} members</span>
+                  <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", palette.violet.tile)}><MessageSquare className="size-3.5" aria-hidden="true" />{active.messages.length} messages</span>
+                  <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", palette.amber.tile)}><Pin className="size-3.5" aria-hidden="true" />{active.messages.filter((m) => m.pinned).length} pinned</span>
+                </div>
+                </div>
               </div>
               <Button variant="soft-info" onClick={() => setTab("members")}>
                 <Users className="size-4" aria-hidden="true" />
@@ -76,26 +96,27 @@ export function CommunityPage({ communities: initial }: { communities: Community
                 value={tab}
                 onChange={setTab}
                 items={[
-                  { value: "messages", label: "Messages", count: active.messages.length },
-                  { value: "members", label: "Members", count: active.members.length },
-                  { value: "pins", label: "Pins", count: active.messages.filter((m) => m.pinned).length },
+                  { value: "messages", label: "Messages", count: active.messages.length, icon: MessageSquare, color: "violet" },
+                  { value: "members", label: "Members", count: active.members.length, icon: Users, color: "teal" },
+                  { value: "pins", label: "Pins", count: active.messages.filter((m) => m.pinned).length, icon: Pin, color: "amber" },
                 ]}
               />
             </div>
 
             {tab === "members" ? (
-              <ul className="divide-y divide-border">
+              <ul className="grid gap-3 p-4" aria-label="Community members">
                 {active.members.map((m) => (
-                  <li key={m.id} className="flex items-center gap-3 px-4 py-3">
-                    <span className="flex size-9 items-center justify-center rounded-full bg-lotus-pink/30 text-xs font-semibold" aria-hidden="true">
+                  <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-muted/40 p-3">
+                    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold", personColor(m.name).tile)} aria-hidden="true">
                       {m.name.split(" ").map((p) => p[0]).join("")}
                     </span>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-[100px] flex-1 break-words">
                       <p className="text-sm font-medium">{m.name}</p>
                       <p className="text-xs text-muted">Joined {m.joined}</p>
                     </div>
-                    <Badge tone={m.role === "Moderator" ? "accent" : "neutral"}>{m.role}</Badge>
-                    <Button size="sm" variant="soft-danger" onClick={() => setRemoving(m)}>
+                    <Badge tone={m.role === "Moderator" ? "accent" : "success"}>{m.role === "Moderator" ? <ShieldCheck className="size-3" aria-hidden="true" /> : null}{m.role}</Badge>
+                    <Button variant="soft-danger" onClick={() => setRemoving(m)} aria-label={`Remove ${m.name}`}>
+                      <UserRoundMinus className="size-4" aria-hidden="true" />
                       Remove
                     </Button>
                   </li>
@@ -107,7 +128,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
 
             {tab === "messages" ? (
               <form
-                className="flex gap-2 border-t border-border p-4"
+                className="community-composer"
                 onSubmit={(e) => {
                   e.preventDefault();
                   const text = draft.trim();
@@ -119,14 +140,14 @@ export function CommunityPage({ communities: initial }: { communities: Community
                   setDraft("");
                 }}
               >
-                <label htmlFor="composer" className="sr-only">
-                  Write a message
-                </label>
+                <label htmlFor="composer" className="mb-2 flex items-center gap-2 text-sm font-semibold"><MessageSquare className="size-4 text-violet-500" aria-hidden="true" />Write a message</label>
+                <div className="flex flex-wrap gap-2">
                 <input id="composer" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a message to the community…" className={inputClass} />
                 <Button type="submit" variant="primary" disabled={!draft.trim()}>
                   <Send className="size-4" aria-hidden="true" />
                   Send
                 </Button>
+                </div>
               </form>
             ) : null}
           </Card>
@@ -159,6 +180,10 @@ export function CommunityPage({ communities: initial }: { communities: Community
   );
 }
 
+function personColor(name: string) {
+  return palette[cardCycle[Array.from(name).reduce((sum, char) => sum + char.charCodeAt(0), 0) % cardCycle.length]];
+}
+
 function MessageList({ messages, onTogglePin, emptyPins }: { messages: CommunityMessage[]; onTogglePin: (m: CommunityMessage) => void; emptyPins: boolean }) {
   if (!messages.length) {
     return (
@@ -170,24 +195,26 @@ function MessageList({ messages, onTogglePin, emptyPins }: { messages: Community
     );
   }
   return (
-    <ul className="flex max-h-[28rem] flex-col gap-1 overflow-y-auto p-4" aria-label="Messages">
+    <ul className="community-messages" aria-label="Messages">
       {messages.map((m) => (
-        <li key={m.id} className="group flex gap-3 rounded-xl p-2 hover:bg-accent-soft/40">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent" aria-hidden="true">
+        <li key={m.id} className={cn("community-message", m.pinned && "community-message-pinned")}>
+          <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold", personColor(m.author).tile)} aria-hidden="true">
             {m.author.split(" ").map((p) => p[0]).join("")}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm">
-              <span className="font-semibold">{m.author}</span> <span className="text-xs text-muted">· {m.role} · {m.time}</span>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-semibold">{m.author}</span>
+              <Badge tone={m.role === "Moderator" || m.role === "Admin" ? "accent" : "info"}>{m.role === "Moderator" || m.role === "Admin" ? <ShieldCheck className="size-3" aria-hidden="true" /> : null}{m.role}</Badge>
               {m.pinned ? (
                 <Badge tone="gold" className="ml-2">
                   <Pin className="size-3" aria-hidden="true" /> Pinned
                 </Badge>
               ) : null}
-            </p>
-            <p className="mt-0.5 text-sm text-foreground/90">{m.text}</p>
+            </div>
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted"><Clock3 className="size-3" aria-hidden="true" />{m.time}</p>
+            <p className="mt-2 text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/90">{m.text}</p>
           </div>
-          <IconButton label={m.pinned ? "Unpin message" : "Pin message"} onClick={() => onTogglePin(m)}>
+          <IconButton className="community-pin" label={m.pinned ? "Unpin message" : "Pin message"} aria-pressed={m.pinned} onClick={() => onTogglePin(m)}>
             {m.pinned ? <PinOff className="size-4" aria-hidden="true" /> : <Pin className="size-4" aria-hidden="true" />}
           </IconButton>
         </li>

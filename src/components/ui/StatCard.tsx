@@ -19,6 +19,19 @@ const toneColor: Partial<Record<Tone, ColorKey>> = {
   gold: "amber",
 };
 
+const cardGradient: Record<ColorKey, string> = {
+  indigo: "from-indigo-50 via-white to-violet-50",
+  violet: "from-violet-50 via-white to-fuchsia-50",
+  blue: "from-blue-50 via-white to-sky-50",
+  teal: "from-teal-50 via-white to-cyan-50",
+  rose: "from-rose-50 via-white to-pink-50",
+  orange: "from-orange-50 via-white to-amber-50",
+  emerald: "from-emerald-50 via-white to-teal-50",
+  amber: "from-amber-50 via-white to-yellow-50",
+  slate: "from-slate-100 via-white to-blue-50",
+  sky: "from-sky-50 via-white to-cyan-50",
+};
+
 /** Picks a card colour from its tone, falling back to a rotating colour. */
 export function statColor(tone: Tone | undefined, fallback: ColorKey): ColorKey {
   return (tone && toneColor[tone]) || fallback;
@@ -44,7 +57,7 @@ export function StatCard({
   const up = (change ?? 0) >= 0;
   const c = palette[color];
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-surface p-4 shadow-card">
+    <div className={cn("relative overflow-hidden rounded-2xl border border-border bg-linear-to-br p-4 shadow-card dark:bg-surface dark:from-surface dark:via-surface dark:to-surface", cardGradient[color])}>
       <span className={cn("absolute inset-x-0 top-0 h-1", c.bar)} aria-hidden="true" />
       <div className="flex items-start justify-between gap-2">
         <p className="pt-1 text-sm text-muted">{label}</p>

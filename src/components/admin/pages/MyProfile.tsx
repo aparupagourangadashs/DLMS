@@ -2,18 +2,25 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { KeyRound, Pencil } from "lucide-react";
+import { AtSign, Bell, CalendarDays, Clock3, ContactRound, House, KeyRound, Mail, MapPin, MapPinned, Pencil, Phone, Save, Settings2, Smartphone, UserRound, UserRoundCog, X, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { palette, type ColorKey } from "@/lib/colors";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, inputClass } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Modal } from "@/components/ui/Modal";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
 type Profile = Record<string, string>;
 
-const sections: Array<{ title: string; fields: Array<{ key: string; label: string; type?: string; options?: string[]; required?: boolean; wide?: boolean }> }> = [
+const sections: Array<{ title: string; description: string; icon: LucideIcon; color: ColorKey; fields: Array<{ key: string; label: string; type?: string; options?: string[]; required?: boolean; wide?: boolean }> }> = [
   {
     title: "Personal details",
+    description: "Your name and personal information",
+    icon: UserRound,
+    color: "violet",
     fields: [
       { key: "name", label: "Name", required: true },
       { key: "username", label: "Username", required: true },
@@ -23,6 +30,9 @@ const sections: Array<{ title: string; fields: Array<{ key: string; label: strin
   },
   {
     title: "Contact",
+    description: "How to reach you",
+    icon: ContactRound,
+    color: "sky",
     fields: [
       { key: "mobile", label: "Mobile", type: "tel", required: true },
       { key: "altMobile", label: "Alternate mobile", type: "tel" },
@@ -31,6 +41,9 @@ const sections: Array<{ title: string; fields: Array<{ key: string; label: strin
   },
   {
     title: "Address",
+    description: "Your home and location details",
+    icon: MapPinned,
+    color: "teal",
     fields: [
       { key: "permanentAddress", label: "Permanent address", wide: true },
       { key: "state", label: "State" },
@@ -41,12 +54,22 @@ const sections: Array<{ title: string; fields: Array<{ key: string; label: strin
   },
   {
     title: "Preferences",
+    description: "Your timezone and communication choices",
+    icon: Settings2,
+    color: "rose",
     fields: [
       { key: "timezone", label: "Timezone", options: ["Asia/Kolkata (IST, UTC+05:30)", "Europe/London", "America/New_York", "Asia/Dubai"] },
       { key: "notifications", label: "Notification preference", options: ["Email and WhatsApp", "Email only", "WhatsApp only", "None"] },
     ],
   },
 ];
+
+const fieldIcons: Record<string, LucideIcon> = {
+  name: UserRound, username: AtSign, dob: CalendarDays, gender: UserRoundCog,
+  mobile: Smartphone, altMobile: Phone, email: Mail,
+  permanentAddress: House, residentialAddress: House, state: MapPin, city: MapPin, pincode: MapPinned,
+  timezone: Clock3, notifications: Bell,
+};
 
 const initial: Profile = {
   name: "Demo Admin",
@@ -113,9 +136,23 @@ export function MyProfile() {
       />
       <DemoNotice />
 
+      <section className="profile-identity mb-5" aria-label="Profile overview">
+        <span className="profile-avatar" aria-hidden="true">{saved.name.split(" ").filter(Boolean).slice(0, 2).map((word) => word[0]).join("")}</span>
+        <div className="min-w-0 flex-1">
+          <p className="mb-1 text-xs font-semibold tracking-widest text-violet-700 uppercase dark:text-violet-300">My account</p>
+          <h2 className="font-serif text-3xl font-semibold break-words">{saved.name}</h2>
+          <p className="mt-1 flex items-center gap-1.5 text-sm break-all text-muted"><AtSign className="size-4 shrink-0" aria-hidden="true" />{saved.username}</p>
+          <p className="mt-2 flex items-start gap-2 text-sm break-all"><Mail className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-300" aria-hidden="true" />{saved.email}</p>
+        </div>
+        <span className={cn("inline-flex items-center gap-2 rounded-full border border-current/15 px-3 py-2 text-xs font-semibold", editing ? palette.amber.tile : palette.violet.tile)}>
+          {editing ? <Pencil className="size-3.5" aria-hidden="true" /> : <UserRound className="size-3.5" aria-hidden="true" />}
+          {editing ? "Editing profile" : "Personal profile"}
+        </span>
+      </section>
+
       <form
         noValidate
-        className="flex max-w-4xl flex-col gap-4"
+        className="grid min-w-0 items-start gap-5 xl:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
           const errs = validateProfile(draft);
@@ -130,18 +167,26 @@ export function MyProfile() {
           toast.success("Profile updated");
         }}
       >
-        {sections.map((s) => (
-          <Card key={s.title}>
-            <CardHeader title={s.title} />
+        {sections.map((s) => {
+          const color = palette[s.color];
+          return (
+          <Card key={s.title} className="h-full min-w-0 overflow-hidden">
+            <div className={cn("h-1", color.bar)} />
+            <CardHeader
+              className="bg-surface-muted/40"
+              title={<span className="flex items-center gap-3"><span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", color.tile)} aria-hidden="true"><s.icon className="size-5" /></span><span>{s.title}</span></span>}
+              description={s.description}
+            />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
               {s.fields.map((f) => {
                 const id = `p-${f.key}`;
+                const Icon = fieldIcons[f.key];
                 if (!editing) {
                   return (
-                    <div key={f.key} className={f.wide ? "sm:col-span-2" : undefined}>
-                      <p className="text-xs text-muted">{f.label}</p>
-                      <p className="mt-0.5 text-sm font-medium">{values[f.key] || <span className="font-normal text-muted">Not provided</span>}</p>
-                    </div>
+                    <dl key={f.key} className={cn("profile-detail", f.wide && "sm:col-span-2")}>
+                      <dt className="flex items-center gap-2 text-xs font-medium text-muted"><Icon className={cn("size-4 shrink-0", color.text)} aria-hidden="true" />{f.label}</dt>
+                      <dd className="mt-2 text-sm font-medium break-words">{values[f.key] || <span className="font-normal text-muted">Not provided</span>}</dd>
+                    </dl>
                   );
                 }
                 const common = {
@@ -158,11 +203,23 @@ export function MyProfile() {
                 return (
                   <Field key={f.key} id={id} label={f.label} required={f.required} error={errors[f.key]} className={f.wide ? "sm:col-span-2" : undefined}>
                     {f.options ? (
-                      <select {...common}>
-                        {f.options.map((o) => (
-                          <option key={o}>{o}</option>
-                        ))}
-                      </select>
+                      <Select
+                        id={id}
+                        value={draft[f.key]}
+                        options={f.options.map((value) => ({ value, label: value }))}
+                        onValueChange={(value) => {
+                          setDraft((d) => ({ ...d, [f.key]: value }));
+                          if (errors[f.key]) setErrors((x) => ({ ...x, [f.key]: "" }));
+                        }}
+                        required={f.required}
+                        aria-invalid={errors[f.key] ? true : undefined}
+                        aria-describedby={errors[f.key] ? `${id}-error` : undefined}
+                      />
+                    ) : f.type === "date" ? (
+                      <DatePicker id={id} value={draft[f.key]} onValueChange={(value) => {
+                        setDraft((d) => ({ ...d, [f.key]: value }));
+                        if (errors[f.key]) setErrors((x) => ({ ...x, [f.key]: "" }));
+                      }} aria-invalid={errors[f.key] ? true : undefined} aria-describedby={errors[f.key] ? `${id}-error` : undefined} />
                     ) : (
                       <input {...common} type={f.type ?? "text"} />
                     )}
@@ -171,18 +228,22 @@ export function MyProfile() {
               })}
             </div>
           </Card>
-        ))}
+          );
+        })}
         {editing ? (
-          <div className="sticky bottom-4 flex justify-end gap-2 rounded-2xl border border-border bg-surface/95 p-3 shadow-card backdrop-blur">
+          <div className="sticky bottom-24 flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-border bg-surface/95 p-3 shadow-card backdrop-blur xl:col-span-2">
+            <p className="mr-auto flex items-center gap-2 text-xs text-muted"><Pencil className="size-3.5" aria-hidden="true" />Review your details before saving.</p>
             <Button
               onClick={() => {
                 setEditing(false);
                 setErrors({});
               }}
             >
+              <X className="size-4" aria-hidden="true" />
               Cancel
             </Button>
             <Button type="submit" variant="success">
+              <Save className="size-4" aria-hidden="true" />
               Save changes
             </Button>
           </div>

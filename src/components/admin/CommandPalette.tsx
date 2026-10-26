@@ -5,13 +5,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleHelp, CornerDownLeft, Search } from "lucide-react";
 import { HELP_HOME, adminNav, findPage, helpHref, pageHref, parseAdminPath } from "@/lib/admin/navigation";
 import { cn } from "@/lib/cn";
+import { colorFor } from "@/lib/colors";
 import { useAdminUi } from "@/store/admin-ui";
 
 const allPages = [
   ...adminNav.flatMap((s) =>
-    s.pages.map((p) => ({ key: `${s.slug}/${p.slug}`, section: s.label, label: p.label, description: p.description, href: pageHref(s.slug, p.slug), Icon: s.icon })),
+    s.pages.map((p) => ({ key: `${s.slug}/${p.slug}`, sectionSlug: s.slug, section: s.label, label: p.label, description: p.description, href: pageHref(s.slug, p.slug), Icon: s.icon })),
   ),
-  { key: "help", section: "Help", label: "Help center", description: "How to use every admin page, step by step", href: HELP_HOME, Icon: CircleHelp },
+  { key: "help", sectionSlug: "help", section: "Help", label: "Help center", description: "How to use every admin page, step by step", href: HELP_HOME, Icon: CircleHelp },
 ];
 
 function isTyping(target: EventTarget | null) {
@@ -139,7 +140,9 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
               onClick={() => go(r.href)}
               className={cn("flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5", i === active && "bg-accent-soft")}
             >
-              <r.Icon className="size-4 shrink-0 text-muted" aria-hidden="true" />
+              <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", colorFor(r.sectionSlug).tile)} aria-hidden="true">
+                <r.Icon className="size-4" />
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">
                   {r.label} <span className="font-normal text-muted">· {r.section}</span>

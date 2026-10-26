@@ -914,8 +914,8 @@ const configs: Record<string, () => ListConfig> = {
       { key: "status", label: "Status", type: "badge" },
     ],
     rows: rows(6, (i) => ({
-      name: ["Bhagavata Mahavidyalaya", "Vedvarsity", "Ancient Wisdom", "Kids & Parents", "Level-wise", "Live Classes"][i],
-      slug: ["/bhagavata-mahavidyalaya", "/vedvarsity", "/ancient-wisdom", "/kids-parents", "/level-wise", "/live-classes"][i],
+      name: ["Bhagavata Mahavidyalaya", "Self-study Courses", "Ancient Wisdom", "Kids & Parents", "Level-wise", "Live Classes"][i],
+      slug: ["/bhagavata-mahavidyalaya", "/self-study", "/ancient-wisdom", "/kids-parents", "/level-wise", "/live-classes"][i],
       courses: [8, 5, 6, 4, 9, 7][i],
       status: "Active",
     })),

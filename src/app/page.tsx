@@ -2,28 +2,33 @@ import Link from "next/link";
 import { ArrowRight, Globe, GraduationCap, LayoutDashboard } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/Logo";
+import { cn } from "@/lib/cn";
+import { palette, type ColorKey } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { siteConfig } from "@/lib/site";
 
-const portals = [
+const portals: Array<{ title: string; description: string; href?: string; Icon: typeof Globe; status: string; color: ColorKey }> = [
   {
     title: "Admin panel",
     description: "Manage courses, batches, sessions, learners, marketing, sales and settings.",
     href: "/admin",
     Icon: LayoutDashboard,
     status: "Screens ready for review",
+    color: "indigo",
   },
   {
     title: "Student portal",
     description: "My learning, course player, calendar, exams, certificates and account.",
     Icon: GraduationCap,
     status: "Next after admin sign-off",
+    color: "teal",
   },
   {
     title: "Public website",
     description: "Course catalogs, course details, publications, about and contact pages.",
     Icon: Globe,
     status: "Planned",
+    color: "orange",
   },
 ];
 
@@ -44,10 +49,10 @@ export default function Home() {
           One platform for the public website, the student portal and the admin panel. Choose a portal to review.
         </p>
         <ul className="mt-10 grid gap-4 md:grid-cols-3">
-          {portals.map(({ title, description, href, Icon, status }) => {
+          {portals.map(({ title, description, href, Icon, status, color }) => {
             const body = (
               <>
-                <span className="flex size-11 items-center justify-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
+                <span className={cn("flex size-11 items-center justify-center rounded-xl", palette[color].tile)} aria-hidden="true">
                   <Icon className="size-5" />
                 </span>
                 <span className="mt-4 block text-lg font-semibold">{title}</span>

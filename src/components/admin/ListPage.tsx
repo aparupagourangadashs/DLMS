@@ -9,6 +9,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
+  CircleDot,
   ClipboardCheck,
   Columns3,
   Copy,
@@ -16,10 +18,12 @@ import {
   Ellipsis,
   Eye,
   Inbox,
+  LayoutList,
   Pencil,
   Plus,
   Search,
   SearchX,
+  SlidersHorizontal,
   Trash2,
   X,
   type LucideIcon,
@@ -27,7 +31,7 @@ import {
 import type { ScreenStatus } from "@/lib/admin/navigation";
 import type { CellValue, Column, ListConfig, Row } from "@/lib/admin/types";
 import { cn } from "@/lib/cn";
-import { cardCycle } from "@/lib/colors";
+import { cardCycle, type ColorKey } from "@/lib/colors";
 import { useAdminUi } from "@/store/admin-ui";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -37,7 +41,10 @@ import { Modal } from "@/components/ui/Modal";
 import { Popover } from "@/components/ui/Popover";
 import { StatCard, statColor } from "@/components/ui/StatCard";
 import { Tabs } from "@/components/ui/Tabs";
-import { CellView, cellText } from "./CellView";
+import { TableHeading, TableScroll } from "@/components/ui/Table";
+import { Select } from "@/components/ui/Select";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { CellView, cellText, columnIcon, columnIcons } from "./CellView";
 import { FormDrawer } from "./FormDrawer";
 import { DemoNotice, PageHeader } from "./PageHeader";
 
@@ -74,6 +81,14 @@ const actionColor: Record<Action, string> = {
 };
 
 const inlineActions: Action[] = ["view", "edit", "delete"];
+
+function tabColor(value?: string): ColorKey {
+  if (!value) return "violet";
+  if (/active|published|sent|completed|available|evaluated/i.test(value) && !/inactive/i.test(value)) return /completed|evaluated/i.test(value) ? "teal" : "emerald";
+  if (/archive|draft|pending|processing/i.test(value)) return "amber";
+  if (/failed|cancel|inactive|expired/i.test(value)) return "rose";
+  return "blue";
+}
 
 function matches(value: CellValue, wanted: string) {
   return Array.isArray(value) ? value.includes(wanted) : String(value ?? "") === wanted;
@@ -275,11 +290,12 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
         </div>
       ) : null}
 
-      <Card>
-        <div className="flex flex-col gap-3 border-b border-border p-4">
+      <Card className="admin-table-card">
+        <div className="admin-table-toolbar">
           {config.tabs && config.tabs.items.length > 1 ? (
             <Tabs
               label={`${config.title} status`}
+              className="admin-table-tabs"
               value={tab}
               onChange={(v) => {
                 setTab(v);
@@ -288,13 +304,15 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
               items={config.tabs.items.map((t) => ({
                 value: t.value ?? ALL,
                 label: t.label,
+                color: tabColor(t.value),
+                icon: t.value === "Archived" ? Archive : t.value === "Completed" ? CircleCheck : t.value ? CircleDot : LayoutList,
                 count: t.value && tabKey ? baseFiltered.filter((r) => matches(r[tabKey], t.value!)).length : baseFiltered.length,
               }))}
             />
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
             {config.searchKeys ? (
-              <div className="relative min-w-56 flex-1 sm:max-w-sm">
+              <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1 sm:max-w-sm">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
                 <input
                   type="search"
@@ -310,50 +328,43 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
               </div>
             ) : null}
             {config.filters?.map((f) => (
-              <select
-                key={f.key}
-                aria-label={`Filter by ${f.label.toLowerCase()}`}
-                value={filters[f.key] ?? ""}
-                onChange={(e) => {
-                  setFilters((prev) => ({ ...prev, [f.key]: e.target.value }));
-                  resetPage();
-                }}
-                className={cn(inputClass, "w-auto max-w-52")}
-              >
-                <option value="">All {plural(f.label.toLowerCase())}</option>
-                {(f.options ?? []).map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
+                <Select
+                  key={f.key}
+                  aria-label={`Filter by ${f.label.toLowerCase()}`}
+                  value={filters[f.key] ?? ""}
+                  onValueChange={(value) => {
+                    setFilters((prev) => ({ ...prev, [f.key]: value }));
+                    resetPage();
+                  }}
+                  className="w-full min-w-0 sm:w-56"
+                  icon={SlidersHorizontal}
+                  options={[{ value: "", label: `All ${plural(f.label.toLowerCase())}` }, ...(f.options ?? []).map((value) => ({ value, label: value }))]}
+                />
             ))}
             {config.dateFilterKey ? (
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="date"
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:w-auto">
+                <DatePicker
                   aria-label="From date"
                   value={dateFrom}
                   max={dateTo || undefined}
-                  onChange={(e) => {
-                    setDateFrom(e.target.value);
+                  onValueChange={(value) => {
+                    setDateFrom(value);
                     resetPage();
                   }}
-                  className={cn(inputClass, "w-auto")}
+                  className="w-full min-w-0 sm:w-52"
                 />
-                <span className="text-sm text-muted" aria-hidden="true">
+                <span className="hidden text-sm text-muted sm:inline" aria-hidden="true">
                   to
                 </span>
-                <input
-                  type="date"
+                <DatePicker
                   aria-label="To date"
                   value={dateTo}
                   min={dateFrom || undefined}
-                  onChange={(e) => {
-                    setDateTo(e.target.value);
+                  onValueChange={(value) => {
+                    setDateTo(value);
                     resetPage();
                   }}
-                  className={cn(inputClass, "w-auto")}
+                  className="w-full min-w-0 sm:w-52"
                 />
               </div>
             ) : null}
@@ -398,13 +409,13 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
             />
           )
         ) : (
-          <div className="relative overflow-x-auto">
-            <table className="w-full text-sm">
+          <TableScroll label={`${config.title} table; scroll horizontally to see more columns`}>
+            <table className="admin-data-table">
               <caption className="sr-only">
                 {config.title}, {filtered.length} results, page {currentPage} of {pageCount}
               </caption>
               <thead>
-                <tr className="border-b border-border bg-surface-muted/60 text-left text-xs font-semibold tracking-wide text-muted uppercase">
+                <tr>
                   {config.selectable ? (
                     <th scope="col" className="w-10 px-4 py-3">
                       <input
@@ -431,15 +442,15 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                     <SortableHeader key={c.key} column={c} sort={sort} onSort={setSort} />
                   ))}
                   {config.rowActions?.length ? (
-                    <th scope="col" className="w-16 px-4 py-3 text-right">
-                      <span className="sr-only">Actions</span>
+                    <th scope="col" className="admin-table-actions text-right">
+                      Actions
                     </th>
                   ) : null}
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((r, i) => (
-                  <tr key={r.id} className={cn("border-b border-border last:border-0 hover:bg-accent-soft/40", selected.has(r.id) && "bg-accent-soft/60")}>
+                  <tr key={r.id} className={selected.has(r.id) ? "is-selected" : undefined}>
                     {config.selectable ? (
                       <td className="px-4 py-3">
                         <input
@@ -458,14 +469,14 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                         />
                       </td>
                     ) : null}
-                    {config.showIndex ? <td className="px-4 py-3 text-muted tabular-nums">{(currentPage - 1) * PAGE_SIZE + i + 1}</td> : null}
+                    {config.showIndex ? <td><span className="admin-table-index">{(currentPage - 1) * PAGE_SIZE + i + 1}</span></td> : null}
                     {visibleColumns.map((c) => (
                       <td key={c.key} className="px-4 py-3 align-middle">
                         <CellView column={c} row={r} />
                       </td>
                     ))}
                     {config.rowActions?.length ? (
-                      <td className="px-4 py-2 text-right">
+                      <td className="admin-table-actions text-right">
                         {config.rowActions.length === 1 ? (
                           (() => {
                             const a = config.rowActions[0];
@@ -479,13 +490,13 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                             );
                           })()
                         ) : (
-                          <div className="flex items-center justify-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1.5">
                             {config.rowActions
                               .filter((a) => inlineActions.includes(a))
                               .map((a) => {
                                 const Icon = actionIcon[a];
                                 return (
-                                  <IconButton key={a} label={`${actionLabel[a]} ${nameOf(r)}`} onClick={() => runAction(r, a)} className={actionColor[a]}>
+                                  <IconButton key={a} label={`${actionLabel[a]} ${nameOf(r)}`} onClick={() => runAction(r, a)} className={actionColor[a]} data-action={a}>
                                     <Icon className="size-4" aria-hidden="true" />
                                   </IconButton>
                                 );
@@ -495,7 +506,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                                 label={`More actions for ${nameOf(r)}`}
                                 panelClassName="min-w-40"
                                 trigger={({ open, toggle, ref }) => (
-                                  <IconButton ref={ref} label={`More actions for ${nameOf(r)}`} aria-expanded={open} onClick={toggle}>
+                                  <IconButton ref={ref} label={`More actions for ${nameOf(r)}`} aria-expanded={open} onClick={toggle} className="text-violet-600 dark:text-violet-300">
                                     <Ellipsis className="size-4" aria-hidden="true" />
                                   </IconButton>
                                 )}
@@ -531,23 +542,39 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
 
         {filtered.length > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-sm text-muted">
-            <p>
+          <div className="admin-table-footer">
+            <p role="status" aria-live="polite" aria-atomic="true">
               Showing <span className="font-medium text-foreground">{(currentPage - 1) * PAGE_SIZE + 1}</span>–
               <span className="font-medium text-foreground">{Math.min(currentPage * PAGE_SIZE, filtered.length)}</span> of{" "}
-              <span className="font-medium text-foreground">{filtered.length}</span>
+              <span className="font-medium text-foreground">{filtered.length}</span> {filtered.length === 1 ? entity : plural(entity)}
             </p>
             <nav aria-label="Pagination" className="flex items-center gap-1">
               <IconButton label="Previous page" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
                 <ChevronLeft className="size-4" aria-hidden="true" />
               </IconButton>
-              <span className="px-2 tabular-nums">
+              <span className="px-2 tabular-nums sm:sr-only">
                 Page {currentPage} of {pageCount}
               </span>
+              {Array.from({ length: pageCount }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === pageCount || Math.abs(p - currentPage) <= 1)
+                .map((p, i, pages) => (
+                  <span key={p} className="hidden items-center gap-1 sm:inline-flex">
+                    {i > 0 && p - pages[i - 1] > 1 ? <span className="px-1" aria-hidden="true">...</span> : null}
+                    <button
+                      type="button"
+                      aria-label={`Page ${p}`}
+                      aria-current={p === currentPage ? "page" : undefined}
+                      onClick={() => setPage(p)}
+                      className={cn("rounded-lg px-2 font-semibold tabular-nums transition-colors", p === currentPage ? "bg-accent text-accent-fg shadow-sm" : "hover:bg-accent-soft hover:text-foreground")}
+                    >
+                      {p}
+                    </button>
+                  </span>
+                ))}
               <IconButton label="Next page" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>
                 <ChevronRight className="size-4" aria-hidden="true" />
               </IconButton>
@@ -655,24 +682,23 @@ function SortableHeader({
 }) {
   const sortable = "sortable" in column && column.sortable;
   const active = sort?.key === column.key;
-  const numeric = column.type === "number" || column.type === "currency" || column.type === "percent";
   if (!sortable) {
     return (
-      <th scope="col" className={cn("px-4 py-3 whitespace-nowrap", numeric && "text-left")}>
-        {column.label}
+      <th scope="col">
+        <TableHeading icon={columnIcons[columnIcon(column)]}>{column.label}</TableHeading>
       </th>
     );
   }
   const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
   return (
-    <th scope="col" className="px-4 py-3 whitespace-nowrap" aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+    <th scope="col" className="whitespace-nowrap" aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
       <button
         type="button"
-        className="inline-flex items-center gap-1 uppercase hover:text-foreground"
+        className={cn("admin-table-sort hover:text-foreground", active && "text-accent")}
         onClick={() => onSort(active && sort.dir === "desc" ? null : { key: column.key, dir: active ? "desc" : "asc" })}
       >
-        {column.label}
-        <Icon className="size-3.5" aria-hidden="true" />
+        <TableHeading icon={columnIcons[columnIcon(column)]}>{column.label}</TableHeading>
+        <Icon className={cn("size-3.5", !active && "opacity-45")} aria-hidden="true" />
       </button>
     </th>
   );

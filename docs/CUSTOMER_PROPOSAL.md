@@ -59,7 +59,7 @@ reference system.
   action for exploring courses, downloading the app, and joining the community.
 - Course-library sections for:
   - ISKCON Board of Examination
-  - Vedvarsity / self-study courses
+  - Self-study courses
   - Ancient Wisdom
   - Kids & Parents
   - Level Wise Shastric Study

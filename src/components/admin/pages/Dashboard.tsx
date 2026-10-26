@@ -4,21 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, CalendarOff, ChevronLeft, ChevronRight, Clock, Eye, Sparkles, Star, Users } from "lucide-react";
+import { CalendarDays, CalendarOff, ChartArea, ChartColumn, ChartLine, ChevronLeft, ChevronRight, Clock, Eye, Sparkles, Star, Users } from "lucide-react";
 import { DEMO_TODAY, addDays, type DemoSession } from "@/lib/admin/demo-data";
 import { formatDate, formatINR, formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { palette } from "@/lib/colors";
 import { useAdminUi } from "@/store/admin-ui";
 import { Badge, toneFor } from "@/components/ui/Badge";
-import { BarChart } from "@/components/ui/BarChart";
+import { BarChart, type ChartType } from "@/components/ui/BarChart";
 import { Button, IconButton, buttonClass } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { inputClass } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Popover } from "@/components/ui/Popover";
 import { StatCard } from "@/components/ui/StatCard";
+import { TableHeading, TableScroll } from "@/components/ui/Table";
+import { Select } from "@/components/ui/Select";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
 const weeks = ["Sep 7", "Sep 14", "Sep 21", "Sep 28", "Oct 5", "Oct 12", "Oct 19", "Oct 26"];
@@ -33,10 +35,17 @@ const whatsNew = [
   "Session calendar with list, day, week and month views",
 ];
 
+const chartViews = [
+  { type: "bar", label: "Bar", Icon: ChartColumn, color: "blue" },
+  { type: "line", label: "Line", Icon: ChartLine, color: "emerald" },
+  { type: "area", label: "Area", Icon: ChartArea, color: "violet" },
+] as const;
+
 export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession[] }) {
   const router = useRouter();
   const setPendingCreate = useAdminUi((s) => s.setPendingCreate);
   const [chart, setChart] = useState<"signups" | "sales">("signups");
+  const [chartType, setChartType] = useState<ChartType>("bar");
   const [date, setDate] = useState(DEMO_TODAY);
   const [sessions, setSessions] = useState(initialSessions);
   const [signedIn, setSignedIn] = useState<Set<string>>(new Set());
@@ -109,15 +118,32 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
           title={chart === "signups" ? "Signups vs enrollments" : "Sales"}
           description="Last 8 weeks"
           actions={
-            <select
-              aria-label="Chart metric"
-              value={chart}
-              onChange={(e) => setChart(e.target.value as "signups" | "sales")}
-              className={`${inputClass} w-auto`}
-            >
-              <option value="signups">Signup vs Enrollments</option>
-              <option value="sales">Sales</option>
-            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <div role="group" aria-label="Chart type" className="chart-view-switch">
+                {chartViews.map(({ type, label, Icon, color }) => (
+                  <button
+                    key={type}
+                    type="button"
+                    aria-pressed={chartType === type}
+                    onClick={() => setChartType(type)}
+                    className={cn(
+                      "chart-view-button",
+                      chartType === type ? palette[color].solid : palette[color].tile,
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+              <Select<"signups" | "sales">
+                aria-label="Chart metric"
+                value={chart}
+                onValueChange={setChart}
+                className="w-full sm:w-60"
+                options={[{ value: "signups", label: "Signup vs Enrollments" }, { value: "sales", label: "Sales" }]}
+              />
+            </div>
           }
         />
         <div className="p-5">
@@ -125,6 +151,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
             <BarChart
               title="Weekly signups and enrollments"
               labels={weeks}
+              chartType={chartType}
               series={[
                 { label: "Signups", values: signups, colorClass: "fill-accent", swatchClass: "bg-accent" },
                 { label: "Enrollments", values: enrollments, colorClass: "fill-gold", swatchClass: "bg-gold" },
@@ -134,6 +161,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
             <BarChart
               title="Weekly sales"
               labels={weeks}
+              chartType={chartType}
               format={(n) => (n >= 1000 ? `₹${Math.round(n / 1000)}k` : formatINR(n))}
               series={[{ label: "Sales (₹)", values: sales, colorClass: "fill-success", swatchClass: "bg-success" }]}
             />
@@ -151,12 +179,12 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
                 <IconButton label="Previous day" onClick={() => setDate(addDays(date, -1))}>
                   <ChevronLeft className="size-4" aria-hidden="true" />
                 </IconButton>
-                <input
-                  type="date"
+                <DatePicker
                   aria-label="Choose date"
                   value={date}
-                  onChange={(e) => e.target.value && setDate(e.target.value)}
-                  className={`${inputClass} w-auto`}
+                  onValueChange={setDate}
+                  required
+                  className="w-48 max-w-full"
                 />
                 <IconButton label="Next day" onClick={() => setDate(addDays(date, 1))}>
                   <ChevronRight className="size-4" aria-hidden="true" />
@@ -203,15 +231,15 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
             }
           />
         ) : (
-          <div className="relative overflow-x-auto">
-            <table className="w-full text-sm">
+          <TableScroll label="Daily sessions; scroll horizontally to see more columns">
+            <table className="admin-data-table">
               <caption className="sr-only">Sessions on {formatDate(date)}</caption>
               <thead>
-                <tr className="border-b border-border bg-surface-muted/60 text-left text-xs font-semibold tracking-wide text-muted uppercase">
-                  <th scope="col" className="px-5 py-3">Session</th>
-                  <th scope="col" className="px-5 py-3">Attendance</th>
-                  <th scope="col" className="px-5 py-3">Status</th>
-                  <th scope="col" className="px-5 py-3">Topics</th>
+                <tr>
+                  <th scope="col"><TableHeading icon={CalendarDays}>Session</TableHeading></th>
+                  <th scope="col"><TableHeading icon={Users}>Attendance</TableHeading></th>
+                  <th scope="col"><TableHeading icon={Clock}>Status</TableHeading></th>
+                  <th scope="col"><TableHeading>Topics</TableHeading></th>
                   <th scope="col" className="px-5 py-3 text-right">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -221,16 +249,21 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
                 {day.map((s) => (
                   <tr key={s.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3">
-                      <p className="font-medium">{s.title}</p>
-                      <p className="text-xs text-muted">
-                        {formatTime(`${s.date}T${s.time}`)} · {s.durationMin} min · {s.batch} · {s.instructor}
-                      </p>
+                      <div className="admin-table-identity">
+                        <span className="admin-table-avatar" aria-hidden="true"><CalendarDays className="size-4" /></span>
+                        <div>
+                          <p className="font-semibold">{s.title}</p>
+                          <p className="mt-0.5 text-xs text-muted">
+                            {formatTime(`${s.date}T${s.time}`)} · {s.durationMin} min · {s.batch} · {s.instructor}
+                          </p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-5 py-3 tabular-nums">
                       {s.status === "Completed" ? `${s.attended} / ${s.enrolled}` : <span className="text-muted">{s.enrolled} enrolled</span>}
                     </td>
                     <td className="px-5 py-3">
-                      <Badge tone={toneFor(s.status)}>{s.status}</Badge>
+                      <Badge tone={toneFor(s.status)} className="admin-table-status"><Clock className="size-3" aria-hidden="true" />{s.status}</Badge>
                     </td>
                     <td className="px-5 py-3 text-muted">{s.topics}</td>
                     <td className="px-5 py-3 text-right">
@@ -255,7 +288,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </Card>
 

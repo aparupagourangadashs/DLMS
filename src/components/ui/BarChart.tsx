@@ -4,6 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { formatNumber } from "@/lib/format";
 
 export type Series = { label: string; colorClass: string; swatchClass: string; values: number[] };
+export type ChartType = "bar" | "line" | "area";
+
+const strokeClassByFill: Record<string, string> = {
+  "fill-accent": "stroke-accent",
+  "fill-gold": "stroke-gold",
+  "fill-success": "stroke-success",
+};
 
 /** Accessible grouped bar chart rendered as SVG, with a screen-reader data table. */
 export function BarChart({
@@ -12,12 +19,14 @@ export function BarChart({
   series,
   format = formatNumber,
   height = 240,
+  chartType = "bar",
 }: {
   title: string;
   labels: string[];
   series: Series[];
   format?: (n: number) => string;
   height?: number;
+  chartType?: ChartType;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
@@ -67,21 +76,45 @@ export function BarChart({
           const gx = pad.left + i * groupW + (groupW - barW * series.length) / 2;
           return (
             <g key={label}>
-              {series.map((s, j) => {
-                const v = s.values[i] ?? 0;
-                const h = (v / niceMax) * plotH;
-                return (
-                  <rect key={s.label} x={gx + j * barW} y={pad.top + plotH - h} width={barW - 3} height={h} rx={3} className={s.colorClass}>
-                    <title>{`${label} · ${s.label}: ${format(v)}`}</title>
-                  </rect>
-                );
-              })}
+              {chartType === "bar"
+                ? series.map((s, j) => {
+                    const v = s.values[i] ?? 0;
+                    const h = (v / niceMax) * plotH;
+                    return (
+                      <rect key={s.label} x={gx + j * barW} y={pad.top + plotH - h} width={barW - 3} height={h} rx={3} className={s.colorClass}>
+                        <title>{`${label} · ${s.label}: ${format(v)}`}</title>
+                      </rect>
+                    );
+                  })
+                : null}
               <text x={pad.left + i * groupW + groupW / 2} y={height - 8} textAnchor="middle" className="fill-muted text-[11px]">
                 {label}
               </text>
             </g>
           );
         })}
+        {chartType !== "bar"
+          ? series.map((s) => {
+              const points = labels.map((_, i) => ({
+                x: pad.left + i * groupW + groupW / 2,
+                y: pad.top + plotH - ((s.values[i] ?? 0) / niceMax) * plotH,
+              }));
+              const line = points.map((point, i) => `${i === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+              const area = `${line} L ${points[points.length - 1]?.x ?? pad.left} ${pad.top + plotH} L ${points[0]?.x ?? pad.left} ${pad.top + plotH} Z`;
+              const strokeClass = strokeClassByFill[s.colorClass];
+              return (
+                <g key={s.label}>
+                  {chartType === "area" ? <path d={area} className={`${s.colorClass} opacity-15`} /> : null}
+                  {strokeClass ? <path d={line} fill="none" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className={strokeClass} /> : null}
+                  {points.map((point, i) => (
+                    <circle key={labels[i]} cx={point.x} cy={point.y} r={4} className={`${s.colorClass} stroke-surface`} strokeWidth={2}>
+                      <title>{`${labels[i]} · ${s.label}: ${format(s.values[i] ?? 0)}`}</title>
+                    </circle>
+                  ))}
+                </g>
+              );
+            })
+          : null}
       </svg>
       </div>
       <table className="sr-only">

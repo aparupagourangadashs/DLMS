@@ -2,28 +2,32 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, FileSpreadsheet, UserPlus, Users, UsersRound } from "lucide-react";
+import { CircleAlert, CircleCheck, FileSpreadsheet, Hash, Mail, UserPlus, Users, UsersRound } from "lucide-react";
 import { batches } from "@/lib/admin/demo-data";
 import { cn } from "@/lib/cn";
+import { palette, type ColorKey } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, inputClass } from "@/components/ui/Field";
+import { TableHeading, TableScroll } from "@/components/ui/Table";
+import { Select } from "@/components/ui/Select";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
 type Mode = "single" | "bulk" | "registration" | "advanced";
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const modes: Array<{ value: Mode; label: string; description: string; Icon: typeof UserPlus }> = [
-  { value: "single", label: "Single Enrollment", description: "Enrol one learner into a batch by email.", Icon: UserPlus },
-  { value: "bulk", label: "Bulk Enrollment", description: "Paste many emails to enrol into one batch.", Icon: Users },
-  { value: "registration", label: "Learner Registration", description: "Create a learner account without enrolling.", Icon: UsersRound },
-  { value: "advanced", label: "Advanced Bulk Enrollment", description: "Upload a CSV with per-learner batches.", Icon: FileSpreadsheet },
+const modes: Array<{ value: Mode; label: string; description: string; Icon: typeof UserPlus; color: ColorKey }> = [
+  { value: "single", label: "Single Enrollment", description: "Enrol one learner into a batch by email.", Icon: UserPlus, color: "blue" },
+  { value: "bulk", label: "Bulk Enrollment", description: "Paste many emails to enrol into one batch.", Icon: Users, color: "violet" },
+  { value: "registration", label: "Learner Registration", description: "Create a learner account without enrolling.", Icon: UsersRound, color: "teal" },
+  { value: "advanced", label: "Advanced Bulk Enrollment", description: "Upload a CSV with per-learner batches.", Icon: FileSpreadsheet, color: "emerald" },
 ];
 
 export function NewEnrolment({ knownEmails }: { knownEmails: string[] }) {
   const [mode, setMode] = useState<Mode>("single");
   const known = useMemo(() => new Set(knownEmails), [knownEmails]);
+  const selectedMode = modes.find((m) => m.value === mode)!;
 
   return (
     <>
@@ -33,32 +37,45 @@ export function NewEnrolment({ knownEmails }: { knownEmails: string[] }) {
       <fieldset className="mb-6">
         <legend className="sr-only">Enrolment type</legend>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {modes.map((m) => (
-            <label
-              key={m.value}
-              className={cn(
-                "flex cursor-pointer gap-3 rounded-2xl border bg-surface p-4 shadow-card transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent",
-                mode === m.value ? "border-accent bg-accent-soft" : "border-border hover:bg-accent-soft/40",
-              )}
-            >
-              <input type="radio" name="mode" value={m.value} checked={mode === m.value} onChange={() => setMode(m.value)} className="sr-only" />
-              <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", mode === m.value ? "bg-accent text-accent-fg" : "bg-surface-muted text-muted")} aria-hidden="true">
-                <m.Icon className="size-5" />
-              </span>
-              <span>
-                <span className="block text-sm font-semibold">{m.label}</span>
-                <span className="block text-xs text-muted">{m.description}</span>
-              </span>
-            </label>
-          ))}
+          {modes.map((m) => {
+            const c = palette[m.color];
+            const selected = mode === m.value;
+            return (
+              <label
+                key={m.value}
+                className={cn(
+                  "relative flex cursor-pointer gap-3 overflow-hidden rounded-2xl border bg-surface p-4 shadow-card transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent",
+                  selected ? "border-transparent ring-2 ring-current shadow-lg" : "border-border hover:-translate-y-0.5 hover:shadow-md",
+                  selected && c.text,
+                )}
+              >
+                <span className={cn("absolute inset-x-0 top-0 h-1", c.bar)} aria-hidden="true" />
+                <input type="radio" name="mode" value={m.value} checked={selected} onChange={() => setMode(m.value)} className="sr-only" />
+                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", selected ? c.solid : c.tile)} aria-hidden="true">
+                  <m.Icon className="size-5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-foreground">{m.label}</span>
+                  <span className="block text-xs text-muted">{m.description}</span>
+                </span>
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 
-      <Card className="max-w-3xl p-5">
+      <Card className="min-w-0 overflow-hidden">
+        <div className={cn("h-1", palette[selectedMode.color].bar)} />
+        <div className="admin-feature-banner rounded-none border-0 border-b border-border">
+          <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", palette[selectedMode.color].solid)} aria-hidden="true"><selectedMode.Icon className="size-6" /></span>
+          <div className="min-w-0"><h2 className="font-semibold">{selectedMode.label}</h2><p className="mt-1 text-sm text-muted">{selectedMode.description}</p></div>
+        </div>
+        <div className="p-5">
         {mode === "single" ? <Single key="single" known={known} /> : null}
         {mode === "bulk" ? <Bulk key="bulk" known={known} /> : null}
         {mode === "registration" ? <Registration key="registration" known={known} /> : null}
         {mode === "advanced" ? <Advanced key="advanced" known={known} /> : null}
+        </div>
       </Card>
     </>
   );
@@ -67,14 +84,7 @@ export function NewEnrolment({ knownEmails }: { knownEmails: string[] }) {
 function BatchSelect({ id, value, onChange, error }: { id: string; value: string; onChange: (v: string) => void; error?: string }) {
   return (
     <Field id={id} label="Batch" required error={error}>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined}>
-        <option value="">Select a batch…</option>
-        {batches.map((b) => (
-          <option key={b.name} value={b.name}>
-            {b.name} · {b.course}
-          </option>
-        ))}
-      </select>
+      <Select id={id} value={value} onValueChange={onChange} placeholder="Select a batch" required icon={Users} options={[{ value: "", label: "Select a batch" }, ...batches.map((b) => ({ value: b.name, label: `${b.name} · ${b.course}` }))]} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} />
     </Field>
   );
 }
@@ -334,16 +344,16 @@ function Advanced({ known }: { known: Set<string> }) {
               <Badge tone="success">{ok.length} ready</Badge>
               {rows.length - ok.length ? <Badge tone="danger">{rows.length - ok.length} need fixing</Badge> : null}
             </div>
-            <div className="relative overflow-x-auto rounded-xl border border-border">
-              <table className="w-full text-sm">
+            <TableScroll label="Enrolment validation results" className="admin-table-card rounded-xl border border-border">
+              <table className="admin-data-table">
                 <caption className="sr-only">Validation results</caption>
                 <thead>
-                  <tr className="border-b border-border bg-surface-muted/60 text-left text-xs text-muted uppercase">
-                    <th scope="col" className="px-3 py-2">Line</th>
-                    <th scope="col" className="px-3 py-2">Email</th>
-                    <th scope="col" className="px-3 py-2">Name</th>
-                    <th scope="col" className="px-3 py-2">Batch</th>
-                    <th scope="col" className="px-3 py-2">Result</th>
+                  <tr>
+                    <th scope="col"><TableHeading icon={Hash}>Line</TableHeading></th>
+                    <th scope="col"><TableHeading icon={Mail}>Email</TableHeading></th>
+                    <th scope="col"><TableHeading icon={UserPlus}>Name</TableHeading></th>
+                    <th scope="col"><TableHeading icon={Users}>Batch</TableHeading></th>
+                    <th scope="col"><TableHeading icon={CircleCheck}>Result</TableHeading></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -370,7 +380,7 @@ function Advanced({ known }: { known: Set<string> }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
             <div className="flex justify-end">
               <Button
                 variant="success"

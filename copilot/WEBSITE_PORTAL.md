@@ -31,7 +31,7 @@ source, backend, or API.
 - Home.
 - **Courses** dropdown:
   - ISKCON Board of Examination
-  - Vedvarsity (Self Study Courses)
+  - Self-study Courses
   - Ancient Wisdom (Self Study Courses)
   - Kids & Parents (Self Study Courses)
   - Level Wise Shastric Study
@@ -77,7 +77,7 @@ Observed footer groups:
 The homepage includes vertically stacked course-category sections:
 
 1. ISKCON Board of Examination Courses.
-2. Vedvarsity (Self Study Courses).
+2. Self-study Courses.
 3. Ancient Wisdom (Self Study Courses).
 4. Kids & Parents (Self Study Courses).
 5. Level Wise Shastric Study.
@@ -108,7 +108,7 @@ may be in English or Hindi. Do not assume all fields exist on every course.
 | Page | Route | Observed content and controls |
 |---|---|---|
 | ISKCON Board of Examination | `/bhagavata-mahavidyalaya` | Board-certified course catalog; search; Upcoming Courses, Ongoing Courses, and Coming Soon groups; Filters; course cards and Enroll Now actions. |
-| Vedvarsity | `/vedvarsity` | Self-study catalog with introductory text; search; English/Hindi language selectors; Filters with Categories and Teachers sections; course cards. |
+| Self-study Courses | `/self-study` | Self-study catalog with introductory text; search; English/Hindi language selectors; Filters with Categories and Teachers sections; course cards. |
 | Ancient Wisdom | `/ancient-wisdom` | Self-study course catalog with search, English/Hindi selectors, Categories/Teachers filters, and course cards. |
 | Kids & Parents | `/kids-parents` | Family and children course catalog with search, English/Hindi selectors, Categories/Teachers filters, and course cards. |
 | Level Wise Shastric Study | `/level-wise` | Level-based shastric course catalog with search, English/Hindi selectors, Categories/Teachers filters, and courses labelled by level. |

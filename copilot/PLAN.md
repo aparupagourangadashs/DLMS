@@ -270,7 +270,7 @@ through CI; authorization tests pass; backup/restore verified.
 2. **Homepage:** hero with CTAs (Explore Courses, Download Our App, Join Our
    Community), participation metric, six course-category bands, testimonials
    and videos.
-3. **Catalogs:** the six routes (`/bhagavata-mahavidyalaya`, `/vedvarsity`,
+3. **Catalogs:** the six routes (`/bhagavata-mahavidyalaya`, `/self-study`,
    `/ancient-wisdom`, `/kids-parents`, `/level-wise`, `/live-classes`) with
    search, categories/teachers filters, language selection, status groups
    (upcoming/ongoing/coming soon), pagination or load-more, consistent card

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CircleHelp, X, type LucideIcon } from "lucide-react";
+import { Headset, Sparkles, X, type LucideIcon } from "lucide-react";
 import { HELP_HOME, adminNav, findSectionByPath, helpHref, pageHref, parseAdminPath, type NavSection } from "@/lib/admin/navigation";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/cn";
@@ -98,7 +98,7 @@ export function Sidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-dvh shrink-0 lg:flex" aria-label="Admin navigation">
-      <nav className="flex w-20 flex-col items-center gap-1 border-r border-border bg-surface pb-3">
+      <nav className="flex w-20 flex-col items-center gap-1 border-r border-[#91a7d2] bg-linear-to-b from-[#a9bee5] via-[#b9b5df] to-[#a5b5df] pb-3 shadow-[2px_0_8px_rgba(45,61,105,0.14)] dark:border-border dark:from-surface dark:via-surface dark:to-surface dark:shadow-none">
         <div className="mb-2 flex h-16 w-full shrink-0 items-center justify-center border-b border-border">
           <Link
             href="/admin"
@@ -108,26 +108,23 @@ export function Sidebar() {
             <Logo size={52} decorative />
           </Link>
         </div>
-        <ul className="flex w-full flex-col gap-0.5 overflow-y-auto px-2">
+        <ul className="admin-nav-scroll flex min-h-0 w-full flex-1 flex-col gap-0.5 overflow-y-auto px-2">
           {adminNav.map((s) => (
             <li key={s.slug}>
               <RailItem href={pageHref(s.slug, s.pages[0].slug)} label={s.label} icon={s.icon} section={s.slug} active={!help && s.slug === current.slug} />
             </li>
           ))}
         </ul>
-        <div className="mt-auto w-full px-2 pt-2">
-          <RailItem href={HELP_HOME} label="Help" icon={CircleHelp} section="help" active={help} />
-        </div>
       </nav>
       {showSubNav ? (
-        <nav className="flex w-60 flex-col border-r border-border bg-surface" aria-label={`${current.label} ${help ? "help topics" : "pages"}`}>
+        <nav className="flex w-60 flex-col border-r border-[#c4cde2] bg-linear-to-b from-[#dce6f8] via-[#e9e8f5] to-[#dfe6f6] dark:border-border dark:from-surface dark:via-surface dark:to-surface" aria-label={`${current.label} ${help ? "help topics" : "pages"}`}>
           <p className="flex h-16 shrink-0 items-center gap-2.5 border-b border-border px-5 font-serif text-xl font-semibold">
             <span className={cn("flex size-8 items-center justify-center rounded-lg", colorFor(current.slug).tile)} aria-hidden="true">
               <current.icon className="size-4" />
             </span>
             {help ? `${current.label} help` : current.label}
           </p>
-          <div className="flex-1 overflow-y-auto px-3 py-4">
+          <div className="admin-nav-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4">
             <SubNav section={current} pathname={pathname} help={help} />
             {help ? (
               <Link href={HELP_HOME} className="mt-4 block px-3 text-sm font-medium text-accent hover:underline">
@@ -138,6 +135,26 @@ export function Sidebar() {
         </nav>
       ) : null}
     </aside>
+  );
+}
+
+export function FloatingHelp() {
+  const mobileNavOpen = useAdminUi((s) => s.mobileNavOpen);
+  if (mobileNavOpen) return null;
+
+  return (
+    <Link
+      href={HELP_HOME}
+      aria-label="Help center"
+      title="Help center"
+      className="floating-help"
+    >
+      <span className="floating-help-icon" aria-hidden="true">
+        <Headset className="size-7" strokeWidth={1.8} />
+        <Sparkles className="floating-help-sparkle size-3.5" />
+      </span>
+      <span className="hidden pr-2 sm:block">Help center</span>
+    </Link>
   );
 }
 
@@ -170,7 +187,7 @@ export function MobileNav() {
             role="dialog"
             aria-modal="true"
             aria-label="Admin navigation"
-            className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-surface shadow-2xl"
+            className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-linear-to-b from-[#a9bee5] via-[#b9b5df] to-[#a5b5df] shadow-2xl dark:from-surface dark:via-surface dark:to-surface"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
@@ -182,7 +199,7 @@ export function MobileNav() {
                 <X className="size-5" aria-hidden="true" />
               </IconButton>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-4">
+            <div className="admin-nav-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4">
               {adminNav.map((s) => {
                 const Icon = s.icon;
                 return (
@@ -199,18 +216,6 @@ export function MobileNav() {
                   </details>
                 );
               })}
-            </div>
-            <div className="border-t border-border px-3 py-3">
-              <Link
-                href={HELP_HOME}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold hover:bg-accent-soft"
-              >
-                <span className={cn("flex size-8 items-center justify-center rounded-lg", colorFor("help").tile)} aria-hidden="true">
-                  <CircleHelp className="size-4" />
-                </span>
-                Help center
-              </Link>
             </div>
           </motion.nav>
         </div>

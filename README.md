@@ -24,6 +24,11 @@ All data is synthetic, generated deterministically in `src/lib/admin/`. Creating
 
 Every admin page has a **Help** button (or press `?`) that opens its help article at `/admin/help/<section>/<page>`. The help center at `/admin/help` has getting-started guides and a searchable list of every page.
 
+A colorful floating **Help center** shortcut sits at the bottom-right on all
+admin pages, replacing the sidebar Help item. It uses a compact icon on phones
+and stays behind dialogs. Sidebar scrollbars are hidden for a clean rail;
+wheel, touch, and keyboard navigation still reach every menu item.
+
 - Hand-written content (purpose, who uses it, page-specific how-tos, tips, related pages) is in `src/lib/admin/help-content.ts`.
 - For list screens, step-by-step tasks, columns, filters, and form fields are generated from the screen's config in `list-configs.ts` (see `src/lib/admin/help.ts`), so the help stays in sync when a screen changes.
 
@@ -74,6 +79,55 @@ src/
 ```
 
 To add a list screen, add an entry to `navigation.ts` and a config to `list-configs.ts`. Search, tabs, filters, sorting, column selection, CSV export, pagination, and create/edit/delete then work automatically.
+
+### Table design
+
+The Community page uses colorful community tiles, icon-led view tabs, role
+badges, highlighted pinned messages, and a labeled message composer. Member
+management and pinning remain interactive demo features; layouts adapt to
+phones and dark mode.
+
+My Profile includes a gradient identity banner and color-coded personal,
+contact, address, and preference cards with labeled field icons. The same cards
+switch into editable controls; save/cancel actions sit above the floating Help
+shortcut on smaller screens. Profile edits remain local demo data.
+
+The remaining custom admin screens follow the same visual system: enrolment
+panels have mode-specific icon headers, notification settings show live enabled
+counts per channel, and decision screens use numbered question cards while
+clearly remaining proposals. Help Center guides and articles use section
+colors, icon tiles, and accented task cards; search and page links are retained.
+
+All visible admin tables share the theme-aware `admin-data-table` styles and the
+keyboard-focusable `TableScroll` wrapper in `src/components/ui/Table.tsx`.
+List screens include icon-led column headings, identity tiles, status badges,
+gradient progress bars, highlighted selected rows, and numbered pagination.
+Headers use a saturated blue-to-violet gradient; status tabs and action buttons
+have distinct colors, and identity tiles use a consistent per-name palette.
+Progress is orange below 40%, blue from 40%, and green from 75%, with the exact
+percentage always visible so color is not the only indicator.
+The same visual language covers dashboard sessions, report previews, enrolment
+validation, notification settings, and help field references. Wide tables scroll
+inside their own region on mobile rather than stretching the page. Light/dark
+themes, visible focus states, and reduced-motion preferences are supported.
+Action menus use native top-layer popovers so pinned cells cannot cover them;
+menus stay within the viewport and reposition when the page or table scrolls.
+
+Dropdowns throughout filters, profile/enrolment forms, form drawers, and
+analytics use `src/components/ui/Select.tsx`. The shared select-only combobox
+has a 44px trigger, a matching-width top-layer listbox, wrapped option labels,
+selected checkmarks, keyboard navigation (arrows, Home/End, type-ahead,
+Enter/Space, Escape), and viewport-constrained scrolling on mobile.
+
+The Sessions calendar uses stable course colors, period-based summary cards,
+an in-view course legend, and responsive week/day/list/month views. The weekly
+board stacks by day on phones instead of forcing a seven-column layout.
+Shared `DatePicker` and `DateTimePicker` components provide themed calendars,
+month/year selection, Today/clear actions, keyboard date navigation, and min/max
+date limits across filters, scheduling forms, profiles, and the dashboard.
+Date-time inputs retain the application's IST convention.
+Dashboard chart controls keep visible Bar/Line/Area labels alongside Lucide
+icons, use blue/green/violet styling, and provide 44px touch targets.
 
 ## Backend: deliberately deferred
 

@@ -2,9 +2,12 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, CircleHelp, Info, Lightbulb, Link2, ListChecks, Monitor, TextCursorInput, Users } from "lucide-react";
 import type { HelpArticleData } from "@/lib/admin/help";
 import { HELP_HOME, helpHref, pageHref, statusLabel, type ScreenStatus } from "@/lib/admin/navigation";
+import { cn } from "@/lib/cn";
+import { cardCycle, colorFor, palette } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClass } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { TableHeading, TableScroll } from "@/components/ui/Table";
 import { RichText } from "./RichText";
 
 const statusTone = { ready: "success", proposed: "info", decision: "warning" } as const;
@@ -15,11 +18,17 @@ const statusNote: Record<ScreenStatus, string> = {
   decision: "What this screen must do is still to be agreed with IBMV. Once the questions above are answered, we'll design the screen and update this help article.",
 };
 
-function Section({ id, title, icon, children }: { id: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
+const sectionColors = {
+  purpose: "sky", screen: "violet", tasks: "teal", fields: "indigo",
+  decision: "amber", tips: "amber", status: "slate", related: "rose",
+} as const;
+
+function Section({ id, title, icon, children }: { id: keyof typeof sectionColors; title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  const color = palette[sectionColors[id]];
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24">
       <h2 id={`${id}-title`} className="mb-3 flex items-center gap-2 text-xl font-semibold">
-        <span className="text-accent" aria-hidden="true">
+        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", color.tile)} aria-hidden="true">
           {icon}
         </span>
         {title}
@@ -44,9 +53,9 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
 
   return (
     <article>
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <header className="admin-feature-banner mb-8 rounded-2xl border border-border">
         <div className="min-w-0">
-          <p className="text-sm font-medium tracking-wide text-accent uppercase">Help · {section.label}</p>
+          <p className={cn("flex items-center gap-2 text-sm font-medium tracking-wide uppercase", colorFor(section.slug).text)}><section.icon className="size-4" aria-hidden="true" />Help · {section.label}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h1 className="font-serif text-3xl font-semibold tracking-tight">{page.label}</h1>
             <Badge tone={statusTone[page.status]}>{statusLabel[page.status]}</Badge>
@@ -82,8 +91,9 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
           {data.screen.length ? (
             <Section id="screen" title="What's on the screen" icon={<Monitor className="size-5" />}>
               <div className="grid gap-3 md:grid-cols-2">
-                {data.screen.map((group) => (
-                  <Card key={group.heading} className="p-4">
+                {data.screen.map((group, i) => (
+                  <Card key={group.heading} className="relative min-w-0 overflow-hidden p-4">
+                    <span className={cn("absolute inset-y-0 left-0 w-1", palette[cardCycle[i % cardCycle.length]].bar)} aria-hidden="true" />
                     <h3 className="mb-2 text-sm font-semibold">{group.heading}</h3>
                     <ul className="flex flex-wrap gap-1.5">
                       {group.items.map((item) => (
@@ -101,14 +111,15 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
           {data.tasks.length ? (
             <Section id="tasks" title="How to…" icon={<ListChecks className="size-5" />}>
               <div className="flex flex-col gap-3">
-                {data.tasks.map((task) => (
-                  <Card key={task.title} className="p-5">
+                {data.tasks.map((task, i) => (
+                  <Card key={task.title} className="relative min-w-0 overflow-hidden p-5">
+                    <span className={cn("absolute inset-y-0 left-0 w-1", palette[cardCycle[i % cardCycle.length]].bar)} aria-hidden="true" />
                     <h3 className="mb-3 font-semibold">{task.title}</h3>
                     <ol className="flex flex-col gap-2.5">
                       {task.steps.map((step, j) => (
                         <li key={j} className="flex gap-3 text-sm leading-relaxed">
                           <span
-                            className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent"
+                            className={cn("flex size-6 shrink-0 items-center justify-center rounded-lg text-xs font-semibold", palette[cardCycle[i % cardCycle.length]].tile)}
                             aria-hidden="true"
                           >
                             {j + 1}
@@ -127,14 +138,15 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
 
           {data.formFields.length ? (
             <Section id="fields" title="Form fields" icon={<TextCursorInput className="size-5" />}>
-              <Card className="relative overflow-x-auto">
-                <table className="w-full text-sm">
+              <Card className="admin-table-card">
+                <TableScroll label={`Fields in the ${page.label} form`}>
+                <table className="admin-data-table">
                   <caption className="sr-only">Fields in the {page.label} form</caption>
                   <thead>
-                    <tr className="border-b border-border bg-surface-muted/60 text-left text-xs font-semibold tracking-wide text-muted uppercase">
-                      <th scope="col" className="px-4 py-3">Field</th>
-                      <th scope="col" className="px-4 py-3">Required</th>
-                      <th scope="col" className="px-4 py-3">Notes</th>
+                    <tr>
+                      <th scope="col"><TableHeading icon={TextCursorInput}>Field</TableHeading></th>
+                      <th scope="col"><TableHeading icon={ListChecks}>Required</TableHeading></th>
+                      <th scope="col"><TableHeading icon={Info}>Notes</TableHeading></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -149,6 +161,7 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
                     ))}
                   </tbody>
                 </table>
+                </TableScroll>
               </Card>
             </Section>
           ) : null}
@@ -200,8 +213,9 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {data.related.map((r) => (
                   <li key={`${r.section.slug}/${r.page.slug}`}>
-                    <Card className="flex h-full flex-col gap-1 p-4">
-                      <span className="text-xs text-muted">{r.section.label}</span>
+                    <Card className="relative flex h-full min-w-0 flex-col gap-1 overflow-hidden p-4">
+                      <span className={cn("absolute inset-x-0 top-0 h-1", colorFor(r.section.slug).bar)} aria-hidden="true" />
+                      <span className={cn("mt-1 flex items-center gap-1.5 text-xs font-medium", colorFor(r.section.slug).text)}><r.section.icon className="size-3.5" aria-hidden="true" />{r.section.label}</span>
                       <Link href={pageHref(r.section.slug, r.page.slug)} className="font-semibold hover:text-accent hover:underline">
                         {r.page.label}
                       </Link>

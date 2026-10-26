@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { DEMO_TODAY, addDays, batches, type DemoSession } from "@/lib/admin/demo-data";
+import { BookOpen, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CircleCheck, Clock3, LayoutGrid, List, Plus, UserRound, Video } from "lucide-react";
+import { DEMO_TODAY, addDays, batches, courses, type DemoSession } from "@/lib/admin/demo-data";
+import { cardCycle, palette } from "@/lib/colors";
 import type { FormField } from "@/lib/admin/types";
 import { formatDate, formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -14,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { FormDrawer } from "../FormDrawer";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
@@ -67,6 +69,9 @@ export function SessionsCalendar({ sessions: initial }: { sessions: DemoSession[
         ? monthFmt.format(new Date(`${cursor}T00:00:00Z`))
         : `${formatDate(startOfWeek(cursor))} – ${formatDate(addDays(startOfWeek(cursor), 6))}`;
 
+  const periodSessions = sessions.filter((s) => view === "day" ? s.date === cursor : view === "month" ? s.date.startsWith(cursor.slice(0, 7)) : s.date >= startOfWeek(cursor) && s.date <= addDays(startOfWeek(cursor), 6));
+  const periodCourses = courses.filter((course) => periodSessions.some((session) => session.course === course));
+
   const closeCreate = () => {
     setCreateOpen(false);
     if (pending) setPending(null);
@@ -87,10 +92,24 @@ export function SessionsCalendar({ sessions: initial }: { sessions: DemoSession[
       />
       <DemoNotice />
 
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setCursor(DEMO_TODAY)}>
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {([
+          { label: "Sessions in view", value: periodSessions.length, Icon: CalendarDays, color: "blue" },
+          { label: "Scheduled", value: periodSessions.filter((s) => s.status === "Scheduled").length, Icon: Video, color: "violet" },
+          { label: "Completed", value: periodSessions.filter((s) => s.status === "Completed").length, Icon: CircleCheck, color: "emerald" },
+          { label: "Learning hours", value: (periodSessions.filter((s) => s.status !== "Cancelled").reduce((total, s) => total + s.durationMin, 0) / 60).toLocaleString("en-IN", { maximumFractionDigits: 1 }), Icon: Clock3, color: "amber" },
+        ] as const).map(({ label, value, Icon, color }) => (
+          <div key={label} className={cn("session-summary", palette[color].tile)}>
+            <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", palette[color].solid)}><Icon className="size-5" aria-hidden="true" /></span>
+            <div><p className="text-xs font-medium">{label}</p><p className="mt-1 text-2xl font-bold tabular-nums">{value}</p></div>
+          </div>
+        ))}
+      </div>
+
+      <Card className="session-calendar">
+        <div className="calendar-toolbar">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Button variant="soft-info" onClick={() => setCursor(DEMO_TODAY)}>
               Today
             </Button>
             <IconButton label={`Previous ${view === "list" ? "week" : view}`} onClick={() => step(-1)}>
@@ -99,7 +118,7 @@ export function SessionsCalendar({ sessions: initial }: { sessions: DemoSession[
             <IconButton label={`Next ${view === "list" ? "week" : view}`} onClick={() => step(1)}>
               <ChevronRight className="size-4" aria-hidden="true" />
             </IconButton>
-            <h2 className="ml-1 font-serif text-xl font-semibold" aria-live="polite">
+            <h2 className="ml-1 min-w-0 basis-full font-serif text-xl font-semibold sm:basis-auto" aria-live="polite">
               {heading}
             </h2>
           </div>
@@ -107,13 +126,20 @@ export function SessionsCalendar({ sessions: initial }: { sessions: DemoSession[
             label="Calendar view"
             value={view}
             onChange={setView}
+            className="calendar-view-tabs"
             items={[
-              { value: "list", label: "List" },
-              { value: "day", label: "Day" },
-              { value: "week", label: "Week" },
-              { value: "month", label: "Month" },
+              { value: "list", label: "List", icon: List, color: "blue" },
+              { value: "day", label: "Day", icon: CalendarDays, color: "teal" },
+              { value: "week", label: "Week", icon: CalendarRange, color: "violet" },
+              { value: "month", label: "Month", icon: LayoutGrid, color: "blue" },
             ]}
           />
+          <DatePicker aria-label="Jump to date" value={cursor} onValueChange={setCursor} required className="w-full sm:w-56" />
+        </div>
+        <div className="calendar-legend">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-foreground"><BookOpen className="size-4 text-accent" aria-hidden="true" />Courses</span>
+          {periodCourses.map((course) => <span key={course} className={cn("calendar-course-label", palette[cardCycle[courses.indexOf(course) % cardCycle.length]].tile)}><span className="size-1.5 rounded-full bg-current" aria-hidden="true" />{course}</span>)}
+          <span className="ml-auto whitespace-nowrap text-xs text-muted">All times in IST</span>
         </div>
 
         {view === "month" ? (
@@ -205,18 +231,27 @@ export function SessionsCalendar({ sessions: initial }: { sessions: DemoSession[
 }
 
 function SessionChip({ s, onSelect, compact }: { s: DemoSession; onSelect: (s: DemoSession) => void; compact?: boolean }) {
+  const color = palette[cardCycle[Math.max(0, courses.findIndex((course) => course === s.course)) % cardCycle.length]];
   return (
     <button
       type="button"
       onClick={() => onSelect(s)}
       className={cn(
-        "w-full rounded-md border-l-4 px-2 py-1 text-left text-xs transition-colors hover:brightness-95",
-        s.status === "Cancelled" ? "border-danger bg-danger-soft line-through opacity-75" : s.status === "Completed" ? "border-success bg-success-soft" : "border-accent bg-accent-soft",
+        "session-chip",
+        color.tile,
+        compact && "is-compact",
+        s.status === "Cancelled" && "line-through opacity-65",
       )}
     >
-      <span className="font-semibold tabular-nums">{formatTime(`${s.date}T${s.time}`)}</span>{" "}
-      <span className={cn(compact && "hidden xl:inline")}>{s.title}</span>
-      <span className="sr-only">, {s.status}</span>
+      <span className="flex flex-wrap items-center justify-between gap-1">
+        <span className="inline-flex items-center gap-1 font-bold tabular-nums"><Clock3 className="size-3" aria-hidden="true" />{formatTime(`${s.date}T${s.time}`)}</span>
+        {!compact ? <span className="text-[10px] opacity-80">{s.durationMin} min</span> : null}
+      </span>
+      <span className="mt-1.5 block font-semibold leading-relaxed">{s.title}</span>
+      {!compact ? <>
+        <span className="mt-2 inline-flex items-center gap-1 text-[11px]"><UserRound className="size-3 shrink-0" aria-hidden="true" />{s.instructor}</span>
+        <span className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide">{s.status === "Completed" ? <CircleCheck className="size-3" aria-hidden="true" /> : null}{s.status}</span>
+      </> : <span className="sr-only">, {s.status}</span>}
     </button>
   );
 }
@@ -224,18 +259,19 @@ function SessionChip({ s, onSelect, compact }: { s: DemoSession; onSelect: (s: D
 function WeekView({ cursor, byDate, onSelect }: { cursor: string; byDate: Map<string, DemoSession[]>; onSelect: (s: DemoSession) => void }) {
   const start = startOfWeek(cursor);
   return (
-    <div className="relative overflow-x-auto">
-      <div className="grid min-w-[840px] grid-cols-7 divide-x divide-border">
+    <div className="calendar-week" role="region" aria-label="Weekly sessions">
+      <div className="calendar-week-grid">
         {weekdays.map((w, i) => {
           const d = addDays(start, i);
           const list = byDate.get(d) ?? [];
           return (
-            <section key={d} aria-label={formatDate(d)} className="min-h-80">
-              <h3 className={cn("border-b border-border px-2 py-2 text-center text-xs font-semibold", d === DEMO_TODAY && "bg-accent text-accent-fg")}>
-                {w} <span className="block text-lg font-semibold">{d.slice(8)}</span>
+            <section key={d} aria-label={formatDate(d)} className={cn("calendar-day-column", d === DEMO_TODAY && "is-today")}>
+              <h3 className="calendar-day-heading">
+                <span>{w}</span><span className="calendar-day-number">{d.slice(8)}</span>
+                <span className="text-[10px] font-medium">{list.length} {list.length === 1 ? "session" : "sessions"}</span>
               </h3>
-              <div className="flex flex-col gap-1.5 p-2">
-                {list.length ? list.map((s) => <SessionChip key={s.id} s={s} onSelect={onSelect} />) : <p className="py-4 text-center text-xs text-muted">No sessions</p>}
+              <div className="flex flex-col gap-2 p-2">
+                {list.length ? list.map((s) => <SessionChip key={s.id} s={s} onSelect={onSelect} />) : <div className="calendar-free-day"><CalendarDays className="mx-auto mb-2 size-5 opacity-50" aria-hidden="true" /><p>No sessions</p><p className="mt-1 text-[10px]">A little room to reflect</p></div>}
               </div>
             </section>
           );
@@ -260,9 +296,9 @@ function MonthView({
   const gridStart = startOfWeek(first);
   const month = first.slice(0, 7);
   return (
-    <div className="relative overflow-x-auto">
+    <div className="relative overflow-x-auto" role="region" aria-label="Monthly sessions; scroll horizontally for more days" tabIndex={0}>
       <div className="min-w-[720px]">
-        <div className="grid grid-cols-7 border-b border-border text-center text-xs font-semibold text-muted" aria-hidden="true">
+        <div className="calendar-month-heading grid grid-cols-7 text-center text-xs font-semibold" aria-hidden="true">
           {weekdays.map((w) => (
             <div key={w} className="py-2">
               {w}
@@ -275,14 +311,14 @@ function MonthView({
             const list = byDate.get(d) ?? [];
             const inMonth = d.startsWith(month);
             return (
-              <div key={d} className={cn("min-h-28 border-r border-b border-border p-1.5 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-surface-muted/50")}>
+              <div key={d} className={cn("calendar-month-cell min-h-36 border-r border-b border-border p-2 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-surface-muted/50")}>
                 <button
                   type="button"
                   onClick={() => onDay(d)}
                   aria-label={`${formatDate(d)}, ${list.length} sessions. Open day view`}
                   className={cn(
-                    "mb-1 flex size-7 items-center justify-center rounded-full text-xs font-medium hover:bg-accent-soft",
-                    d === DEMO_TODAY && "bg-accent text-accent-fg hover:bg-accent",
+                    "mb-2 flex size-9 items-center justify-center rounded-xl text-sm font-semibold hover:bg-accent-soft",
+                    d === DEMO_TODAY && "bg-info text-accent-fg hover:bg-info",
                     !inMonth && "text-muted",
                   )}
                 >
@@ -347,7 +383,7 @@ function ListView({
                 <button
                   type="button"
                   onClick={() => onSelect(s)}
-                  className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border px-4 py-3 text-left text-sm hover:bg-accent-soft/50"
+                  className={cn("session-agenda-card flex w-full flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-4 text-left text-sm", palette[cardCycle[Math.max(0, courses.findIndex((course) => course === s.course)) % cardCycle.length]].tile)}
                 >
                   <span className="w-20 font-semibold tabular-nums">{formatTime(`${s.date}T${s.time}`)}</span>
                   <span className="min-w-0 flex-1">

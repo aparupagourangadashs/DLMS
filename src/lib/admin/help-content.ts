@@ -595,7 +595,7 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["analytics/notification-logs", "settings/utility-wallet", "marketing/campaigns"],
   },
   "settings/categories": {
-    summary: "Categories group courses on the website catalog pages and in reports. Each one has its own web address, such as /vedvarsity.",
+    summary: "Categories group courses on the website catalog pages and in reports. Each one has its own web address, such as /self-study.",
     whoUses: "Administrators and content editors.",
     tips: ["Changing a URL path breaks old links and bookmarks. Plan a redirect when you change one."],
     related: ["products/events", "marketing/blogs"],

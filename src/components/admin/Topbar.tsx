@@ -60,7 +60,7 @@ export function Topbar() {
   const setPendingCreate = useAdminUi((s) => s.setPendingCreate);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-[#aebfe2] bg-linear-to-r from-[#c6d5f2] via-[#c2c9e9] to-[#d0c5eb] px-4 shadow-[0_2px_8px_rgba(45,61,105,0.12)] sm:px-6 dark:border-border dark:from-surface dark:via-surface dark:to-surface dark:shadow-none">
       <IconButton label="Open navigation" className="lg:hidden" onClick={() => setMobileNavOpen(true)}>
         <Menu className="size-5" aria-hidden="true" />
       </IconButton>

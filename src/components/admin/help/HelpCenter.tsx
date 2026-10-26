@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { BookOpen, ChevronDown, Search, SearchX } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, LifeBuoy, Search, SearchX } from "lucide-react";
 import { generalGuides, helpContent } from "@/lib/admin/help-content";
 import { adminNav, helpHref } from "@/lib/admin/navigation";
 import { cn } from "@/lib/cn";
+import { cardCycle, colorFor, palette } from "@/lib/colors";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inputClass } from "@/components/ui/Field";
@@ -46,8 +47,13 @@ export function HelpCenter() {
     <>
       <PageHeader title="Help center" description="Learn what each admin page is for and how to use it, step by step." />
 
-      <div className="relative mb-8 max-w-xl">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+      <div className="admin-feature-banner mb-8 flex-col items-stretch rounded-2xl border border-border">
+        <div className="flex items-center gap-3">
+          <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-2xl", palette.sky.solid)} aria-hidden="true"><LifeBuoy className="size-6" /></span>
+          <div><h2 className="text-lg font-semibold">How can we help?</h2><p className="mt-1 text-sm text-muted">Browse guides or search for a page, task, or feature.</p></div>
+        </div>
+      <div className="relative w-full max-w-2xl">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sky-600 dark:text-sky-300" aria-hidden="true" />
         <input
           type="search"
           value={query}
@@ -56,6 +62,8 @@ export function HelpCenter() {
           aria-label="Search help"
           className={cn(inputClass, "h-12 pl-9 text-base")}
         />
+      </div>
+      {q ? <p className="text-xs text-muted" role="status">{guides.length} guides and {sections.reduce((sum, s) => sum + s.pages.length, 0)} page topics found</p> : null}
       </div>
 
       {nothing ? (
@@ -75,11 +83,13 @@ export function HelpCenter() {
             Getting started
           </h2>
           <div className="grid gap-3 lg:grid-cols-2">
-            {guides.map((g) => (
-              <details key={g.id} open={Boolean(q)} className="group rounded-2xl border border-border bg-surface shadow-card">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 font-semibold [&::-webkit-details-marker]:hidden">
-                  {g.title}
-                  <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+            {guides.map((g, index) => (
+              <details key={g.id} open={Boolean(q)} className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
+                <summary className="relative flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 font-semibold [&::-webkit-details-marker]:hidden">
+                  <span className={cn("absolute inset-x-0 top-0 h-1", palette[cardCycle[index % cardCycle.length]].bar)} aria-hidden="true" />
+                  <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", palette[cardCycle[index % cardCycle.length]].tile)} aria-hidden="true"><BookOpen className="size-4" /></span>
+                  <span className="flex-1">{g.title}</span>
+                  <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <ol className="flex flex-col gap-2 border-t border-border px-5 py-4 text-sm leading-relaxed">
                   {g.steps.map((s, i) => (
@@ -106,26 +116,34 @@ export function HelpCenter() {
           </h2>
           <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
             {sections.map(({ section, pages }) => (
-              <Card key={section.slug} className="p-5">
-                <h3 className="mb-3 flex items-center gap-2 font-serif text-xl font-semibold">
-                  <section.icon className="size-5 text-accent" aria-hidden="true" />
+              <Card key={section.slug} className="min-w-0 overflow-hidden">
+                <div className={cn("h-1", colorFor(section.slug).bar)} />
+                <div className="p-5">
+                <h3 className="mb-3 flex items-center gap-2.5 font-serif text-xl font-semibold">
+                  <span className={cn("flex size-9 items-center justify-center rounded-xl", colorFor(section.slug).tile)} aria-hidden="true">
+                    <section.icon className="size-[18px]" />
+                  </span>
                   {section.label}
                 </h3>
                 <ul className="flex flex-col gap-1">
                   {pages.map(({ page, summary }) => (
                     <li key={page.slug}>
-                      <Link href={helpHref(section.slug, page.slug)} className="block rounded-lg px-3 py-2 hover:bg-accent-soft">
+                      <Link href={helpHref(section.slug, page.slug)} className="group block rounded-xl border border-transparent px-3 py-2.5 hover:border-border hover:bg-accent-soft">
                         <span className="flex items-center gap-2 text-sm font-medium">
+                          <span className="min-w-0 flex-1">
                           {page.label}
+                          </span>
                           {page.status === "decision" ? (
                             <span className="size-1.5 rounded-full bg-warning" title="Needs IBMV decision" aria-label="(needs IBMV decision)" />
                           ) : null}
+                          <ArrowRight className={cn("size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5", colorFor(section.slug).text)} aria-hidden="true" />
                         </span>
                         <span className="line-clamp-2 text-xs text-muted">{summary}</span>
                       </Link>
                     </li>
                   ))}
                 </ul>
+                </div>
               </Card>
             ))}
           </div>

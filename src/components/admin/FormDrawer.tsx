@@ -5,6 +5,8 @@ import type { CellValue, FormField } from "@/lib/admin/types";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClass } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Select";
+import { DatePicker, DateTimePicker } from "@/components/ui/DatePicker";
 import { cn } from "@/lib/cn";
 
 type Values = Record<string, string>;
@@ -16,6 +18,7 @@ function validate(fields: FormField[], values: Values) {
   for (const f of fields) {
     const v = (values[f.key] ?? "").trim();
     if (f.required && !v) errors[f.key] = `${f.label} is required.`;
+    else if (v && f.type === "datetime-local" && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) errors[f.key] = "Choose a date and time.";
     else if (v && f.type === "email" && !emailRe.test(v)) errors[f.key] = "Enter a valid email address.";
     else if (v && f.type === "number" && Number.isNaN(Number(v))) errors[f.key] = "Enter a number.";
     else if (v && f.type === "tel" && !/^\+?[\d\s-]{8,}$/.test(v)) errors[f.key] = "Enter a valid phone number.";
@@ -125,14 +128,11 @@ function FormBody({
         return (
           <Field key={f.key} id={id} label={f.label} required={f.required} help={f.help} error={errors[f.key]}>
             {f.type === "select" ? (
-              <select {...common} onChange={(e) => set(f.key, e.target.value)} className={inputClass}>
-                <option value="">Select…</option>
-                {f.options?.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
+              <Select {...common} onValueChange={(value) => set(f.key, value)} placeholder="Select an option" options={[{ value: "", label: "Select an option" }, ...(f.options ?? []).map((value) => ({ value, label: value }))]} />
+            ) : f.type === "date" || f.type === "datetime-local" ? (
+              f.type === "date"
+                ? <DatePicker {...common} onValueChange={(value) => set(f.key, value)} />
+                : <DateTimePicker {...common} onValueChange={(value) => set(f.key, value)} />
             ) : f.type === "textarea" ? (
               <textarea
                 {...common}

@@ -1,5 +1,5 @@
 import { CommandPalette } from "@/components/admin/CommandPalette";
-import { MobileNav, Sidebar } from "@/components/admin/Sidebar";
+import { FloatingHelp, MobileNav, Sidebar } from "@/components/admin/Sidebar";
 import { Topbar } from "@/components/admin/Topbar";
 
 export const metadata = {
@@ -19,11 +19,12 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
       <MobileNav />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8">
+        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1400px] flex-1 px-4 pt-6 pb-28 outline-none sm:px-6 lg:px-8">
           {children}
         </main>
       </div>
       <CommandPalette />
+      <FloatingHelp />
     </div>
   );
 }
