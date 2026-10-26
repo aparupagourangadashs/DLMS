@@ -6,9 +6,40 @@ One application for the three IBMV portals: the **admin panel**, the **student p
 
 ## Status
 
+### Admin parity implementation
+
+The October 2026 reference review is implemented as **local demo workflows**,
+not connected production services:
+
+- **Dashboard:** four weekly metric sparklines, a ten-day active-user chart,
+  and enrollment/sales trends with Bar/Line/Area controls and totals.
+- **Learning:** multi-day event wizard with Markdown description/preview and
+  pricing; batch dates, managers, modules and community configuration;
+  feedback templates and question builder; required question-bank metadata;
+  validated local asset previews; certificate design, expiry, automation and
+  notification configuration.
+- **Community:** create message or feed communities, post, pin and moderate.
+- **Marketing and sales:** four-channel template drafts and safe previews,
+  structured promo-code wizard with an order simulator, and a filterable
+  cheque register with proposed status handling.
+- **Settings:** international currencies, learner-sidebar configuration and
+  preview, hierarchical categories, scoped custom fields, branch managers and
+  activity, validated grading bands, fee descriptions, wallet history/usage,
+  and nine notification families with global channel controls.
+- **Analytics:** 49 deterministic synthetic reports, including the More
+  category. Date/branch/course/status/search filters recalculate previews;
+  exports download all matching rows as CSV rather than only the visible page.
+
+The detailed implementation matrix and integration boundaries are in
+[the admin specification](copilot/ADMIN_PANEL_SPEC.md#9-local-demo-implementation).
+
+Do not use these screens for real learner, financial, or provider operations.
+Demo changes remain in page memory and reset on navigation unless explicitly
+stated otherwise. No changes are made to the reference site's records.
+
 | Portal | Status |
 | --- | --- |
-| Admin panel (`/admin`) | All 9 sections and 51 screens are built as a **clickable frontend with demo data**, ready for customer review |
+| Admin panel (`/admin`) | All 9 sections and 52 screens are built as a **clickable frontend with demo data**, ready for customer review |
 | Student portal | Next, after the admin screens are signed off |
 | Public website | Planned |
 
@@ -18,9 +49,20 @@ Admin screens are labelled by how well the source specification supports them:
 - **Proposed design**: the spec listed only the menu entry; fields are our proposal for IBMV to review.
 - **Needs IBMV decision**: the reference showed Coming Soon, Access Restricted or a legacy page. These screens show a proposal and the open questions instead of a fake UI.
 
-All data is synthetic, generated deterministically in `src/lib/admin/`. Creating, editing, archiving, and reviewing records works in the browser for demos, but **nothing is saved**. Changes reset when you leave the page.
+All data is synthetic, generated deterministically in `src/lib/admin/`.
+Most edits reset when you leave the page. Promotional templates, promo codes
+and cheque status history explicitly use **local browser storage**, with reset
+controls. This is not shared, authenticated or production storage. Never enter
+real learner, financial or confidential information into demo forms.
 
 ### Help center
+
+Admin sections, each section's page menu, and quick-create actions are sorted
+A-Z by their visible English labels (case-insensitive). Desktop navigation,
+mobile navigation, search and Help topics share this route inventory. Routes
+and existing bookmarks are unchanged; each section keeps its original landing
+page. Home remains available in the A-Z rail and through the logo. Account
+navigation links are also alphabetical.
 
 Every admin page has a **Help** button (or press `?`) that opens its help article at `/admin/help/<section>/<page>`. The help center at `/admin/help` has getting-started guides and a searchable list of every page.
 
@@ -50,6 +92,8 @@ npm run dev        # http://localhost:3000, admin panel at /admin
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint (Next.js Core Web Vitals + TypeScript rules) |
 | `npx tsc --noEmit` | Type-check |
+| `node --experimental-strip-types --test src/lib/admin/editor-validation.test.mjs src/lib/admin/markdown.test.mjs` | Nine focused editor-validation and safe Markdown tests (Node 22.18+ or newer supported LTS) |
+| `node --experimental-strip-types --test src/lib/admin/navigation.test.mjs` | Alphabetical navigation, landing-page and quick-create regression tests |
 
 ## Stack
 
@@ -97,6 +141,13 @@ panels have mode-specific icon headers, notification settings show live enabled
 counts per channel, and decision screens use numbered question cards while
 clearly remaining proposals. Help Center guides and articles use section
 colors, icon tiles, and accented task cards; search and page links are retained.
+
+The newly added parity screens use that same visual system, not a separate
+plain theme: colorful report/template/setting cards, icon-led tabs and wizard
+steps, tinted previews, shared gradient table headers, status badges, and
+semantic gold/create/save/archive/delete actions. Shared comboboxes, date
+pickers and Bar/Line/Area controls keep their responsive sizing and keyboard
+behavior in new screens and drawers as well.
 
 All visible admin tables share the theme-aware `admin-data-table` styles and the
 keyboard-focusable `TableScroll` wrapper in `src/components/ui/Table.tsx`.

@@ -46,6 +46,7 @@ export function BarChart({
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const groupW = plotW / labels.length;
+  const labelStride = Math.max(1, Math.ceil(labels.length / Math.max(2, Math.floor(plotW / 58))));
   const barW = Math.min(28, (groupW * 0.7) / series.length);
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => Math.round(niceMax * t));
 
@@ -87,9 +88,9 @@ export function BarChart({
                     );
                   })
                 : null}
-              <text x={pad.left + i * groupW + groupW / 2} y={height - 8} textAnchor="middle" className="fill-muted text-[11px]">
+              {i % labelStride === 0 ? <text x={pad.left + i * groupW + groupW / 2} y={height - 8} textAnchor="middle" className="fill-muted text-[11px]">
                 {label}
-              </text>
+              </text> : null}
             </g>
           );
         })}

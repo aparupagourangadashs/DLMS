@@ -589,15 +589,17 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
           title={formRow ? `Edit ${entity}` : config.primaryAction ?? `New ${entity}`}
           description={formRow ? nameOf(formRow) : `Fields marked * are required.`}
           fields={config.form.fields}
-          initial={formRow}
+          steps={config.form.steps}
+          editor={config.form.editor}
+          initial={formRow ?? config.form.defaults}
           submitLabel={formRow ? "Save changes" : `Create ${entity}`}
           onClose={closeForm}
           onSubmit={(values) => {
             if (formRow) {
               setRows((prev) => prev.map((r) => (r.id === formRow.id ? { ...r, ...values } : r)));
-              toast.success(`${cap(entity)} updated`);
+              toast.success(`${cap(entity)} updated locally`, { description: "Demo only: changes are cleared when this page reloads." });
             } else {
-              const row = { ...config.form!.defaults, ...values, id: `new-${rows.length + 1}` } as Row;
+              const row = { ...config.form!.defaults, ...values, id: `new-${crypto.randomUUID()}` } as Row;
               setRows((prev) => [row, ...prev]);
               const hasAllTab = config.tabs?.items.some((t) => !t.value) ?? true;
               setTab(hasAllTab || !tabKey ? ALL : String(row[tabKey] ?? ALL));

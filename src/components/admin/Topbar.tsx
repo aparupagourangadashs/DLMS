@@ -81,7 +81,7 @@ export function Topbar() {
         <Popover
           label="Quick create"
           trigger={({ open, toggle, ref }) => (
-            <button ref={ref} type="button" onClick={toggle} aria-expanded={open} className={buttonClass("gold")}>
+            <button ref={ref} type="button" onClick={toggle} aria-label="New" aria-expanded={open} className={buttonClass("gold")}>
               <Plus className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">New</span>
             </button>
@@ -93,27 +93,28 @@ export function Topbar() {
                 const [section, page] = q.key.split("/");
                 return (
                   <li key={q.key}>
-                    <button
-                      type="button"
-                      className={menuItemClass}
-                      onClick={() => {
-                        close();
-                        setPendingCreate(q.key);
-                        router.push(pageHref(section, page));
-                      }}
-                    >
-                      <Plus className="size-3.5 text-muted" aria-hidden="true" />
-                      {q.label}
-                    </button>
+                    {q.key === "users/new-enrolment" ? (
+                      <Link href={pageHref(section, page)} onClick={close} className={menuItemClass}>
+                        <Plus className="size-3.5 text-muted" aria-hidden="true" />
+                        {q.label}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className={menuItemClass}
+                        onClick={() => {
+                          close();
+                          setPendingCreate(q.key);
+                          router.push(pageHref(section, page));
+                        }}
+                      >
+                        <Plus className="size-3.5 text-muted" aria-hidden="true" />
+                        {q.label}
+                      </button>
+                    )}
                   </li>
                 );
               })}
-              <li className="mt-1 border-t border-border pt-1">
-                <Link href="/admin/users/new-enrolment" onClick={close} className={menuItemClass}>
-                  <Plus className="size-3.5 text-muted" aria-hidden="true" />
-                  Enrolment
-                </Link>
-              </li>
             </ul>
           )}
         </Popover>
@@ -152,7 +153,7 @@ export function Topbar() {
           )}
         </Popover>
 
-        <ThemeToggle className="hidden sm:inline-flex" />
+        <div className="hidden sm:block"><ThemeToggle /></div>
 
         <Popover
           label="Account"
@@ -185,16 +186,16 @@ export function Topbar() {
                 </Badge>
               </div>
               <div className="border-t border-border pt-1">
-                <Link href={pageHref("settings", "my-profile")} onClick={close} className={menuItemClass}>
-                  <UserRound className="size-4 text-muted" aria-hidden="true" />
-                  My Profile
+                <Link href="/" onClick={close} className={menuItemClass}>
+                  All portals
                 </Link>
                 <Link href={HELP_HOME} onClick={close} className={menuItemClass}>
                   <CircleHelp className="size-4 text-muted" aria-hidden="true" />
                   Help center
                 </Link>
-                <Link href="/" onClick={close} className={menuItemClass}>
-                  All portals
+                <Link href={pageHref("settings", "my-profile")} onClick={close} className={menuItemClass}>
+                  <UserRound className="size-4 text-muted" aria-hidden="true" />
+                  My Profile
                 </Link>
               </div>
               <div className="flex items-center justify-between border-t border-border px-3 pt-2 pb-1 sm:hidden">

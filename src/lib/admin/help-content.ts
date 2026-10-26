@@ -20,7 +20,7 @@ export const generalGuides: Array<HelpTask & { id: string }> = [
     id: "navigation",
     title: "Finding your way around",
     steps: [
-      "The left rail lists the nine sections: Home, Products, Learning, Users, Engage, Marketing, Sales, Analytics and Settings.",
+      "The left rail lists all nine sections alphabetically. Each section's pages are also sorted A–Z by their displayed names.",
       "Selecting a section opens its pages in the second column. The page you are on is highlighted.",
       "On a phone or tablet, select the **menu** button (top left) to open the same navigation.",
       "The breadcrumb at the top shows the section and page you are on.",
@@ -74,7 +74,8 @@ export const generalGuides: Array<HelpTask & { id: string }> = [
     steps: [
       "All names, numbers and records are sample data for review. They are not real learners or payments.",
       "You can create, edit, archive and delete records to try the screens. A message at the top right confirms each action.",
-      "Changes are kept only until you leave or reload the page. Saving to the database arrives with the backend phase.",
+      "Most changes reset when you leave or reload the page. Screens explicitly marked local browser storage retain their demo drafts on this device only.",
+      "Nothing is saved to a production database or sent to learners, payment gateways or notification providers.",
     ],
   },
   {
@@ -92,14 +93,14 @@ export const generalGuides: Array<HelpTask & { id: string }> = [
 const analyticsTasks: HelpTask[] = [
   {
     title: "Choose the reporting period",
-    steps: ["Open the date range menu at the top right.", "Choose **Last 7 days**, **Last 30 days**, **Last 90 days** or **This year**. The figures and reports use this period."],
+    steps: ["Open the date range menu at the top right.", "Choose the last 7, 30, 90 or 365 demo days, anchored to 26 October 2026. Figures and reports use this period and the selected filters."],
   },
   {
     title: "Open a report",
     steps: [
       "Select a report card under **Reports**.",
-      "A panel opens on the right. Reports with sample data show a preview table; the others describe what the report will contain.",
-      "Select **Export** in the panel to download the report (enabled once reports read from the database).",
+      "A panel opens on the right with a filtered synthetic preview table.",
+      "Select **Export** to download all matching synthetic rows as CSV, including rows beyond the visible page. These are not production figures.",
       "Press **Esc** or the close button to return to the report list.",
     ],
   },
@@ -113,8 +114,9 @@ export const helpContent: Record<string, HelpEntry> = {
       {
         title: "Read the weekly performance cards",
         steps: [
-          "The four cards at the top show average time spent, total views, average rating and daily active users.",
-          "The green or red percentage compares each figure with the previous week (with yesterday for daily active users).",
+          "The four cards show average time spent, total views, average rating and average attendance, each with a seven-day sparkline.",
+          "The green or red percentage compares each figure with the previous week. All figures are synthetic demo data.",
+          "The separate Daily active users chart shows ten days of activity and their daily average.",
         ],
       },
       {
@@ -122,7 +124,8 @@ export const helpContent: Record<string, HelpEntry> = {
         steps: [
           "In the chart card, open the menu at the top right.",
           "Choose **Signup vs Enrollments** to compare new accounts with enrollments, or **Sales** for weekly revenue.",
-          "Point at a bar to see its exact value.",
+          "Switch between **Bar**, **Line** and **Area**. Point at a data mark to see its value, or use the accessible data table.",
+          "The total above the chart covers the last four weekly periods.",
         ],
       },
       {
@@ -393,6 +396,7 @@ export const helpContent: Record<string, HelpEntry> = {
     summary: "Learner communities where members post messages, staff pin important posts and moderators manage membership.",
     whoUses: "Community moderators and instructors.",
     tasks: [
+      { title: "Create a demo community", steps: ["Select **New Community**.", "Enter a unique name and description, then choose Message layout for chronological conversations or Feed layout for newest posts first.", "Select **Create community**. The new community opens with Demo Admin as moderator; no learners are invited or notified."] },
       { title: "Switch community", steps: ["Select a community in the list on the left. Its messages, members and pins open on the right."] },
       { title: "Post a message", steps: ["Open the **Messages** tab.", "Type in the box at the bottom and select **Send**."] },
       {
@@ -405,7 +409,8 @@ export const helpContent: Record<string, HelpEntry> = {
       },
     ],
     tips: [
-      "Pin the community guidelines so new members see them first.",
+      "Pinned posts appear in the Pins tab. Message communities remain chronological; feed communities show newest posts first.",
+      "Communities and messages are local demo state and reset when you leave the page.",
       "Rules for moderation, reporting and message retention are still to be agreed with IBMV.",
     ],
     related: ["engage/discussions", "analytics/community-analytics"],
@@ -572,7 +577,8 @@ export const helpContent: Record<string, HelpEntry> = {
   "settings/sub-organizations": {
     summary: "Branches and centres (for example Head Office, Pune Centre and Online), each with its own admins and learners.",
     whoUses: "Super administrators.",
-    tips: ["Archive a branch that closes rather than deleting it, so its history and reports are kept."],
+    tasks: [{ title: "Configure a demo branch", steps: ["Enter the branch name, city and manager in the branch form.", "Add the branch to the local list. Manager and activity are visible on each branch.", "Use Pause or Reactivate to try a local status change, then Save changes. No real learners or permissions are moved."] }],
+    tips: ["Branch activity and manager assignments are synthetic; real access isolation requires backend authorization."],
     related: ["users/team"],
   },
   "settings/system-notifications": {
@@ -582,11 +588,12 @@ export const helpContent: Record<string, HelpEntry> = {
       {
         title: "Change which channels a message uses",
         steps: [
-          "Find the message in the list, for example **Session reminder – 1 hour before**.",
+          "Choose one of the nine event-family tabs, then find the message in its list.",
           "Turn the switch on or off under **Email**, **WhatsApp**, **SMS** or **Push**.",
           "Select **Save changes**. **Reset** discards changes you haven't saved.",
         ],
       },
+      { title: "Manage global channels", steps: ["Select **Manage Notifications**.", "Disable a global channel to disable its event switches without discarding their preferences.", "Select **Done**, then Save changes. Provider statuses remain Not connected and no message is sent."] },
     ],
     tips: [
       "Learners can still opt out of a channel in their own preferences.",
@@ -597,12 +604,14 @@ export const helpContent: Record<string, HelpEntry> = {
   "settings/categories": {
     summary: "Categories group courses on the website catalog pages and in reports. Each one has its own web address, such as /self-study.",
     whoUses: "Administrators and content editors.",
+    tasks: [{ title: "Build a category hierarchy", steps: ["Add a category or choose its parent when adding a subcategory.", "Use the move-up and move-down icon buttons to reorder categories or their subcategories.", "Save changes to validate the local structure. The live catalog is not changed."] }],
     tips: ["Changing a URL path breaks old links and bookmarks. Plan a redirect when you change one."],
     related: ["products/events", "marketing/blogs"],
   },
   "settings/custom-fields": {
     summary: "Extra fields captured on learner profiles, registration and kids' enrolment forms.",
     whoUses: "Administrators.",
+    tasks: [{ title: "Configure scoped demo fields", steps: ["Choose an entity tab, then the available placement view.", "Add the field label, type and required setting.", "Use the reorder controls to adjust fields within the selected entity and placement. Save changes keeps the configuration only on this page."] }],
     tips: [
       "Ask only for information you will actually use. Every required field makes registration longer.",
       "Personal details such as a parent's contact need consent and careful handling.",
@@ -612,6 +621,7 @@ export const helpContent: Record<string, HelpEntry> = {
   "settings/grading-system": {
     summary: "Grade bands (for example A+ for 90–100%) applied to assessment percentages.",
     whoUses: "Examiners and administrators.",
+    tasks: [{ title: "Edit grade bands", steps: ["Edit the label and percentage range inline, or select Add band.", "Remove bands you do not need.", "Save changes checks that ranges cover 0 through 100 without gaps or overlaps. Resolve the inline error before saving."] }],
     tips: [
       "Make sure the bands cover 0–100% with no gaps or overlaps.",
       "Changing the bands affects how existing results are displayed.",
@@ -621,18 +631,26 @@ export const helpContent: Record<string, HelpEntry> = {
   "settings/miscellaneous-fees": {
     summary: "Extra charges, such as printed material or courier, that can be added to a product at checkout.",
     whoUses: "Finance staff.",
+    tasks: [{ title: "Add a fee template", steps: ["Enter a template name, description and amount.", "Add it to the local list and Save changes.", "No invoice, tax calculation or real charge is created."] }],
     tips: ["How these fees are taxed and shown on invoices will be confirmed with IBMV."],
     related: ["analytics/sales-enrollment"],
   },
-  "settings/international-selling": { summary: "Prices and payments for learners outside India." },
-  "settings/learner-experience": { summary: "How the student portal looks and which features learners see." },
+  "settings/international-selling": {
+    summary: "Preview branch availability, base and fallback currencies, pricing method, adjustments and precision.",
+    tasks: [{ title: "Configure international pricing", steps: ["Set branch enablement and choose different base and fallback currencies.", "Choose fixed pricing or automatic conversion, then set the adjustment and decimal precision.", "Save changes validates the settings. Live rates, payment gateway connection and checkout remain unconfigured."] }],
+  },
+  "settings/learner-experience": {
+    summary: "Configure a local preview of the learner menu and feature visibility.",
+    tasks: [{ title: "Customize the learner menu", steps: ["Toggle visibility and use the reorder controls on learner-sidebar items.", "Add a custom item label and HTTPS destination, then check its position in the preview. Custom links open in a new tab.", "Adjust class-record, overview, password, preference and profile visibility, then Save changes. No deployed student portal is modified."] }],
+  },
   "settings/utility-wallet": {
     summary: "Prepaid credits used for sending SMS, WhatsApp and email, with every recharge and charge listed.",
     whoUses: "Finance staff and administrators.",
     tips: [
-      "Recharge before a large campaign so messages aren't held back by a low balance.",
+      "Recharging and sending notifications are not connected in this demo.",
       "Use the dates to reconcile charges with the provider's invoices.",
     ],
+    tasks: [{ title: "Review demo wallet activity", steps: ["Open Notification credits to inspect usage, channel and running balance.", "Filter recharge history and export matching demo rows.", "AI credits are marked unavailable; no real balance is recharged or spent."] }],
     related: ["marketing/campaigns", "settings/system-notifications"],
   },
 };

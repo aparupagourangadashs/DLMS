@@ -45,6 +45,7 @@ export function StatCard({
   change,
   icon,
   color = "indigo",
+  trend,
 }: {
   label: string;
   value: string;
@@ -53,6 +54,7 @@ export function StatCard({
   change?: number;
   icon?: React.ReactNode;
   color?: ColorKey;
+  trend?: { labels: string[]; values: number[]; unit?: string };
 }) {
   const up = (change ?? 0) >= 0;
   const c = palette[color];
@@ -83,6 +85,26 @@ export function StatCard({
         ) : null}
         {hint ? <span>{hint}</span> : null}
       </div>
+      {trend ? <Sparkline label={label} trend={trend} color={c.text} /> : null}
     </div>
+  );
+}
+
+function Sparkline({ label, trend, color }: { label: string; trend: { labels: string[]; values: number[]; unit?: string }; color: string }) {
+  const max = Math.max(1, ...trend.values);
+  const points = trend.values.map((value, index) => ({
+    x: 4 + (index * 192) / Math.max(1, trend.values.length - 1),
+    y: 44 - (value / max) * 36,
+  }));
+  const line = points.map((point, index) => `${index ? "L" : "M"}${point.x},${point.y}`).join(" ");
+  return (
+    <figure className={cn("mt-3", color)}>
+      <svg viewBox="0 0 200 50" className="h-14 w-full" role="img" aria-label={`${label}: seven-day trend`}>
+        <path d={`${line} L196,48 L4,48 Z`} fill="currentColor" opacity={0.1} />
+        <path d={line} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r={2.5} fill="currentColor"><title>{`${trend.labels[index]}: ${trend.values[index]}${trend.unit ?? ""}`}</title></circle>)}
+      </svg>
+      <figcaption className="sr-only">{trend.values.map((value, index) => `${trend.labels[index]}: ${value}${trend.unit ?? ""}`).join("; ")}</figcaption>
+    </figure>
   );
 }

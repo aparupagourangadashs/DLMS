@@ -2,21 +2,21 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, ChevronRight, Clock3, HeartHandshake, MessageSquare, Pin, PinOff, Send, ShieldCheck, Users, UserRoundMinus } from "lucide-react";
+import { BookOpen, ChevronRight, Clock3, HeartHandshake, LayoutList, MessageSquare, Pin, PinOff, Plus, Send, ShieldCheck, Users, UserRoundMinus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { cardCycle, palette } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { inputClass } from "@/components/ui/Field";
+import { Field, inputClass } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
 export type CommunityMessage = { id: string; author: string; role: string; time: string; text: string; pinned: boolean };
 export type CommunityMember = { id: string; name: string; role: "Moderator" | "Member"; joined: string };
-export type Community = { id: string; name: string; description: string; messages: CommunityMessage[]; members: CommunityMember[] };
+export type Community = { id: string; name: string; description: string; layout?: "messages" | "feed"; messages: CommunityMessage[]; members: CommunityMember[] };
 
 export function CommunityPage({ communities: initial }: { communities: Community[] }) {
   const [communities, setCommunities] = useState(initial);
@@ -24,6 +24,9 @@ export function CommunityPage({ communities: initial }: { communities: Community
   const [tab, setTab] = useState<"messages" | "members" | "pins">("messages");
   const [draft, setDraft] = useState("");
   const [removing, setRemoving] = useState<CommunityMember | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [communityDraft, setCommunityDraft] = useState<{ name: string; description: string; layout: "messages" | "feed" }>({ name: "", description: "", layout: "messages" });
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
   const active = communities.find((c) => c.id === activeId);
   const activeColor = palette[cardCycle[Math.max(0, communities.findIndex((c) => c.id === activeId)) % cardCycle.length]];
 
@@ -36,7 +39,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
 
   return (
     <>
-      <PageHeader title="Community" description="Learner communities with members, messages and pinned posts." status="ready" />
+      <PageHeader title="Community" description="Learner communities with members, messages and pinned posts." status="ready" actions={<Button variant="gold" onClick={() => { setCommunityDraft({ name: "", description: "", layout: "messages" }); setCreateErrors({}); setCreating(true); }}><Plus className="size-4" aria-hidden="true" />New Community</Button>} />
       <DemoNotice />
       <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
         <Card className="h-fit min-w-0 overflow-hidden">
@@ -53,7 +56,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
               <li key={c.id}>
                 <button
                   type="button"
-                  onClick={() => setActiveId(c.id)}
+                  onClick={() => { setActiveId(c.id); setDraft(""); }}
                   aria-current={c.id === activeId ? "true" : undefined}
                   className={cn("community-choice", c.id === activeId ? color.tile : "hover:bg-surface-muted")}
                 >
@@ -78,6 +81,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
                 <div className="min-w-0">
                 <h2 className="font-serif text-2xl font-semibold">{active.name}</h2>
                 <p className="mt-1 text-sm text-muted">{active.description}</p>
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-muted"><LayoutList className="size-3.5" aria-hidden="true" />{active.layout === "feed" ? "Feed layout · newest posts first" : "Message layout · conversation order"}</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
                   <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", palette.teal.tile)}><Users className="size-3.5" aria-hidden="true" />{active.members.length} members</span>
                   <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", palette.violet.tile)}><MessageSquare className="size-3.5" aria-hidden="true" />{active.messages.length} messages</span>
@@ -123,7 +127,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
                 ))}
               </ul>
             ) : (
-              <MessageList messages={tab === "pins" ? active.messages.filter((m) => m.pinned) : active.messages} onTogglePin={togglePin} emptyPins={tab === "pins"} />
+              <MessageList messages={(tab === "pins" ? active.messages.filter((m) => m.pinned) : active.messages).toSorted((a, b) => active.layout === "feed" ? active.messages.indexOf(b) - active.messages.indexOf(a) : 0)} onTogglePin={togglePin} emptyPins={tab === "pins"} />
             )}
 
             {tab === "messages" ? (
@@ -135,7 +139,7 @@ export function CommunityPage({ communities: initial }: { communities: Community
                   if (!text) return;
                   update((c) => ({
                     ...c,
-                    messages: [...c.messages, { id: `m-${c.messages.length + 1}`, author: "Demo Admin", role: "Admin", time: "Just now", text, pinned: false }],
+                    messages: [...c.messages, { id: crypto.randomUUID(), author: "Demo Admin", role: "Admin", time: "Just now", text, pinned: false }],
                   }));
                   setDraft("");
                 }}
@@ -153,6 +157,32 @@ export function CommunityPage({ communities: initial }: { communities: Community
           </Card>
         ) : null}
       </div>
+
+      <Modal open={creating} onClose={() => setCreating(false)} title="Create community" description="Create a local demo community. No learners are notified.">
+        <form noValidate className="flex flex-col gap-4" onSubmit={(event) => {
+          event.preventDefault();
+          const errors: Record<string, string> = {};
+          if (!communityDraft.name.trim()) errors.name = "Community name is required.";
+          else if (communities.some((community) => community.name.toLowerCase() === communityDraft.name.trim().toLowerCase())) errors.name = "A community with this name already exists.";
+          if (!communityDraft.description.trim()) errors.description = "Description is required.";
+          setCreateErrors(errors);
+          if (Object.keys(errors).length) { document.getElementById(`community-${Object.keys(errors)[0]}`)?.focus(); return; }
+          const id = crypto.randomUUID();
+          setCommunities((previous) => [...previous, { id, name: communityDraft.name.trim(), description: communityDraft.description.trim(), layout: communityDraft.layout, members: [{ id: crypto.randomUUID(), name: "Demo Admin", role: "Moderator", joined: "Just now" }], messages: [] }]);
+          setActiveId(id); setTab("messages"); setDraft(""); setCreating(false);
+          toast.success("Demo community created");
+        }}>
+          <div className={cn("flex items-center gap-3 rounded-xl border border-violet-200 p-4 dark:border-violet-500/25", palette.violet.tile)}><span className={cn("flex size-11 shrink-0 items-center justify-center rounded-2xl", palette.violet.solid)}><HeartHandshake className="size-6" aria-hidden="true" /></span><div><p className="font-semibold">A new space to learn together</p><p className="mt-1 text-xs text-muted">Choose a conversation or announcement-style feed.</p></div></div>
+          <Field id="community-name" label="Community name" required error={createErrors.name}><input id="community-name" className={inputClass} value={communityDraft.name} maxLength={100} onChange={(event) => setCommunityDraft((draft) => ({ ...draft, name: event.target.value }))} aria-invalid={Boolean(createErrors.name)} aria-describedby={createErrors.name ? "community-name-error" : undefined} /></Field>
+          <Field id="community-description" label="Description" required error={createErrors.description}><textarea id="community-description" className={cn(inputClass, "min-h-24 py-3")} value={communityDraft.description} onChange={(event) => setCommunityDraft((draft) => ({ ...draft, description: event.target.value }))} aria-invalid={Boolean(createErrors.description)} aria-describedby={createErrors.description ? "community-description-error" : undefined} /></Field>
+          <fieldset className="grid gap-2"><legend className="mb-2 text-sm font-medium">Community layout</legend>{(["messages", "feed"] as const).map((layout) => {
+            const color = palette[layout === "messages" ? "sky" : "violet"];
+            const Icon = layout === "messages" ? MessageSquare : LayoutList;
+            return <label key={layout} className={cn("flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3 text-sm transition-colors", communityDraft.layout === layout ? color.tile : "bg-surface hover:bg-surface-muted")}><input type="radio" name="community-layout" checked={communityDraft.layout === layout} onChange={() => setCommunityDraft((draft) => ({ ...draft, layout }))} className="mt-2.5 size-4 shrink-0 accent-accent" /><span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", color.solid)} aria-hidden="true"><Icon className="size-4" /></span><span><strong className="block">{layout === "messages" ? "Message layout" : "Feed layout"}</strong><span className="text-xs text-muted">{layout === "messages" ? "A conversation in chronological order." : "Latest updates and announcements first."}</span></span></label>;
+          })}</fieldset>
+          <div className="flex flex-wrap justify-end gap-2"><Button variant="soft-info" onClick={() => setCreating(false)}>Cancel</Button><Button type="submit" variant="success"><Plus className="size-4" aria-hidden="true" />Create community</Button></div>
+        </form>
+      </Modal>
 
       <Modal
         open={removing !== null}

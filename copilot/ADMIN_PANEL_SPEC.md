@@ -312,3 +312,164 @@ columns remain unverified.
 - Error handling for the observed 400/404 responses and intermittent loading.
 - Whether all listed features belong to the desired clone scope or are
   optional LMS capabilities.
+
+## 8. Read-only parity recheck: 2026-10-26
+
+### Scope and interpretation
+
+The live V2 application was revisited with an administrator session, including
+the nine primary sections, their visible submenu inventories, all ten settings
+screens, report categories, and selected create/configuration forms.
+Creation forms were opened for inspection only. No forms were submitted, no
+settings toggled, and no records, messages, payments, or files intentionally
+created, changed, sent, or downloaded. Credentials, authentication tokens, and
+private learner/account records are not included in this document.
+
+This recheck supplements rather than rewrites the 2026-10-19 observations.
+Visible controls confirm a UI surface, not successful backend behavior.
+Several live requests still returned 400/404 errors or incomplete states.
+
+The local application has 51 admin screens and 52 help pages. Most top-level
+navigation is represented, but this does not establish workflow parity:
+local records and edits are synthetic/in-memory, authentication and permission
+enforcement are deferred, and provider/database integration is not implemented.
+The preceding UI review checked those 103 local routes at desktop and 320px
+widths without page-level horizontal overflow or browser runtime exceptions;
+that is UI evidence only, not production functionality evidence.
+
+### Confirmed differences
+
+| Area | Live controls observed | Local implementation and gap |
+| --- | --- | --- |
+| Events | A multi-step editor with multiple event days, start/end times, image and rich description, publication state, venue/platform, guest access, manager, category, membership, feedback-form selection, and a pricing step | The local event form contains name, one date/time, venue text, and visibility. The fuller editor is missing; pricing-step fields were not inspected because advancing could require completed data. |
+| Batches | Explicit start/end dates, primary/additional managers, course/module selection, and optional batch community | Local form substitutes a duration choice and has no additional manager, module picker, or batch-community control. |
+| Feedback Forms | A type/template selection wizard for session feedback, course-linked forms, and general surveys | Local form creates only a name and Rating/Survey metadata. The observed wizard and template selection are missing; downstream question-builder behavior remains unverified. |
+| Question Bank | A creation form with required exam/subject/topic/difficulty and a short description | Local exam is optional, topic is optional, and description is absent. Question-level editing/import was not inspected and must not be claimed as verified parity. |
+| Asset Library | Asset-type selection covering 13 media/document/link formats | Local type names are present, but creation accepts a filename/link string rather than a media upload/storage workflow. |
+| Certificates | Serial prefix, description, custom fields, expiry rules, builder or uploaded template, placeholder reference, course/exam-based automation, and notification editing | Local form is basic template metadata and a free-text issuance rule. Template design/upload, PDF generation, structured automation, and notification configuration are missing. |
+| Community | New Community form with name/description and message-versus-feed layouts, alongside member/message/pin controls | Local page supports existing demo communities, sending, pinning, and member removal; it lacks community creation and layout selection. |
+| Promotional Templates | Email/SMS/WhatsApp/Push tabs and an Add Template editor; email editor exposes subject, reply-to, rich content/upload, and unsubscribe settings | Local route remains a decision/proposal page. This is now an observed missing management surface, not merely an unverified menu. |
+| Promo Codes | Multiple-use/single-use tabs and a wizard with start/expiry dates, website/app display options, system-wide and per-user limits, plus a discount-configuration step | Local form has code, discount text, applicability, and expiry; it lacks these type, visibility, and limit controls. Second-step details were not inspected. |
+| Cheque Management | A table with student/parent/bank/amount/status/remark and date/status/bank filtering | Local route remains a proposal. Live table controls are confirmed, but operational actions could not be validated on the empty/erroring list. |
+| Categories | Category/Sub-Category tabs and Reorder/Add Category controls | Local flat category list has no parent-child category management or reorder action. |
+| Custom Fields | Entity tabs for learner/instructor/course/batch/certificate/question/announcement/enquiry; signup/offline-admission placement views | Local scope choices and required/type metadata are much narrower. Live Add Field/Reorder controls were visibly gated, so creation/reordering was not exercised or bypassed. |
+| Sub-Organizations | Branch list exposes manager and activity | Local branch list/form instead focuses on city and synthetic admin/learner counts; manager/activity parity needs implementation. |
+| Grading System | An inline band configuration screen with add/remove and Save Changes | Local generic grade CRUD is a different interaction model. Exact live grading validation rules remain unverified. |
+| Miscellaneous Fees | Fee-template list with name, description, amount, and template creation | Local fee metadata lacks the observed description field; complete template rules require further inspection. |
+| International Selling | Branch enablement, gateway indicator, base/fallback currency, fixed-price/automatic-rate options, and currency conversion/adjustment/precision controls | Local route is only a proposal. Currency configuration is a confirmed missing screen. No payment settings were changed or transactions attempted. |
+| Learner Experience | Learner-sidebar items, New Custom Item, preview, and additional visibility settings for class records, overview, password, preferences, and profile | Local route is only a proposal. The observed sidebar/custom-item configuration is missing. Reorder persistence was not exercised. |
+| Utility Wallet | Notification/AI credit tabs, credit-usage information, recharge history, export/filter controls, and transaction channel/balance fields | Local synthetic ledger lacks these separate views/actions and channel/running-balance fields. AI capability showed a Coming Soon indication; it is not verified working functionality. |
+| System Notifications | Nine event-family tabs plus a Manage Notifications dialog with channel-level global controls and provider-connection status | Local eight-event/channel switch matrix is only a subset; family-level coverage, global controls, provider setup, and delivery are missing. |
+| Dashboard | Four weekly metric sparklines (time spent, views, rating, attendance), a separate Daily Active Users trend, and an enrollment chart with a Signup vs Enrollments / Sales selector | Local dashboard has one switchable main chart and static summary cards. It lacks all four metric sparklines, the separate Daily Active Users chart, the enrollment total above the main chart, and the weekly average-attendance card. Local attendance/session actions remain demo state. |
+| Quick create | Session, Enrolment, Batch, Event, Blog | Local quick-create already includes these, including a separate Enrolment link in the shared top bar. The initial omission finding was corrected by checking that full menu. |
+| Analytics | Report categories include a More entry, and the suite exposes report families broader than local cards | Local report previews are samples, many cards are explanatory placeholders, selected date ranges do not recalculate real data, and report exports are deferred. |
+
+### Report inventory gaps
+
+Dashboard chart coverage was corrected after a visual recheck prompted by the
+user: the live dashboard renders six chart surfaces at once (four small weekly
+sparklines and two larger trends). Switching the enrollment panel to Sales
+changes that panel rather than adding a seventh simultaneous chart. The local
+Bar/Line/Area switches change rendering style; they do not supply the missing
+metric or Daily Active Users chart surfaces. Live chart data accuracy was not
+validated; this is a confirmed layout/functionality inventory difference.
+
+The live suite exposes the following report subjects not represented as
+equivalent dedicated local report experiences:
+
+- Batch performance, batch attendance, module progress, batch assessment,
+  assessment attempts, and issued certificates.
+- Session feedback, batch rating, trainer feedback, and event feedback.
+- Community overall activity, inbox activity, course engagement, and member
+  participation as separate reports.
+- The More category: branch statistics, storage consumption, bandwidth
+  consumption, scheduled tasks, user-time statistics, and wallet recharges.
+- Advanced user/test/course analytics are advertised in the suite, but the
+  direct Advanced Analytics route showed Access Restricted for this account.
+  Their actual filters, fields, actions, and results are not verified.
+
+Some local reports address related subjects with different names; these are
+partial conceptual coverage, not evidence of matching columns/calculations.
+Real query/filter/export behavior remains a separate implementation gap.
+
+### Restricted, unavailable, and changed observations
+
+- eBooks, Test Series, and Playlists still show Coming Soon. There is no
+  verified working manager to copy from those pages.
+- Workflows and Advanced Analytics showed Access Restricted. No restriction
+  was bypassed.
+- Mentorships now shows a service introduction, booking/pricing descriptions,
+  FAQ, and Get Started entry point rather than just a loader. Activation was
+  not attempted; booking-management parity remains unverified.
+- Discussions and Leads still redirect to the legacy application. During this
+  recheck they remained on environment setup, so their detailed workflows
+  could not be confirmed.
+
+### Recommended priority
+
+1. Treat the current application as a reviewed UI prototype, not a replacement
+   production admin. Add real authentication, authorization, persistence, and
+   integration boundaries before connecting sensitive operations.
+2. Complete core event/batch/media/feedback/certificate workflows.
+3. Add confirmed missing community/template/settings screens, then structured
+   promo-code controls and notification coverage.
+4. Complete report inventory, actual calculations, filtered exports, and
+   wallet/provider integration.
+5. Resolve legacy/restricted/activation-dependent requirements with IBMV
+   before treating proposed designs as a verified feature specification.
+
+## 9. Local demo implementation
+
+The section 8 matrix is a historical audit of the pre-change application.
+The changes below implement its actionable frontend gaps. They do **not**
+establish production parity or validate the reference system's calculations.
+The local inventory is now 52 admin screens and 53 help pages, including the
+new Analytics > More route and its help article.
+
+| Area | Implemented local workflow | Integration or verification boundary |
+| --- | --- | --- |
+| Dashboard | Four seven-day metric sparklines, attendance card, ten-day Daily Active Users trend, enrollment/sales totals and switchable main chart: six simultaneous chart surfaces | Synthetic values; no live activity or revenue queries |
+| Events | Three-step editor; multiple ordered, non-overlapping days; image selection/preview; Markdown formatting and safe preview; publication, platform, venue/link, guest access, manager, category, membership, feedback and pricing configuration | Pricing controls are a proposed demo design because the live pricing step was not inspected. No checkout, meeting creation or uploads |
+| Batches | Start/end dates, primary/additional managers, module selection and community configuration | Community selection is stored as configuration; it does not provision or attach a persisted community |
+| Feedback Forms | Session/course/general types, starting templates, editable/reorderable required/rating/text/choice questions and preview | No learner response collection or persisted forms |
+| Question Bank | Required exam, subject, topic and difficulty, with description | Question-level editing/import was not observed and is not claimed |
+| Asset Library | All 13 type choices, extension/size validation, local image/audio/video previews, external URLs, document/archive metadata | Files are not uploaded or executed. Only metadata survives closing the editor; preview requires reselecting the local file |
+| Certificates | Serial prefix, description, custom fields, expiry configuration, builder/upload selection, placeholders, structured course/exam automation and notification choices | HTML/image preview only; uploaded PDF metadata only. No PDF generation/download, real issuance, automation execution or message delivery |
+| Community | Validated unique-name creation, message/feed layouts, chronological/newest-first ordering, existing post/pin/member controls | Page-local communities and messages; no invitations or notifications |
+| Promotional Templates | Email/SMS/WhatsApp/Push tabs, create/edit/duplicate/delete, safe content import and sample-personalized preview, subject/reply-to/unsubscribe validation | Local browser drafts only; arbitrary HTML is not executed, and no provider approval or sending occurs |
+| Promo Codes | Single/multiple use, dates, website/app visibility, system/per-user limits, percentage/fixed discount, minimum spend/cap/applicability and order simulator | Local browser codes; no real redemption, checkout or shared usage enforcement |
+| Cheque Management | Synthetic register, date/status/bank/text filtering, CSV export, proposed status transitions with required remarks and local history | Operational transitions were not verified on the live empty/erroring list. No deposit, bank verification, ledger posting or settlement |
+| Categories | Parent/child management and category/subcategory reorder controls | Local hierarchy only; no published catalog changes |
+| Custom Fields | Entity scopes, placement views, field type/required metadata and reorder controls | Local configuration only. Live creation/reorder was gated and not exercised |
+| Sub-Organizations | Manager and activity details, local branch creation and pause/reactivate actions | No persisted branch membership or authorization changes |
+| Grading System | Inline add/remove/edit bands, validation of whole-number 0-100 coverage without gaps/overlaps | Proposed validation policy; live rules were not verified and no assessment is regraded |
+| Miscellaneous Fees | Name, description and amount templates | No invoicing, taxation or actual charge |
+| International Selling | Branch availability, unconnected gateway status, base/fallback currencies, pricing method, adjustment and precision | No live conversion feed or payment integration |
+| Learner Experience | Sidebar reorder/visibility, custom HTTPS links, preview and additional profile/class-record/preferences controls | Does not publish changes to a deployed learner portal |
+| Utility Wallet | Notification/AI views, usage, filtered recharge history/export, channel and running balance | Synthetic ledger; no real recharge/spend. AI is unavailable |
+| System Notifications | Nine event families, per-event channels, global channel controls, enabled counts, save/reset and provider status dialog | All providers remain Not connected; preferences are page-local, no delivery occurs |
+| Analytics | 49 deterministic synthetic reports, including missing batch/feedback/community/More families, recalculating date/branch/course/status/search filters, sortable/selectable-column previews and matching-row CSV exports | Demo period anchored to 26 October 2026; not production metrics, storage measurements, provider logs or audited calculations |
+| Quick create | Existing Session/Enrolment/Batch/Event/Blog shortcuts retained and wired to their workflows | No duplicate Enrolment entry was added |
+
+### Storage and access boundaries
+
+- Learning, community and settings changes remain page-local and reset on
+  navigation. Marketing template/code drafts and cheque history explicitly use
+  versioned local browser storage with reset controls; this is not secure,
+  shared, authoritative persistence.
+- No database connection, migration, production authentication/authorization,
+  external provider setup, payment integration or live-site writes were added.
+  Never enter real credentials, learner data or financial records in demos.
+- Coming Soon products, restricted workflows, legacy pages and mentorship
+  activation requirements remain explicitly unverified/proposed. The local
+  Advanced Analytics reports are proposals, not a bypass or verified copy of
+  the restricted live feature.
+- Reusable dropdowns, date pickers, dialogs, colorful tables, light/dark
+  themes and mobile layouts remain the shared UI conventions. Help content
+  distinguishes local configuration, browser-persisted drafts and real
+  external effects.
+- Newly added settings, marketing managers, learning editors and all report
+  pages follow the same colorful card, icon, table, status-badge and semantic
+  button treatment as the previously redesigned admin screens. Wizard
+  progress, local-file selection, content previews and notification controls
+  are included in this visual pass.

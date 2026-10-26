@@ -30,10 +30,11 @@ export type NavSection = {
   slug: string;
   label: string;
   icon: LucideIcon;
+  landingPage: string;
   pages: NavPage[];
 };
 
-export const adminNav: NavSection[] = [
+const sections: Omit<NavSection, "landingPage">[] = [
   {
     slug: "home",
     label: "Home",
@@ -69,7 +70,7 @@ export const adminNav: NavSection[] = [
       { slug: "assessments", label: "Assessments", description: "Assignment-based and custom-link assessments.", status: "ready" },
       { slug: "submissions", label: "Submissions", description: "Review and evaluate learner submissions.", status: "ready" },
       { slug: "session-recordings", label: "Session Recordings", description: "Recorded classes by batch and instructor.", status: "ready" },
-      { slug: "certificates", label: "Certificates", description: "Certificate templates and issuance.", status: "proposed" },
+      { slug: "certificates", label: "Certificates", description: "Demo certificate design, validity and issuance configuration.", status: "ready" },
     ],
   },
   {
@@ -102,8 +103,8 @@ export const adminNav: NavSection[] = [
       { slug: "blogs", label: "Blogs", description: "Blog posts with visibility and view counts.", status: "ready" },
       { slug: "marketing-banners", label: "Marketing Banners", description: "Promotional banners shown to learners.", status: "ready" },
       { slug: "leads", label: "Leads", description: "Enquiries from the website and campaigns.", status: "proposed" },
-      { slug: "promotional-templates", label: "Promotional Templates", description: "Reusable message templates.", status: "decision" },
-      { slug: "promo-codes", label: "Promo Codes", description: "Discount codes with validity and usage limits.", status: "proposed" },
+      { slug: "promotional-templates", label: "Promotional Templates", description: "Browser-local Email, SMS, WhatsApp and Push template drafts.", status: "ready" },
+      { slug: "promo-codes", label: "Promo Codes", description: "Demo discount codes with validity, visibility and usage limits.", status: "ready" },
       { slug: "testimonials", label: "Testimonials", description: "Learner testimonials for the website.", status: "proposed" },
     ],
   },
@@ -113,7 +114,7 @@ export const adminNav: NavSection[] = [
     icon: ShoppingCart,
     pages: [
       { slug: "abandoned-cart", label: "Abandoned Cart", description: "Checkouts that were not completed.", status: "ready" },
-      { slug: "cheque-management", label: "Cheque Management", description: "Offline cheque payments and reconciliation.", status: "decision" },
+      { slug: "cheque-management", label: "Cheque Management", description: "Synthetic cheque register, filters and proposed local status handling.", status: "ready" },
     ],
   },
   {
@@ -128,6 +129,7 @@ export const adminNav: NavSection[] = [
       { slug: "trainer", label: "Trainer", description: "Instructor sessions, attendance and ratings.", status: "proposed" },
       { slug: "notification-logs", label: "Notification Logs", description: "Delivery logs for every channel.", status: "proposed" },
       { slug: "community-analytics", label: "Community Analytics", description: "Community activity and engagement.", status: "proposed" },
+      { slug: "more", label: "More", description: "Synthetic branch, storage, bandwidth, task, user-time and wallet reports.", status: "ready" },
       { slug: "advanced-analytics", label: "Advanced Analytics", description: "Custom cross-module reports.", status: "proposed" },
     ],
   },
@@ -137,18 +139,29 @@ export const adminNav: NavSection[] = [
     icon: Settings,
     pages: [
       { slug: "my-profile", label: "My Profile", description: "Your personal details, preferences and password.", status: "ready" },
-      { slug: "sub-organizations", label: "Sub-Organizations", description: "Branches and organisation hierarchy.", status: "proposed" },
-      { slug: "system-notifications", label: "System Notifications", description: "Which automatic messages are sent, and on which channels.", status: "proposed" },
-      { slug: "categories", label: "Categories", description: "Course and product categories.", status: "proposed" },
-      { slug: "custom-fields", label: "Custom Fields", description: "Extra fields for learner and course records.", status: "proposed" },
-      { slug: "grading-system", label: "Grading System", description: "Grade bands used in assessments.", status: "proposed" },
-      { slug: "miscellaneous-fees", label: "Miscellaneous Fees", description: "Additional fees added at checkout.", status: "proposed" },
-      { slug: "international-selling", label: "International Selling", description: "Currencies and pricing outside India.", status: "decision" },
-      { slug: "learner-experience", label: "Learner Experience", description: "Student-portal behaviour and branding.", status: "decision" },
-      { slug: "utility-wallet", label: "Utility Wallet", description: "Messaging credits and billing balance.", status: "proposed" },
+      { slug: "sub-organizations", label: "Sub-Organizations", description: "Demo branches, managers and activity.", status: "ready" },
+      { slug: "system-notifications", label: "System Notifications", description: "Event-family preferences and unconnected delivery channels.", status: "ready" },
+      { slug: "categories", label: "Categories", description: "Course and product category hierarchy.", status: "ready" },
+      { slug: "custom-fields", label: "Custom Fields", description: "Scoped fields and registration placement.", status: "ready" },
+      { slug: "grading-system", label: "Grading System", description: "Validated demo grade-band configuration.", status: "ready" },
+      { slug: "miscellaneous-fees", label: "Miscellaneous Fees", description: "Demo fee templates with descriptions.", status: "ready" },
+      { slug: "international-selling", label: "International Selling", description: "Demo currencies, branch availability and pricing.", status: "ready" },
+      { slug: "learner-experience", label: "Learner Experience", description: "Learner-menu configuration and visibility preview.", status: "ready" },
+      { slug: "utility-wallet", label: "Utility Wallet", description: "Synthetic messaging credits, usage and recharge history.", status: "ready" },
     ],
   },
 ];
+
+const byLabel = (a: { label: string }, b: { label: string }) =>
+  a.label.localeCompare(b.label, "en", { sensitivity: "base" });
+
+export const adminNav: NavSection[] = sections
+  .map((section) => ({
+    ...section,
+    landingPage: section.pages[0].slug,
+    pages: [...section.pages].sort(byLabel),
+  }))
+  .sort(byLabel);
 
 export function pageHref(section: string, page: string) {
   return section === "home" ? "/admin" : `/admin/${section}/${page}`;
@@ -177,7 +190,7 @@ export function parseAdminPath(pathname: string): { help: boolean; section?: str
 
 export function findSectionByPath(pathname: string) {
   const { section } = parseAdminPath(pathname);
-  return adminNav.find((s) => s.slug === section) ?? adminNav[0];
+  return adminNav.find((s) => s.slug === section) ?? adminNav.find((s) => s.slug === "home") ?? adminNav[0];
 }
 
 export const quickCreate = [
@@ -188,7 +201,8 @@ export const quickCreate = [
   { label: "Event", key: "products/events" },
   { label: "Campaign", key: "marketing/campaigns" },
   { label: "Blog", key: "marketing/blogs" },
-];
+  { label: "Enrolment", key: "users/new-enrolment" },
+].sort(byLabel);
 
 export const statusLabel: Record<ScreenStatus, string> = {
   ready: "Designed from spec",

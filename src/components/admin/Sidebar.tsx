@@ -111,7 +111,7 @@ export function Sidebar() {
         <ul className="admin-nav-scroll flex min-h-0 w-full flex-1 flex-col gap-0.5 overflow-y-auto px-2">
           {adminNav.map((s) => (
             <li key={s.slug}>
-              <RailItem href={pageHref(s.slug, s.pages[0].slug)} label={s.label} icon={s.icon} section={s.slug} active={!help && s.slug === current.slug} />
+              <RailItem href={pageHref(s.slug, s.landingPage)} label={s.label} icon={s.icon} section={s.slug} active={!help && s.slug === current.slug} />
             </li>
           ))}
         </ul>

@@ -145,7 +145,9 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
   let tasks: HelpTask[] = [];
 
   const decision = found.page.status === "decision" ? decisions[key] : undefined;
-  const list = decision ? null : getListConfig(key);
+  const customManaged = ["marketing/promotional-templates", "marketing/promo-codes", "sales/cheque-management"].includes(key);
+  const customSettings = sectionSlug === "settings" && pageSlug !== "my-profile";
+  const list = decision || customManaged || customSettings ? null : getListConfig(key);
   const report = sectionSlug === "analytics" ? analytics[pageSlug] : undefined;
 
   if (list) {
@@ -170,9 +172,28 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
   }
 
   if (report) {
-    screen.push({ heading: "Key figures", items: report.kpis.map((k) => k.label) });
-    if (report.chart) screen.push({ heading: "Chart", items: [report.chart.title] });
+    screen.push({ heading: "Synthetic report controls", items: ["Last 7, 30, 90 or 365 demo days, anchored to 26 October 2026", "Branch, course, status and text search", "Sortable preview, column selection and pagination", "CSV download of all matching rows, labeled SYNTHETIC DEMO"] });
     screen.push({ heading: "Reports", items: report.reports.map((r) => `${r.title}: ${r.description}`) });
+    if (report.restricted) screen.push({ heading: "Verification limit", items: ["The live Advanced Analytics route was access restricted. These local reports are proposals, not verified live functionality."] });
+    tasks = [{ title: "Preview and export a synthetic report", steps: ["Choose a demo date range and optional branch, course, status or search filters.", "Open a report card to see its calculated synthetic rows. Change filters in the drawer if needed.", "Select a column heading to sort and use Choose preview / CSV columns to choose fields.", "Select Export to download every matching row, not only the visible page. No database or live provider is queried."] }];
+  }
+
+  if (customManaged) {
+    screen.push({ heading: "Local demo storage", items: ["Changes are saved only in this browser, separately from production data. No delivery, checkout or banking integration is connected."] });
+    if (key === "marketing/promotional-templates") {
+      screen.push({ heading: "Template manager", items: ["Email, SMS, WhatsApp and Push tabs with search", "Add, edit, duplicate and delete local drafts", "Subject, reply-to and required unsubscribe footer for promotional email", "Safe text / Markdown import and sample-personalized preview; no arbitrary HTML"] });
+      tasks = [{ title: "Edit a local message draft", steps: ["Choose a channel and select Add Template or Edit & preview.", "Enter the name and content. Email also requires a subject, reply-to and unsubscribe footer.", "Review sample personalization and select Save local draft. No message is sent."] }];
+    } else if (key === "marketing/promo-codes") {
+      screen.push({ heading: "Structured promo codes", items: ["Single-use and multiple-use tabs", "Start and expiry, website/app display, system-wide and per-user limits", "Percentage or fixed discount, minimum spend, optional percentage cap and product applicability", "Example order simulator; no redemption or checkout effects"] });
+      tasks = [{ title: "Configure a demo discount", steps: ["Create or edit a code. Set its type, dates, limits and display options.", "Single use fixes both limits at one. The per-user limit cannot exceed the system-wide limit.", "Continue to Discount. Configure the amount and applicability, then try an example order.", "Save local code to update this browser only. Marketing reports use independent synthetic fixtures."] }];
+    } else {
+      screen.push({ heading: "Cheque register", items: ["Student, parent, bank, cheque date, amount, status and remark", "Date, bank and status filters plus text search", "Export filtered CSV", "Proposed demo status transitions with required remarks and local history"] });
+      tasks = [{ title: "Explore a demo cheque status", steps: ["Filter the register by cheque date, bank, status or text.", "Select Update demo status. Choose an allowed next status and enter a reason.", "Save demo status. No bank deposit, ledger update or actual settlement occurs.", "Cleared is final in this proposed local workflow."] }];
+    }
+  }
+
+  if (customSettings) {
+    screen.push({ heading: "Local settings demo", items: ["Controls update this page's synthetic configuration only and reset on navigation.", "Where available, Save changes validates configuration; it does not connect providers or write to the production database.", "Payment, delivery, student-portal and catalog effects require backend integration."] });
   }
 
   const relatedKeys = content.related ?? found.section.pages.filter((p) => p.slug !== pageSlug).slice(0, 3).map((p) => `${sectionSlug}/${p.slug}`);
@@ -187,11 +208,11 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
     key,
     section: found.section,
     page: found.page,
-    summary: content.summary,
+    summary: report ? "Filter, preview and export deterministic synthetic reports. These are not live figures or verified production calculations." : customManaged ? found.page.description : content.summary,
     whoUses: content.whoUses,
     screen,
     formFields,
-    tasks: [...tasks, ...(content.tasks ?? [])],
+    tasks: [...tasks, ...(report || customManaged ? [] : content.tasks ?? [])],
     tips: content.tips ?? [],
     decision,
     related,

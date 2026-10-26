@@ -16,12 +16,23 @@ export type Column =
 export type FormField = {
   key: string;
   label: string;
-  type: "text" | "email" | "tel" | "number" | "date" | "datetime-local" | "time" | "select" | "textarea" | "url";
+  type: "text" | "email" | "tel" | "number" | "date" | "datetime-local" | "time" | "select" | "textarea" | "url" | "multiselect" | "file" | "repeat";
   options?: string[];
   required?: boolean;
   placeholder?: string;
   help?: string;
+  step?: number;
+  defaultValue?: string;
+  showWhen?: { key: string; values: string[] };
+  min?: number;
+  max?: number;
+  accept?: string;
+  itemFields?: FormField[];
+  minItems?: number;
+  format?: "markdown";
 };
+
+export type EditorKind = "event" | "batch" | "feedback" | "asset" | "certificate";
 
 export type SummaryCard = { label: string; value: string; hint?: string; tone?: Tone };
 
@@ -38,7 +49,7 @@ export type ListConfig = {
   dateFilterKey?: string;
   summary?: SummaryCard[];
   primaryAction?: string;
-  form?: { fields: FormField[]; defaults?: Record<string, CellValue> };
+  form?: { fields: FormField[]; defaults?: Record<string, CellValue>; steps?: string[]; editor?: EditorKind };
   exportable?: boolean;
   selectable?: boolean;
   configurableColumns?: boolean;

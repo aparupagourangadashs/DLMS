@@ -1,149 +1,142 @@
-import type { SummaryCard } from "./types";
-import { courses, instructors } from "./demo-data";
+export type ReportColumn = { key: string; label: string; unit?: "INR" | "%" | "minutes" | "GB" };
+export type Report = { title: string; description: string; subject: string; columns: ReportColumn[] };
+export type AnalyticsPageData = { reports: Report[]; restricted?: boolean };
+export type ReportRow = Record<string, string | number>;
 
-export type Report = { title: string; description: string; preview?: { columns: string[]; rows: string[][] } };
-export type AnalyticsPageData = {
-  kpis: SummaryCard[];
-  chart?: { title: string; labels: string[]; series: Array<{ label: string; values: number[]; colorClass: string; swatchClass: string }>; currency?: boolean };
-  reports: Report[];
-};
+export const REPORT_AS_OF = "2026-10-26";
+export const reportBranches = ["Main Campus", "North Branch", "Online"];
+export const reportCourses = ["Bhakti Shastri", "Sanskrit for Beginners", "Vedic Parenting"];
 
-const months = ["May", "Jun", "Jul", "Aug", "Sep", "Oct"];
+function report(title: string, description: string, subject: string, metrics: Array<string | [string, ReportColumn["unit"]] >): Report {
+  return {
+    title, description, subject,
+    columns: [
+      { key: "date", label: "Date" }, { key: "branch", label: "Branch" },
+      { key: "course", label: "Course" }, { key: "subject", label: subject }, { key: "status", label: "Status" },
+      ...metrics.map((metric, i) => ({ key: `metric${i}`, label: typeof metric === "string" ? metric : metric[0], unit: typeof metric === "string" ? undefined : metric[1] })),
+    ],
+  };
+}
 
 export const analytics: Record<string, AnalyticsPageData> = {
-  "sales-enrollment": {
-    kpis: [
-      { label: "Revenue (30 days)", value: "₹3,74,400", hint: "+14% vs previous", tone: "success" },
-      { label: "Enrollments (30 days)", value: "671" },
-      { label: "Payments received", value: "512" },
-      { label: "Average order value", value: "₹731" },
-    ],
-    chart: {
-      title: "Monthly enrollments and revenue",
-      labels: months,
-      series: [
-        { label: "Enrollments", values: [410, 452, 498, 530, 588, 671], colorClass: "fill-accent", swatchClass: "bg-accent" },
-        { label: "Paid enrollments", values: [260, 288, 310, 344, 401, 452], colorClass: "fill-gold", swatchClass: "bg-gold" },
-      ],
-    },
-    reports: [
-      { title: "Product Enrollments", description: "Enrollments per product, by period." },
-      { title: "Sales Overview", description: "Gross sales, discounts, refunds and net revenue." },
-      {
-        title: "Payments Received",
-        description: "Successful payments with gateway reference.",
-        preview: {
-          columns: ["Date", "Learner", "Product", "Amount", "Method"],
-          rows: [
-            ["26 Oct 2026", "Ananya Iyer", "Bhakti Shastri", "₹2,499", "UPI"],
-            ["25 Oct 2026", "Rohan Mehta", "Sanskrit for Beginners", "₹999", "Card"],
-            ["25 Oct 2026", "Meera Nair", "Vedic Parenting", "₹1,499", "UPI"],
-            ["24 Oct 2026", "Vikram Das", "Bhagavad Gita – Foundation Course", "₹499", "Net banking"],
-          ],
-        },
-      },
-      {
-        title: "Course Wise Enrollments",
-        description: "Active, completed and total enrollments per course.",
-        preview: {
-          columns: ["Course", "Active", "Completed", "Total"],
-          rows: courses.slice(0, 6).map((c, i) => [c, String(120 - i * 13), String(60 + i * 7), String(180 - i * 6)]),
-        },
-      },
-      { title: "Event Enrollments", description: "Registrations and attendance for events." },
-      { title: "Membership Enrollments", description: "New, renewed and expired memberships." },
-      { title: "GST Report", description: "Tax summary for filing. Format to be confirmed with IBMV." },
-    ],
-  },
-  "batch-progress": {
-    kpis: [
-      { label: "Active batches", value: "16" },
-      { label: "Average progress", value: "58%" },
-      { label: "Completion rate", value: "71%", tone: "success" },
-      { label: "At-risk learners", value: "84", tone: "warning", hint: "no activity in 14 days" },
-    ],
-    reports: [
-      {
-        title: "Batch Progress",
-        description: "Progress and completion for each batch.",
-        preview: { columns: ["Batch", "Learners", "Avg. progress", "Completed"], rows: [["BGFC-2026-B1", "48", "72%", "21"], ["BS-2026-B1", "36", "54%", "8"], ["SFB-2026-B2", "52", "41%", "3"]] },
-      },
-      { title: "Learner Progress", description: "Lesson-level progress per learner." },
-      { title: "Attendance Report", description: "Live-class attendance by batch and learner." },
-      { title: "Inactive Learners", description: "Learners with no activity in a chosen period." },
-    ],
-  },
-  "feedback-rating": {
-    kpis: [
-      { label: "Average rating", value: "4.7 / 5", tone: "success" },
-      { label: "Responses (30 days)", value: "1,284" },
-      { label: "Forms active", value: "6" },
-    ],
-    reports: [
-      { title: "Course Ratings", description: "Average rating and distribution per course." },
-      { title: "Form Responses", description: "Responses to each feedback form." },
-      { title: "Instructor Ratings", description: "Ratings given to each instructor." },
-    ],
-  },
-  "marketing-analytics": {
-    kpis: [
-      { label: "Campaigns sent (30 days)", value: "14" },
-      { label: "Messages delivered", value: "38,210" },
-      { label: "Click-through rate", value: "6.4%" },
-      { label: "Leads converted", value: "112", tone: "success" },
-    ],
-    reports: [
-      { title: "Campaign Performance", description: "Delivery, opens, clicks and conversions per campaign." },
-      { title: "Promo Code Usage", description: "Redemptions and discount value per code." },
-      { title: "Lead Sources", description: "Where enquiries come from and how they convert." },
-    ],
-  },
-  trainer: {
-    kpis: [
-      { label: "Instructors", value: String(instructors.length) },
-      { label: "Sessions taken (30 days)", value: "96" },
-      { label: "Average attendance", value: "78%" },
-    ],
-    reports: [
-      {
-        title: "Trainer Summary",
-        description: "Sessions, attendance and rating per instructor.",
-        preview: { columns: ["Instructor", "Sessions", "Attendance", "Rating"], rows: instructors.slice(0, 4).map((n, i) => [n, String(18 - i * 2), `${82 - i * 3}%`, (4.9 - i * 0.1).toFixed(1)]) },
-      },
-      { title: "Session Log", description: "Every session with start time, duration and sign-in." },
-    ],
-  },
-  "notification-logs": {
-    kpis: [
-      { label: "Sent today", value: "2,418" },
-      { label: "Delivered", value: "97.8%", tone: "success" },
-      { label: "Failed", value: "53", tone: "danger" },
-    ],
-    reports: [
-      { title: "Delivery Log", description: "Every message with channel, status and provider response." },
-      { title: "Failures", description: "Failed deliveries with reason, for follow-up." },
-      { title: "Opt-outs", description: "Learners who unsubscribed, per channel." },
-    ],
-  },
-  "community-analytics": {
-    kpis: [
-      { label: "Communities", value: "2" },
-      { label: "Messages (30 days)", value: "1,906" },
-      { label: "Active members", value: "642" },
-    ],
-    reports: [
-      { title: "Community Activity", description: "Posts, replies and active members over time." },
-      { title: "Top Contributors", description: "Most active members per community." },
-    ],
-  },
-  "advanced-analytics": {
-    kpis: [
-      { label: "Saved reports", value: "0" },
-      { label: "Scheduled exports", value: "0" },
-    ],
-    reports: [
-      { title: "Custom Report Builder", description: "Choose data, filters and columns. Scope to be agreed with IBMV." },
-      { title: "Cohort Analysis", description: "Compare learner groups over time." },
-    ],
-  },
+  "sales-enrollment": { reports: [
+    report("Product Enrollments", "Daily product registrations and paid enrollments.", "Product", ["Enrollments", "Paid enrollments"]),
+    report("Sales Overview", "Synthetic gross, discounts, refunds and net, in INR.", "Product", [["Gross", "INR"], ["Discounts", "INR"], ["Refunds", "INR"], ["Net", "INR"]]),
+    report("Payments Received", "Demo settled payments; references are not gateway records.", "Payment reference", [["Amount", "INR"]]),
+    report("Course Wise Enrollments", "Daily cohort active and completed enrollments.", "Course cohort", ["Active", "Completed", "Total"]),
+    report("Event Enrollments", "Registrations and attendees per demo event.", "Event", ["Registered", "Attended"]),
+    report("Membership Enrollments", "Daily new, renewed and expired memberships.", "Membership", ["New", "Renewed", "Expired"]),
+    report("GST Report", "Illustrative 18% GST only; not a filing or tax calculation.", "Invoice", [["Taxable", "INR"], ["GST (18%)", "INR"], ["Total", "INR"]]),
+  ] },
+  "batch-progress": { reports: [
+    report("Batch Progress", "Progress of synthetic dated learner cohorts.", "Batch", ["Learners", ["Progress", "%"], "Completed"]),
+    report("Batch Performance", "Pass rate and mean score for batch assessments.", "Batch", ["Assessed", "Passed", ["Mean score", "%"]]),
+    report("Learner Progress", "Lessons completed and progress for demo learners.", "Learner", ["Lessons assigned", "Lessons completed", ["Progress", "%"]]),
+    report("Attendance Report", "Course-level expected and present learners.", "Session", ["Expected", "Present", ["Attendance", "%"]]),
+    report("Batch Attendance", "Separate batch-level attendance rollup.", "Batch", ["Expected", "Present", ["Attendance", "%"]]),
+    report("Module Progress", "Module assignments and completion.", "Module", ["Assigned", "Completed", ["Progress", "%"]]),
+    report("Batch Assessment", "Assessment assignments, submissions and passes.", "Assessment", ["Assigned", "Submitted", "Passed"]),
+    report("Assessment Attempts", "Demo attempt score and time spent.", "Attempt", [["Score", "%"], ["Time spent", "minutes"]]),
+    report("Issued Certificates", "Certificates issued to synthetic cohorts.", "Certificate template", ["Issued"]),
+    report("Inactive Learners", "Demo learners with 14 or more inactive days.", "Learner", ["Inactive days"]),
+  ] },
+  "feedback-rating": { reports: [
+    report("Course Ratings", "Response count and mean course rating out of five.", "Course", ["Responses", "Rating / 5"]),
+    report("Form Responses", "Submitted and invited feedback responses.", "Feedback form", ["Invited", "Responses"]),
+    report("Instructor Ratings", "Ratings of demo instructors out of five.", "Instructor", ["Responses", "Rating / 5"]),
+    report("Session Feedback", "Session-specific feedback responses and rating.", "Session", ["Responses", "Rating / 5"]),
+    report("Batch Rating", "Separate batch rating and response count.", "Batch", ["Responses", "Rating / 5"]),
+    report("Trainer Feedback", "Trainer feedback and recommendation percentage.", "Trainer", ["Responses", ["Recommend", "%"]]),
+    report("Event Feedback", "Event feedback responses and mean rating.", "Event", ["Responses", "Rating / 5"]),
+  ] },
+  "marketing-analytics": { reports: [
+    report("Campaign Performance", "Synthetic delivered, opened, clicked and converted funnel.", "Campaign", ["Delivered", "Opened", "Clicked", "Converted"]),
+    report("Promo Code Usage", "Demo redemptions and discounts, unrelated to local code edits.", "Promo code", ["Redemptions", ["Discount value", "INR"]]),
+    report("Lead Sources", "Enquiries and conversions by source.", "Lead source", ["Enquiries", "Converted"]),
+  ] },
+  trainer: { reports: [
+    report("Trainer Summary", "Trainer sessions, attendance and mean rating.", "Instructor", ["Sessions", ["Attendance", "%"], "Rating / 5"]),
+    report("Session Log", "Dated demo sessions, duration and participant count.", "Session", [["Duration", "minutes"], "Participants"]),
+  ] },
+  "notification-logs": { reports: [
+    report("Delivery Log", "Demo message deliveries; no provider is connected.", "Channel", ["Sent", "Delivered", "Failed"]),
+    report("Failures", "Synthetic failed deliveries by channel, not a retry queue.", "Channel", ["Failed"]),
+    report("Opt-outs", "Synthetic unsubscribe events, not actual learner preferences.", "Channel", ["Opt-outs"]),
+  ] },
+  "community-analytics": { reports: [
+    report("Community Activity", "Posts, replies and active members per community.", "Community", ["Posts", "Replies", "Active members"]),
+    report("Community Overall Activity", "Daily total messages and contributors.", "Community", ["Messages", "Contributors"]),
+    report("Inbox Activity", "Inbox conversations opened, replied and unresolved.", "Inbox", ["Opened", "Replied", "Unresolved"]),
+    report("Course Engagement", "Course views, discussions and participating learners.", "Course community", ["Views", "Discussions", "Participants"]),
+    report("Member Participation", "Posts, replies and active minutes per demo member.", "Member", ["Posts", "Replies", ["Time spent", "minutes"]]),
+    report("Top Contributors", "Contribution totals per synthetic member; sortable in preview.", "Member", ["Posts", "Replies", "Contributions"]),
+  ] },
+  more: { reports: [
+    report("Branch Statistics", "Registrations, enrollments and revenue by branch.", "Branch cohort", ["Registrations", "Enrollments", ["Revenue", "INR"]]),
+    report("Storage Consumption", "Daily synthetic storage additions, not current occupied storage.", "Asset type", [["Added", "GB"]]),
+    report("Bandwidth Consumption", "Daily transferred data and requests.", "Asset type", [["Transferred", "GB"], "Requests"]),
+    report("Scheduled Tasks", "Synthetic daily queued, completed and failed tasks.", "Task type", ["Queued", "Completed", "Failed"]),
+    report("User-time Statistics", "Dated active users and total time spent.", "User group", ["Active users", ["Time spent", "minutes"]]),
+    report("Wallet Recharges", "Synthetic recharge amounts and credits, not real wallet transactions.", "Recharge channel", [["Amount", "INR"], "Credits"]),
+  ] },
+  "advanced-analytics": { restricted: true, reports: [
+    report("Custom Report Builder", "Local column selection and filtered CSV only; no scheduled or saved production reports.", "Cohort", ["Users", "Enrollments", ["Progress", "%"]]),
+    report("Cohort Analysis", "Synthetic cohort retention; not verified against the restricted live route.", "Cohort", ["Joined", "Retained", ["Retention", "%"]]),
+    report("Advanced User Analytics", "Proposed synthetic activity preview; live route access was restricted.", "User group", ["Active users", ["Time spent", "minutes"]]),
+    report("Advanced Test Analytics", "Proposed test performance preview; live fields remain unverified.", "Test", ["Attempts", "Passed", ["Mean score", "%"]]),
+    report("Advanced Course Analytics", "Proposed course completion preview; live fields remain unverified.", "Course cohort", ["Enrolled", "Completed", ["Completion", "%"]]),
+  ] },
 };
+
+const subjects: Record<string, string[]> = {
+  Channel: ["Email", "SMS", "WhatsApp", "Push"], Instructor: ["Demo trainer A", "Demo trainer B", "Demo trainer C"],
+  Trainer: ["Demo trainer A", "Demo trainer B", "Demo trainer C"], "Lead source": ["Website", "Referral", "Campaign"],
+  "Asset type": ["Video", "Documents", "Audio"], "Task type": ["Notification", "Report export", "Certificate generation"],
+  "Recharge channel": ["Demo UPI", "Demo card", "Demo bank transfer"], "Promo code": ["DEMO10", "DEMO20", "WELCOME"],
+};
+
+/** A deterministic fixture anchored to the audit date, never a production query. */
+export function getReportRows(report: Report, days: number): ReportRow[] {
+  const seed = [...report.title].reduce((n, c) => n + c.charCodeAt(0), 0);
+  return Array.from({ length: days * 3 }, (_, index) => {
+    const day = Math.floor(index / 3);
+    const branch = index % 3;
+    const date = new Date(`${REPORT_AS_OF}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - day);
+    const n = (seed + day * 17 + branch * 13) % 83 + 18;
+    const part = Math.floor(n * 0.72);
+    const row: ReportRow = {
+      date: date.toISOString().slice(0, 10), branch: reportBranches[branch],
+      course: reportCourses[(day + branch) % 3],
+      subject: subjects[report.subject]?.[(day + branch) % subjects[report.subject].length] ?? `${report.subject} ${1 + (day + branch) % 8}`,
+      status: report.title === "Failures" ? "Failed" : report.title === "Opt-outs" ? "Unsubscribed" :
+        ["Payments Received", "GST Report", "Wallet Recharges"].includes(report.title) ? "Settled" :
+        report.title === "Issued Certificates" ? "Issued" : ["Completed", "Pending", "Active"][(day + branch) % 3],
+    };
+    report.columns.slice(5).forEach((column, i) => {
+      const label = column.label;
+      let value = Math.max(1, n - i * 12);
+      if (column.unit === "INR") value = n * 100;
+      if (column.unit === "%") value = Math.round(part / n * 100);
+      if (column.unit === "GB") value = Number((n / 30).toFixed(2));
+      if (column.unit === "minutes") value = n * 4;
+      if (label === "Rating / 5") value = Number((3.5 + (n % 16) / 10).toFixed(1));
+      if (["Completed", "Present", "Retained", "Paid enrollments", "Lessons completed", "Submitted", "Attended"].includes(label)) value = part;
+      if (label === "Total" && report.title === "Course Wise Enrollments") value = n + part;
+      if (label === "Progress" && report.title === "Batch Progress") value = Math.round(part / n * 100);
+      if (report.title === "Sales Overview") value = [n * 100, n * 10, n * 5, n * 85][i];
+      if (report.title === "GST Report") value = [n * 100, n * 18, n * 118][i];
+      if (report.title === "Campaign Performance") value = [n * 100, n * 45, n * 8, n][i];
+      if (report.title === "Delivery Log") value = [n * 10, n * 9, n][i];
+      if (report.title === "Inbox Activity") value = [n, part, n - part][i];
+      if (report.title === "Scheduled Tasks") value = [n, part, n - part][i];
+      if (report.title === "Batch Assessment") value = [n, part, Math.floor(part * 0.8)][i];
+      if (report.title === "Cohort Analysis") value = [n, part, Math.round(part / n * 100)][i];
+      if (report.title === "Promo Code Usage") value = i === 0 ? n : n * 50;
+      if (report.title === "Top Contributors" && i === 2) value = n + n - 12;
+      if (label === "Inactive days") value = 14 + n;
+      row[column.key] = value;
+    });
+    return row;
+  });
+}

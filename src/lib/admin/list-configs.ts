@@ -1,4 +1,5 @@
 import type { ListConfig, Row } from "./types";
+import { assetForm, batchForm, certificateForm, eventForm, feedbackForm } from "./editor-definitions";
 import { formatDate } from "@/lib/format";
 import {
   DEMO_TODAY,
@@ -45,15 +46,7 @@ const configs: Record<string, () => ListConfig> = {
         visibility: pick(["Public", "Public", "Private", "Unlisted"]),
         status: i % 4 === 3 ? "Inactive" : "Active",
       })),
-      form: {
-        fields: [
-          { key: "name", label: "Event name", type: "text", required: true },
-          { key: "date", label: "Event date and time", type: "datetime-local", required: true, help: "Times are in India Standard Time (IST)." },
-          { key: "venue", label: "Venue or link type", type: "text", placeholder: "Online (Zoom)" },
-          { key: "visibility", label: "Visibility", type: "select", options: ["Public", "Private", "Unlisted"], required: true },
-        ],
-        defaults: { status: "Active" },
-      },
+      form: eventForm,
       rowActions: ["edit", "duplicate", "delete"],
     };
   },
@@ -91,6 +84,8 @@ const configs: Record<string, () => ListConfig> = {
           name: b.name,
           course: b.course,
           duration: `${formatDate(start)} – ${formatDate(addDays(start, 120))}`,
+          startDate: start,
+          endDate: addDays(start, 120),
           instructor: b.instructor,
           module: `Module ${int(1, 6)} of 8`,
           manager: pick(["Hari Prasad", "Vrinda Joshi", "Mukund Rao"]),
@@ -98,16 +93,7 @@ const configs: Record<string, () => ListConfig> = {
           status,
         };
       }),
-      form: {
-        fields: [
-          { key: "name", label: "Batch name", type: "text", required: true, placeholder: "BGFC-2026-B3" },
-          { key: "course", label: "Course", type: "select", options: [...courses], required: true },
-          { key: "instructor", label: "Instructor", type: "select", options: [...instructors], required: true },
-          { key: "manager", label: "Batch manager", type: "text" },
-          { key: "duration", label: "Duration", type: "select", options: ["8 weeks", "12 weeks", "16 weeks", "6 months", "1 year"], required: true },
-        ],
-        defaults: { status: "Active", progress: 0, module: "Module 1 of 8" },
-      },
+      form: batchForm,
       rowActions: ["edit", "duplicate", "archive"],
     };
   },
@@ -174,13 +160,7 @@ const configs: Record<string, () => ListConfig> = {
         type: pick(["Rating", "Survey", "Survey"]),
         conversions: int(12, 640),
       })),
-      form: {
-        fields: [
-          { key: "name", label: "Form name", type: "text", required: true },
-          { key: "type", label: "Type", type: "select", options: ["Rating", "Survey"], required: true },
-        ],
-        defaults: { createdOn: DEMO_TODAY, conversions: 0 },
-      },
+      form: feedbackForm,
       rowActions: ["edit", "duplicate", "delete"],
     };
   },
@@ -248,9 +228,10 @@ const configs: Record<string, () => ListConfig> = {
         fields: [
           { key: "name", label: "Name", type: "text", required: true },
           { key: "difficulty", label: "Difficulty", type: "select", options: ["Easy", "Medium", "Hard"], required: true },
-          { key: "exam", label: "Exam", type: "text" },
+          { key: "exam", label: "Exam", type: "text", required: true },
           { key: "subject", label: "Subject", type: "text", required: true },
-          { key: "topic", label: "Topic", type: "text" },
+          { key: "topic", label: "Topic", type: "text", required: true },
+          { key: "description", label: "Short description", type: "textarea", required: true },
         ],
         defaults: { code: "QB-NEW" },
       },
@@ -305,14 +286,7 @@ const configs: Record<string, () => ListConfig> = {
         { key: "downloads", label: "Downloads", type: "number", sortable: true },
       ],
       rows: data,
-      form: {
-        fields: [
-          { key: "type", label: "Asset type", type: "select", options: types, required: true },
-          { key: "name", label: "Asset name", type: "text", required: true },
-          { key: "fileName", label: "File name or link", type: "text", required: true, help: "File upload will connect to media storage in the backend phase." },
-        ],
-        defaults: { uploadedBy: "Demo Admin", uploadedOn: DEMO_TODAY, sizeLabel: "—", usage: "Unused", downloads: 0 },
-      },
+      form: assetForm,
       rowActions: ["edit", "delete"],
     };
   },
@@ -467,15 +441,7 @@ const configs: Record<string, () => ListConfig> = {
         validity: i % 3 === 0 ? "2 years" : "Lifetime",
         status: i === 5 ? "Draft" : "Active",
       })),
-      form: {
-        fields: [
-          { key: "name", label: "Certificate name", type: "text", required: true },
-          { key: "course", label: "Linked course", type: "select", options: [...courses], required: true },
-          { key: "validity", label: "Validity", type: "select", options: ["Lifetime", "1 year", "2 years"], required: true },
-          { key: "rule", label: "Issuance rule", type: "textarea", placeholder: "e.g. 100% progress and final exam ≥ 60%" },
-        ],
-        defaults: { issued: 0, status: "Draft" },
-      },
+      form: certificateForm,
       rowActions: ["edit", "duplicate", "delete"],
     };
   },

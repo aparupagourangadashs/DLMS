@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, CalendarOff, ChartArea, ChartColumn, ChartLine, ChevronLeft, ChevronRight, Clock, Eye, Sparkles, Star, Users } from "lucide-react";
+import { CalendarDays, CalendarOff, ChevronLeft, ChevronRight, ClipboardCheck, Clock, Eye, Sparkles, Star, Users } from "lucide-react";
 import { DEMO_TODAY, addDays, type DemoSession } from "@/lib/admin/demo-data";
 import { formatDate, formatINR, formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -14,6 +14,7 @@ import { Badge, toneFor } from "@/components/ui/Badge";
 import { BarChart, type ChartType } from "@/components/ui/BarChart";
 import { Button, IconButton, buttonClass } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { ChartViewSwitch } from "@/components/ui/ChartViewSwitch";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { Popover } from "@/components/ui/Popover";
@@ -27,6 +28,10 @@ const weeks = ["Sep 7", "Sep 14", "Sep 21", "Sep 28", "Oct 5", "Oct 12", "Oct 19
 const signups = [142, 168, 155, 190, 210, 184, 236, 198];
 const enrollments = [96, 120, 104, 141, 162, 150, 188, 171];
 const sales = [48200, 61500, 52800, 74400, 88100, 79300, 101600, 93400];
+const weeklyDays = Array.from({ length: 7 }, (_, index) => formatDate(addDays(DEMO_TODAY, index - 6)));
+const dailyLabels = Array.from({ length: 10 }, (_, index) => formatDate(addDays(DEMO_TODAY, index - 9)).slice(0, 6));
+const dailyUsers = [980, 1040, 1120, 1085, 1250, 1180, 1310, 1050, 1125, 1120];
+const recentEnrollments = enrollments.slice(-4).reduce((sum, value) => sum + value, 0);
 
 const whatsNew = [
   "Global search with Ctrl+K",
@@ -34,12 +39,6 @@ const whatsNew = [
   "CSV export on learner, team and cart lists",
   "Session calendar with list, day, week and month views",
 ];
-
-const chartViews = [
-  { type: "bar", label: "Bar", Icon: ChartColumn, color: "blue" },
-  { type: "line", label: "Line", Icon: ChartLine, color: "emerald" },
-  { type: "area", label: "Area", Icon: ChartArea, color: "violet" },
-] as const;
 
 export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession[] }) {
   const router = useRouter();
@@ -102,40 +101,32 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
       <DemoNotice />
 
       <section aria-labelledby="weekly-heading" className="mb-6">
-        <h2 id="weekly-heading" className="sr-only">
-          Weekly performance
+        <h2 id="weekly-heading" className="mb-3 text-lg font-semibold">
+          Weekly performance <span className="text-sm font-normal text-muted">· Last 7 days</span>
         </h2>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatCard label="Avg. time spent" value="42 min" change={8} hint="vs last week" color="indigo" icon={<Clock />} />
-          <StatCard label="Total views" value="12,480" change={12} hint="vs last week" color="sky" icon={<Eye />} />
-          <StatCard label="Avg. rating" value="4.7 / 5" change={2} hint="vs last week" color="amber" icon={<Star />} />
-          <StatCard label="Daily active users" value="1,126" change={-3} hint="vs yesterday" color="emerald" icon={<Users />} />
+          <StatCard label="Avg. time spent" value="42 min" change={8} hint="vs last week" color="indigo" icon={<Clock />} trend={{ labels: weeklyDays, values: [36, 40, 38, 44, 45, 49, 42], unit: " min" }} />
+          <StatCard label="Total views" value="12,480" change={12} hint="vs last week" color="sky" icon={<Eye />} trend={{ labels: weeklyDays, values: [1560, 1640, 1720, 1840, 1920, 1800, 2000] }} />
+          <StatCard label="Avg. rating" value="4.7 / 5" change={2} hint="vs last week" color="amber" icon={<Star />} trend={{ labels: weeklyDays, values: [4.5, 4.6, 4.7, 4.6, 4.8, 4.8, 4.7], unit: " / 5" }} />
+          <StatCard label="Avg. attendance" value="82%" change={4} hint="vs last week" color="emerald" icon={<ClipboardCheck />} trend={{ labels: weeklyDays, values: [76, 80, 78, 85, 84, 89, 82], unit: "%" }} />
         </div>
       </section>
 
-      <Card className="mb-6">
+      <div className="mb-6 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <Card className="min-w-0">
+        <CardHeader title={<span className="flex items-center gap-2"><Users className="size-4 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />Daily active users</span>} description="Last 10 days · sample activity" />
+        <div className="p-5">
+          <p className="mb-4 text-sm text-muted"><strong className="mr-2 text-3xl font-semibold text-foreground">{Math.round(dailyUsers.reduce((sum, value) => sum + value, 0) / dailyUsers.length).toLocaleString("en-IN")}</strong>Daily average</p>
+          <BarChart title="Daily active users over ten days" labels={dailyLabels} chartType="area" series={[{ label: "Active learners", values: dailyUsers, colorClass: "fill-success", swatchClass: "bg-success" }]} />
+        </div>
+      </Card>
+      <Card className="min-w-0">
         <CardHeader
           title={chart === "signups" ? "Signups vs enrollments" : "Sales"}
           description="Last 8 weeks"
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <div role="group" aria-label="Chart type" className="chart-view-switch">
-                {chartViews.map(({ type, label, Icon, color }) => (
-                  <button
-                    key={type}
-                    type="button"
-                    aria-pressed={chartType === type}
-                    onClick={() => setChartType(type)}
-                    className={cn(
-                      "chart-view-button",
-                      chartType === type ? palette[color].solid : palette[color].tile,
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" aria-hidden="true" />
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
+              <ChartViewSwitch value={chartType} onChange={setChartType} />
               <Select<"signups" | "sales">
                 aria-label="Chart metric"
                 value={chart}
@@ -147,6 +138,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
           }
         />
         <div className="p-5">
+          <p className="mb-4 text-sm text-muted"><strong className="mr-2 text-3xl font-semibold text-foreground">{chart === "signups" ? recentEnrollments.toLocaleString("en-IN") : formatINR(sales.slice(-4).reduce((sum, value) => sum + value, 0))}</strong>{chart === "signups" ? "Enrollments" : "Sales"} · Last 4 weekly periods</p>
           {chart === "signups" ? (
             <BarChart
               title="Weekly signups and enrollments"
@@ -168,6 +160,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
           )}
         </div>
       </Card>
+      </div>
 
       <Card>
         <CardHeader
@@ -175,7 +168,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
           description={formatDate(date) + (date === DEMO_TODAY ? " · Today" : "")}
           actions={
             <>
-              <div className="flex items-center gap-1">
+              <div className="flex w-full min-w-0 items-center gap-1 sm:w-auto">
                 <IconButton label="Previous day" onClick={() => setDate(addDays(date, -1))}>
                   <ChevronLeft className="size-4" aria-hidden="true" />
                 </IconButton>
@@ -184,7 +177,7 @@ export function Dashboard({ sessions: initialSessions }: { sessions: DemoSession
                   value={date}
                   onValueChange={setDate}
                   required
-                  className="w-48 max-w-full"
+                  className="min-w-0 flex-1 sm:w-48 sm:flex-none"
                 />
                 <IconButton label="Next day" onClick={() => setDate(addDays(date, 1))}>
                   <ChevronRight className="size-4" aria-hidden="true" />
