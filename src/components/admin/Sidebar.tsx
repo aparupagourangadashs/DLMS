@@ -1,17 +1,17 @@
 "use client";
 
+import { Logo } from "@/components/Logo";
+import { IconButton } from "@/components/ui/Button";
+import { HELP_HOME, adminNav, findSectionByPath, helpHref, pageHref, parseAdminPath, type NavSection } from "@/lib/admin/navigation";
+import { cn } from "@/lib/cn";
+import { colorFor } from "@/lib/colors";
+import { siteConfig } from "@/lib/site";
+import { useAdminUi } from "@/store/admin-ui";
+import { AnimatePresence, motion } from "framer-motion";
+import { Headset, Sparkles, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Headset, Sparkles, X, type LucideIcon } from "lucide-react";
-import { HELP_HOME, adminNav, findSectionByPath, helpHref, pageHref, parseAdminPath, type NavSection } from "@/lib/admin/navigation";
-import { siteConfig } from "@/lib/site";
-import { cn } from "@/lib/cn";
-import { colorFor } from "@/lib/colors";
-import { useAdminUi } from "@/store/admin-ui";
-import { IconButton } from "@/components/ui/Button";
-import { Logo } from "@/components/Logo";
 
 function Brand() {
   return (
@@ -36,7 +36,6 @@ function SubNav({
   help?: boolean;
   onNavigate?: () => void;
 }) {
-  const color = colorFor(section.slug);
   return (
     <ul className="flex flex-col gap-0.5">
       {section.pages.map((p) => {
@@ -49,8 +48,8 @@ function SubNav({
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-                active ? cn(color.tile, "font-semibold") : "text-foreground/80 hover:bg-accent-soft hover:text-foreground",
+                "admin-subnav-link flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                active ? "font-semibold" : "text-foreground/80 hover:bg-accent-soft hover:text-foreground",
               )}
             >
               <span className="truncate">{p.label}</span>
@@ -65,22 +64,18 @@ function SubNav({
   );
 }
 
-function RailItem({ href, label, icon: Icon, section, active }: { href: string; label: string; icon: LucideIcon; section: string; active: boolean }) {
-  const color = colorFor(section);
+function RailItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: LucideIcon; active: boolean }) {
   return (
     <Link
       href={href}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "group flex flex-col items-center gap-1 rounded-xl px-1 py-1 text-[11px] font-medium transition-colors",
-        active ? cn("font-semibold", color.text) : "text-muted hover:text-foreground",
+        "admin-rail-link group flex flex-col items-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium transition-colors",
+        active && "font-semibold",
       )}
     >
       <span
-        className={cn(
-          "flex size-9 items-center justify-center rounded-xl transition-all",
-          active ? color.solid : cn(color.tile, "group-hover:scale-105 group-hover:shadow-sm"),
-        )}
+        className="admin-rail-icon flex size-9 items-center justify-center rounded-lg"
         aria-hidden="true"
       >
         <Icon className="size-[18px]" />
@@ -98,8 +93,8 @@ export function Sidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-dvh shrink-0 lg:flex" aria-label="Admin navigation">
-      <nav className="flex w-20 flex-col items-center gap-1 border-r border-[#91a7d2] bg-linear-to-b from-[#a9bee5] via-[#b9b5df] to-[#a5b5df] pb-3 shadow-[2px_0_8px_rgba(45,61,105,0.14)] dark:border-border dark:from-surface dark:via-surface dark:to-surface dark:shadow-none">
-        <div className="mb-2 flex h-16 w-full shrink-0 items-center justify-center border-b border-border">
+      <nav className="admin-rail flex w-20 flex-col items-center gap-1 pb-3">
+        <div className="admin-rail-brand mb-2 flex h-16 w-full shrink-0 items-center justify-center">
           <Link
             href="/admin"
             className="flex items-center justify-center rounded-lg p-1 transition-transform hover:scale-105"
@@ -111,13 +106,13 @@ export function Sidebar() {
         <ul className="admin-nav-scroll flex min-h-0 w-full flex-1 flex-col gap-0.5 overflow-y-auto px-2">
           {adminNav.map((s) => (
             <li key={s.slug}>
-              <RailItem href={pageHref(s.slug, s.landingPage)} label={s.label} icon={s.icon} section={s.slug} active={!help && s.slug === current.slug} />
+              <RailItem href={pageHref(s.slug, s.landingPage)} label={s.label} icon={s.icon} active={!help && s.slug === current.slug} />
             </li>
           ))}
         </ul>
       </nav>
       {showSubNav ? (
-        <nav className="flex w-60 flex-col border-r border-[#c4cde2] bg-linear-to-b from-[#dce6f8] via-[#e9e8f5] to-[#dfe6f6] dark:border-border dark:from-surface dark:via-surface dark:to-surface" aria-label={`${current.label} ${help ? "help topics" : "pages"}`}>
+        <nav className="admin-subnav flex w-60 flex-col border-r border-border" aria-label={`${current.label} ${help ? "help topics" : "pages"}`}>
           <p className="flex h-16 shrink-0 items-center gap-2.5 border-b border-border px-5 font-serif text-xl font-semibold">
             <span className={cn("flex size-8 items-center justify-center rounded-lg", colorFor(current.slug).tile)} aria-hidden="true">
               <current.icon className="size-4" />
@@ -187,7 +182,7 @@ export function MobileNav() {
             role="dialog"
             aria-modal="true"
             aria-label="Admin navigation"
-            className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-linear-to-b from-[#a9bee5] via-[#b9b5df] to-[#a5b5df] shadow-2xl dark:from-surface dark:via-surface dark:to-surface"
+            className="admin-mobile-nav absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col shadow-2xl"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}

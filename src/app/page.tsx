@@ -1,11 +1,10 @@
-import Link from "next/link";
-import { ArrowRight, Globe, GraduationCap, LayoutDashboard } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/Logo";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
 import { palette, type ColorKey } from "@/lib/colors";
-import { Badge } from "@/components/ui/Badge";
 import { siteConfig } from "@/lib/site";
+import { ArrowRight, Globe, GraduationCap, LayoutDashboard } from "lucide-react";
+import Link from "next/link";
 
 const portals: Array<{ title: string; description: string; href?: string; Icon: typeof Globe; status: string; color: ColorKey }> = [
   {
@@ -42,7 +41,6 @@ export default function Home() {
           <Logo size={48} decorative />
           {siteConfig.name}
         </Link>
-        <ThemeToggle />
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-16">
         <p className="text-sm font-medium tracking-wide text-accent uppercase">Welcome</p>

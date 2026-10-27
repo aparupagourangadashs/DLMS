@@ -74,17 +74,20 @@ wheel, touch, and keyboard navigation still reach every menu item.
 - Hand-written content (purpose, who uses it, page-specific how-tos, tips, related pages) is in `src/lib/admin/help-content.ts`.
 - For list screens, step-by-step tasks, columns, filters, and form fields are generated from the screen's config in `list-configs.ts` (see `src/lib/admin/help.ts`), so the help stays in sync when a screen changes.
 
-The admin desktop navigation and mobile drawer use the supplied navy/gold
-IBMV emblem (`public/admin-logo.png`) without dark-mode inversion. Student and
-public website branding retain their existing logo.
+The admin uses one fixed IBMV theme matched to the supplied navy/gold emblem
+(`public/admin-logo.png`): navy navigation, gold actions and white content
+surfaces. Geometric gradient patterns and subtle entrance motion respect
+reduced-motion preferences. Theme switching and saved-theme initialization
+have been removed; previous browser preferences are ignored. Student and
+public website branding retain their existing logo and scoped palettes.
 
 ### Public website preview
 
 Open `/website` or choose **Public website** from the portal selector. The
 original responsive design uses deep indigo/plum, warm ivory, forest teal and
 gold, with Inter/Crimson typography, named Lucide icons, finite entrance
-motion and reduced-motion support. Its light-only tokens do not change the
-saved admin theme. Desktop grouped navigation and the mobile modal drawer
+motion and reduced-motion support. Its light-only tokens remain scoped to the
+website. Desktop grouped navigation and the mobile modal drawer
 link the six collections, publications and institutional pages.
 
 - Homepage: six collection previews with 18 real course cards, swipeable rows
@@ -137,7 +140,7 @@ Navigation is alphabetical and shared between the desktop sidebar and mobile
 dialog. Shared dropdowns, date picker, tabs and modal components are reused.
 The student portal is **light-only**, with scoped pearl/plum/teal/gold colors,
 original gradient course artwork and reduced-motion-aware entrance/hover
-effects. It ignores (and never changes) the saved admin theme. The header
+effects. Its palette remains independent of the admin theme. The header
 includes Help and an illustrated demo avatar/account menu; real profile-photo
 upload is not connected.
 
@@ -191,7 +194,7 @@ npm run dev        # http://localhost:3000, admin panel at /admin
 ## Stack
 
 - Next.js 16.4 (App Router, Turbopack, React Compiler), React 19.2, TypeScript (strict)
-- Tailwind CSS v4 with semantic theme tokens (light/dark) in `src/app/globals.css`
+- Tailwind CSS v4 with fixed semantic brand tokens in `src/app/globals.css`
 - Lucide icons, Sonner toasts, Framer Motion (respects reduced motion), Zustand for shared UI state
 - Fonts: Inter (interface) and Crimson Text (headings)
 
@@ -222,7 +225,7 @@ To add a list screen, add an entry to `navigation.ts` and a config to `list-conf
 The Community page uses colorful community tiles, icon-led view tabs, role
 badges, highlighted pinned messages, and a labeled message composer. Member
 management and pinning remain interactive demo features; layouts adapt to
-phones and dark mode.
+phones within the fixed brand theme.
 
 My Profile includes a gradient identity banner and color-coded personal,
 contact, address, and preference cards with labeled field icons. The same cards
@@ -242,18 +245,18 @@ semantic gold/create/save/archive/delete actions. Shared comboboxes, date
 pickers and Bar/Line/Area controls keep their responsive sizing and keyboard
 behavior in new screens and drawers as well.
 
-All visible admin tables share the theme-aware `admin-data-table` styles and the
+All visible admin tables share the branded `admin-data-table` styles and the
 keyboard-focusable `TableScroll` wrapper in `src/components/ui/Table.tsx`.
 List screens include icon-led column headings, identity tiles, status badges,
 gradient progress bars, highlighted selected rows, and numbered pagination.
-Headers use a saturated blue-to-violet gradient; status tabs and action buttons
+Headers use a navy gradient; status tabs and action buttons
 have distinct colors, and identity tiles use a consistent per-name palette.
 Progress is orange below 40%, blue from 40%, and green from 75%, with the exact
 percentage always visible so color is not the only indicator.
 The same visual language covers dashboard sessions, report previews, enrolment
 validation, notification settings, and help field references. Wide tables scroll
-inside their own region on mobile rather than stretching the page. Light/dark
-themes, visible focus states, and reduced-motion preferences are supported.
+inside their own region on mobile rather than stretching the page. Visible
+focus states and reduced-motion preferences are supported.
 Action menus use native top-layer popovers so pinned cells cannot cover them;
 menus stay within the viewport and reposition when the page or table scrolls.
 

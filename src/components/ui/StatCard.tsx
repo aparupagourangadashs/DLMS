@@ -1,7 +1,7 @@
-import { TrendingDown, TrendingUp } from "lucide-react";
 import type { Tone } from "@/lib/admin/types";
 import { cn } from "@/lib/cn";
 import { palette, type ColorKey } from "@/lib/colors";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
 const valueTone: Partial<Record<Tone, string>> = {
   success: "text-success",
@@ -59,7 +59,7 @@ export function StatCard({
   const up = (change ?? 0) >= 0;
   const c = palette[color];
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl border border-border bg-linear-to-br p-4 shadow-card dark:bg-surface dark:from-surface dark:via-surface dark:to-surface", cardGradient[color])}>
+    <div className={cn("admin-stat-card relative overflow-hidden rounded-2xl border border-border bg-linear-to-br p-4 shadow-card dark:bg-surface dark:from-surface dark:via-surface dark:to-surface", cardGradient[color])}>
       <span className={cn("absolute inset-x-0 top-0 h-1", c.bar)} aria-hidden="true" />
       <div className="flex items-start justify-between gap-2">
         <p className="pt-1 text-sm text-muted">{label}</p>

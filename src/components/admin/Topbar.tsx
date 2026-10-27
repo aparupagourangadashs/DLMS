@@ -1,15 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronRight, CircleHelp, Menu, Plus, Search, UserRound } from "lucide-react";
-import { HELP_HOME, findPage, pageHref, parseAdminPath, quickCreate } from "@/lib/admin/navigation";
-import { useAdminUi } from "@/store/admin-ui";
 import { Badge } from "@/components/ui/Badge";
 import { IconButton, buttonClass } from "@/components/ui/Button";
 import { Popover } from "@/components/ui/Popover";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { HELP_HOME, findPage, pageHref, parseAdminPath, quickCreate } from "@/lib/admin/navigation";
 import { cn } from "@/lib/cn";
+import { useAdminUi } from "@/store/admin-ui";
+import { Bell, ChevronRight, CircleHelp, Menu, Plus, Search, UserRound } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
 const notifications = [
   { title: "12 submissions waiting for review", time: "10 min ago", href: "/admin/learning/submissions" },
@@ -60,7 +59,7 @@ export function Topbar() {
   const setPendingCreate = useAdminUi((s) => s.setPendingCreate);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-[#aebfe2] bg-linear-to-r from-[#c6d5f2] via-[#c2c9e9] to-[#d0c5eb] px-4 shadow-[0_2px_8px_rgba(45,61,105,0.12)] sm:px-6 dark:border-border dark:from-surface dark:via-surface dark:to-surface dark:shadow-none">
+    <header className="admin-topbar sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 px-4 sm:px-6">
       <IconButton label="Open navigation" className="lg:hidden" onClick={() => setMobileNavOpen(true)}>
         <Menu className="size-5" aria-hidden="true" />
       </IconButton>
@@ -70,7 +69,7 @@ export function Topbar() {
         <button
           type="button"
           onClick={() => setCommandOpen(true)}
-          className="flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-muted hover:bg-accent-soft md:w-64"
+          className="flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-muted hover:bg-surface-muted md:w-64"
           aria-label="Search (Ctrl+K)"
         >
           <Search className="size-4" aria-hidden="true" />
@@ -129,7 +128,7 @@ export function Topbar() {
               onClick={toggle}
               aria-expanded={open}
               aria-label={`Notifications (${notifications.length} unread)`}
-              className="relative inline-flex size-10 items-center justify-center rounded-full border border-border bg-surface hover:bg-accent-soft"
+              className="relative inline-flex size-10 items-center justify-center rounded-full border border-border bg-surface hover:bg-surface-muted"
             >
               <Bell className="size-4" aria-hidden="true" />
               <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger" aria-hidden="true" />
@@ -153,8 +152,6 @@ export function Topbar() {
           )}
         </Popover>
 
-        <div className="hidden sm:block"><ThemeToggle /></div>
-
         <Popover
           label="Account"
           trigger={({ open, toggle, ref }) => (
@@ -164,9 +161,9 @@ export function Topbar() {
               onClick={toggle}
               aria-expanded={open}
               aria-label="Account menu"
-              className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-1 hover:bg-accent-soft sm:pr-3"
+              className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-1 hover:bg-surface-muted sm:pr-3"
             >
-              <span className="flex size-8 items-center justify-center rounded-full bg-lotus-pink/40 text-sm font-semibold" aria-hidden="true">
+              <span className="flex size-8 items-center justify-center rounded-full bg-gold-soft text-sm font-semibold text-accent" aria-hidden="true">
                 DA
               </span>
               <span className="hidden text-left leading-tight sm:block">
@@ -197,10 +194,6 @@ export function Topbar() {
                   <UserRound className="size-4 text-muted" aria-hidden="true" />
                   My Profile
                 </Link>
-              </div>
-              <div className="flex items-center justify-between border-t border-border px-3 pt-2 pb-1 sm:hidden">
-                <span className="text-sm">Theme</span>
-                <ThemeToggle />
               </div>
             </div>
           )}

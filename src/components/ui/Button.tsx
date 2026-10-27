@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { cn } from "@/lib/cn";
+import Link from "next/link";
 
 /**
  * Colour by meaning:
@@ -25,7 +25,7 @@ const variantClass: Record<Variant, string> = {
   primary: "bg-accent text-accent-fg shadow-sm hover:brightness-110",
   secondary: "border border-border bg-surface text-foreground hover:bg-accent-soft",
   ghost: "text-foreground hover:bg-accent-soft",
-  gold: "border border-[#d6ad20] bg-linear-to-b from-[#ffec82] via-[#ffdc4f] to-[#f4c929] text-[#302653] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_2px_5px_rgba(185,150,47,0.35)] hover:from-[#fff1a3] hover:via-[#ffe36c] hover:to-[#f8d64a]",
+  gold: "border border-[#d79c15] bg-linear-to-b from-[#ffda70] to-[#ffbf26] text-[#051b50] shadow-sm hover:from-[#ffe39a] hover:to-[#ffcb4f]",
   success: "bg-emerald-600 text-white shadow-sm shadow-emerald-600/25 hover:bg-emerald-700",
   warning: "bg-amber-500 text-amber-950 shadow-sm shadow-amber-500/25 hover:bg-amber-400",
   danger: "bg-red-600 text-white shadow-sm shadow-red-600/25 hover:bg-red-700",
