@@ -1,12 +1,12 @@
 import officialCourses from "./official-courses.json" with { type: "json" };
 
 export const collections = [
-  { slug: "bhagavata-mahavidyalaya", title: "ISKCON Board of Examination", short: "Structured study", description: "Explore the pathway of systematic shastric learning.", color: "plum" },
-  { slug: "self-study", title: "Vedvarsity · Self-study Courses", short: "At your own pace", description: "Make a little space for learning, wherever life takes you.", color: "teal" },
-  { slug: "ancient-wisdom", title: "Ancient Wisdom", short: "Ideas for everyday life", description: "Bring thoughtful questions to timeless themes.", color: "gold" },
-  { slug: "kids-parents", title: "Kids & Parents", short: "Grow together", description: "Discover meaningful ways to read and reflect as a family.", color: "rose" },
-  { slug: "level-wise", title: "Level Wise Shastric Study", short: "One step at a time", description: "Build a foundation before moving to deeper study.", color: "blue" },
-  { slug: "live-classes", title: "Live Classes", short: "Learn in good company", description: "A place for guided learning and thoughtful conversation.", color: "teal" },
+  { slug: "bhagavata-mahavidyalaya", title: "ISKCON Board of Examination Courses", short: "Structured shastric study", description: "Study the Bhagavad-gita and Srimad-Bhagavatam through Bhakti Shastri, Bhakti Vaibhava and Bhakti Vedanta courses, grounded in Srila Prabhupada's teachings.", color: "plum" },
+  { slug: "self-study", title: "Vedvarsity · Self-study Courses", short: "Study at your own pace", description: "Deepen your understanding of Vaishnava literature with self-study courses on the Ramayana, Mahabharata, Gaudiya texts, Sanskrit and devotional practice.", color: "teal" },
+  { slug: "ancient-wisdom", title: "Ancient Wisdom", short: "Scripture and daily life", description: "Explore the Bhagavad-gita, yoga, devotion and the nature of the self through focused studies that connect Vedic philosophy with the questions of daily life.", color: "gold" },
+  { slug: "kids-parents", title: "Kids & Parents", short: "Learning for the family", description: "Bring spiritual learning into family life through courses on parenting, stories from scripture, Vaishnava songs and Vedic maths for young learners.", color: "rose" },
+  { slug: "level-wise", title: "Level Wise Shastric Study", short: "A progressive learning path", description: "Follow a level-wise approach to shastric education, from introductory reading and Sanskrit to correspondence study in Bhakti Shastri and Bhakti Vaibhava.", color: "blue" },
+  { slug: "live-classes", title: "Live Classes", short: "Guided online learning", description: "Join scheduled courses on the Bhagavad-gita, Srimad-Bhagavatam and other sacred texts. Explore each offering for its language, teacher and upcoming batch details.", color: "teal" },
 ] as const;
 
 export type CollectionSlug = (typeof collections)[number]["slug"];
@@ -71,8 +71,8 @@ export function filterPublicCourses(items: PublicCourse[], filters: { query: str
 }
 
 export const publicFaq = [
-  { question: "Where should I begin?", answer: "Explore the six collections and choose a subject and learning format that feels approachable. Course names and artwork come from IBMV's public website; use each official course link to confirm the current offering." },
-  { question: "Can I enroll or pay on this website?", answer: "Not in this preview. Official course links are identified as external. Checkout, eligibility checks and payment confirmation must be connected before enrollment is available here." },
-  { question: "Can I study at my own pace?", answer: "The catalog distinguishes self-paced and guided study formats. Actual access periods and schedules must be confirmed for the selected offering." },
-  { question: "Will I receive a certificate?", answer: "Certificate eligibility depends on the official offering and assessment rules. Please check the linked IBMV course page. This design preview does not issue certificates or grant learning access." },
+  { question: "Where should I begin?", answer: "Choose from six collections to match your interests and experience. Vedvarsity and Ancient Wisdom offer self-study subjects; Board of Examination courses and Level Wise Shastric Study provide structured pathways. Check each course for prerequisites." },
+  { question: "How do I enroll in a course?", answer: "Open the course details and follow the official IBMV course link to check current batches, fees, eligibility and enrollment. Registration and payments are handled on the official IBMV website, not on this page." },
+  { question: "Can I study at my own pace?", answer: "Vedvarsity, Ancient Wisdom and Kids & Parents include self-study courses. Live classes follow a schedule. Confirm access periods, language and study requirements on the official page for your chosen course." },
+  { question: "Will I receive a certificate?", answer: "Many IBMV offerings include a certificate, subject to their completion and assessment requirements. Please confirm the certificate details on the official course page before enrolling." },
 ];

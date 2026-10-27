@@ -92,6 +92,20 @@ link the six collections, publications and institutional pages.
 
 - Homepage: six collection previews with 18 real course cards, swipeable rows
   on mobile, authorized official offering banner, institution and publications.
+- Hero artwork: a scalable gold vector rendition of the supplied lotus/tilak
+  emblem, without the ISKCON lettering, plus original lotus/manuscript line drawing and a geometric border,
+  rendered with local assets and inline SVG/CSS without
+  external artwork requests. The finite entrance animation is disabled for
+  reduced-motion preferences; decorative artwork is hidden from assistive technology.
+  The hero keeps its introduction and gold emblem without a featured course-image
+  card, caption or Study/Serve badge.
+- Homepage copy is adapted from `https://www.ibmedu.org/` and its institutional
+  about page: the Vedic-studies hero, six subject-specific collection introductions,
+  Govardhan mission, testimonials/video introductions, publications and the
+  fortnightly Nityam Bhagavata-sevaya magazine. The hero includes the published
+  31,500+ online/onsite learner figure with attribution, plus the official app,
+  WhatsApp and Telegram links. Magazine subscriptions go to the existing IBMV
+  website; no local subscription form or delivery service is implied.
 - Testimonials: four named portraits and short attributed excerpts linking to
   the source. Community figures are explicitly the original site's published
   reference figures, not live totals or counts of our imported catalog.
@@ -101,6 +115,15 @@ link the six collections, publications and institutional pages.
   request is made before selection; a direct YouTube link is also available.
 - Refined navy/gold header, homepage section shortcuts, outside-click/Escape
   dropdown dismissal, and a coordinated footer invitation/link hierarchy.
+  A separate navy top bar follows the official site's arrangement: email
+  (`info@iskconbm.org`), phone (`+91 95280 06565`), Instagram, Facebook,
+  LinkedIn, X/Twitter, WhatsApp, YouTube and the official Donate link
+  (`https://donation.ibmedu.org/`). It reflows into contact/donation and social
+  rows on smaller screens, while the main header contains branding, navigation
+  and learner access only. Social links also remain in the mobile drawer. Brand SVGs are hosted
+  locally from Simple Icons 11.15.0 (CC0), with accessible labels and tooltips.
+  Social icons use recognizable platform colors on white tiles, including
+  WhatsApp green, Instagram's gradient and a black X, retained on hover/focus.
   The public header uses a Vani Samputa-inspired arrangement: a larger
   gold-ringed circular IBMV mark, two-line institutional wordmark, left-grouped
   navigation and a separate right-aligned learner action. At the homepage hero,
