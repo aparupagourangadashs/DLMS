@@ -91,7 +91,8 @@ export function WebsiteShell({ children }: { children: React.ReactNode }) {
             <Link href="/website/contact" aria-current={path === "/website/contact" ? "page" : undefined}>Contact</Link>
           </nav>
           <div className="web-header-actions">
-            <Link href="/website/account" className="web-btn web-btn-gold web-btn-small">Learner access <ArrowRight size={15} aria-hidden="true" /></Link>
+            <a className="web-auth-button web-auth-signup" href="https://www.ibmedu.org/" target="_blank" rel="noopener noreferrer">Sign up<ExternalLink size={14} aria-hidden="true" /></a>
+            <a className="web-auth-button web-auth-login" href="https://www.ibmedu.org/" target="_blank" rel="noopener noreferrer">Log in<ExternalLink size={14} aria-hidden="true" /></a>
             <button className="web-menu-button" type="button" aria-label="Open website navigation" aria-expanded={menu} aria-haspopup="dialog" onClick={() => setMenu(true)}><Menu size={23} aria-hidden="true" /></button>
           </div>
         </div>
@@ -108,7 +109,7 @@ export function WebsiteShell({ children }: { children: React.ReactNode }) {
         <div className="web-container web-footer-bottom"><span>IBMV · Study. Reflect. Grow.<span className="web-footer-disclaimer">Enrollment and payments remain on the official site.</span></span><div><Link href="/website/privacy">Privacy notice</Link><Link href="/website/terms">Preview terms</Link><Link href="/">Portal selector</Link></div></div>
       </footer>
       <Modal open={menu} onClose={() => setMenu(false)} title="Explore IBMV" variant="drawer" side="right">
-        <nav aria-label="Mobile public website" className="web-mobile-links"><Link href="/website" onClick={() => setMenu(false)}>Home</Link>{groups.map((group) => <details key={group.label} open><summary>{group.label}</summary>{group.links.map((item) => <Link key={item.slug} href={`/website/${item.slug}`} onClick={() => setMenu(false)}>{item.title}</Link>)}</details>)}<Link href="/website#testimonials" onClick={() => setMenu(false)}>Testimonials</Link><Link href="/website#videos" onClick={() => setMenu(false)}>Videos</Link><Link href="/website/contact" onClick={() => setMenu(false)}>Contact us</Link><Link href="/website/account" onClick={() => setMenu(false)}>Learner access</Link></nav>
+        <nav aria-label="Mobile public website" className="web-mobile-links"><Link href="/website" onClick={() => setMenu(false)}>Home</Link>{groups.map((group) => <details key={group.label} open><summary>{group.label}</summary>{group.links.map((item) => <Link key={item.slug} href={`/website/${item.slug}`} onClick={() => setMenu(false)}>{item.title}</Link>)}</details>)}<Link href="/website#testimonials" onClick={() => setMenu(false)}>Testimonials</Link><Link href="/website#videos" onClick={() => setMenu(false)}>Videos</Link><Link href="/website/contact" onClick={() => setMenu(false)}>Contact us</Link><div className="web-mobile-auth"><a href="https://www.ibmedu.org/" target="_blank" rel="noopener noreferrer">Sign up<ExternalLink size={15} aria-hidden="true" /></a><a href="https://www.ibmedu.org/" target="_blank" rel="noopener noreferrer">Log in<ExternalLink size={15} aria-hidden="true" /></a></div></nav>
         <div className="web-social-drawer"><p className="web-eyebrow">Follow IBMV</p><SocialLinks /></div>
       </Modal>
     </div>

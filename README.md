@@ -106,6 +106,9 @@ link the six collections, publications and institutional pages.
   31,500+ online/onsite learner figure with attribution, plus the official app,
   WhatsApp and Telegram links. Magazine subscriptions go to the existing IBMV
   website; no local subscription form or delivery service is implied.
+  Hero community links use larger frosted cards, brand-colored WhatsApp and
+  Telegram icons, soft decorative glows and responsive stacking. Text and icons
+  stay sharp; blur is limited to the background.
 - Testimonials: four named portraits and short attributed excerpts linking to
   the source. Community figures are explicitly the original site's published
   reference figures, not live totals or counts of our imported catalog.
@@ -114,7 +117,9 @@ link the six collections, publications and institutional pages.
   YouTube privacy-enhanced player, without autoplay. No third-party video
   request is made before selection; a direct YouTube link is also available.
 - Refined navy/gold header, homepage section shortcuts, outside-click/Escape
-  dropdown dismissal, and a coordinated footer invitation/link hierarchy.
+  dropdown dismissal,   and a coordinated footer invitation/link hierarchy. Sign-up and log-in
+  buttons are available in the desktop header and mobile drawer and open the
+  official IBMV website; this preview does not implement local authentication.
   A separate navy top bar follows the official site's arrangement: email
   (`info@iskconbm.org`), phone (`+91 95280 06565`), Instagram, Facebook,
   LinkedIn, X/Twitter, WhatsApp, YouTube and the official Donate link

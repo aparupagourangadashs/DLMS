@@ -1,8 +1,9 @@
 import { collections, publicBooks, publicCourses, publicFaq } from "@/lib/website/content";
-import { ArrowDown, ArrowRight, BookOpen, Compass, ExternalLink, Heart, Layers3, Leaf, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, BookOpen, Compass, ExternalLink, Heart, Layers3, Leaf, Smartphone, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { WebsiteTestimonials } from "./WebsiteCommunity";
+import { WebsiteHeroStats } from "./WebsiteHeroStats";
 import { PublicCourseCard, WebsiteFaq } from "./WebsiteUi";
 import { WebsiteVideos } from "./WebsiteVideos";
 
@@ -15,7 +16,6 @@ function HeroArtwork() {
         <path d="M265 329 C205 333 148 319 115 272 C88 234 83 202 68 178 C141 172 224 194 255 250 C269 274 271 304 265 329Z" />
         <path d="M265 329 C215 372 153 369 104 339 C75 321 46 298 18 299 C83 269 153 273 204 296 C229 307 250 319 265 329Z" />
         <path d="M265 329 C222 391 139 387 82 345 C59 328 41 309 18 299" />
-        <path d="M265 329 C229 358 171 356 127 330 C98 313 71 298 42 295" />
       </g>)}
       <path d="M288 26 V291 C288 325 352 325 352 291 V26" />
       <path d="M320 315 C283 324 277 369 292 392 C303 408 314 415 320 430 C326 415 337 408 348 392 C363 369 357 324 320 315Z" fill="currentColor" stroke="none" />
@@ -32,13 +32,32 @@ function HeroArtwork() {
   </div>;
 }
 
+function HeroCommunityLinks() {
+  return <nav className="web-hero-values" aria-label="Join the IBMV community">
+    <a className="web-community-card web-community-whatsapp" href="https://chat.whatsapp.com/JoCb24xIIJ31f9t1KNrh3W" target="_blank" rel="noopener noreferrer">
+      <span className="web-community-icon" aria-hidden="true"><span className="web-community-whatsapp-icon" /></span>
+      <span className="web-community-label"><small>Join our community</small><strong>WhatsApp</strong></span>
+      <ExternalLink size={16} aria-hidden="true" />
+    </a>
+    <a className="web-community-card web-community-telegram" href="https://t.me/+R3ecNqESCwmxJIJt" target="_blank" rel="noopener noreferrer">
+      <span className="web-community-icon" aria-hidden="true"><Image src="/website/social-telegram.svg" alt="" width={28} height={28} /></span>
+      <span className="web-community-label"><small>Stay connected</small><strong>Telegram</strong></span>
+      <ExternalLink size={16} aria-hidden="true" />
+    </a>
+    <a className="web-community-app" href="https://play.google.com/store/apps/details?id=com.edmingle.iskconbhagavatamahavidyalaya" target="_blank" rel="noopener noreferrer">
+      <Smartphone size={20} aria-hidden="true" /><span>Learn on the go <strong>Get the learner app</strong></span><ExternalLink size={16} aria-hidden="true" />
+    </a>
+  </nav>;
+}
+
 export function WebsiteHome() {
   return <>
     <section className="web-hero">
       <HeroArtwork />
       <div className="web-container web-hero-grid">
-        <div className="web-hero-copy"><p className="web-eyebrow"><span />A college of Vedic studies</p><h1>ISKCON Bhagavata<br /><em>Mahavidyalaya</em></h1><p>Study the Bhagavad-gita, Srimad-Bhagavatam and the teachings of the Vaishnava acharyas. Discover online and onsite learning rooted in Srila Prabhupada&apos;s teachings, from your first introduction to advanced shastric study.</p><div className="web-hero-actions"><Link className="web-btn web-btn-gold" href="/website/bhagavata-mahavidyalaya">Explore courses<ArrowRight size={18} aria-hidden="true" /></Link><Link className="web-text-link" href="/website/iskcon-bhagavata-mahavidyalaya">About the Mahavidyalaya<ArrowRight size={17} aria-hidden="true" /></Link></div><div className="web-hero-values"><a href="https://play.google.com/store/apps/details?id=com.edmingle.iskconbhagavatamahavidyalaya" target="_blank" rel="noopener noreferrer">Get the learner app<ExternalLink size={14} aria-hidden="true" /></a><a href="https://chat.whatsapp.com/JoCb24xIIJ31f9t1KNrh3W" target="_blank" rel="noopener noreferrer">Join on WhatsApp<ExternalLink size={14} aria-hidden="true" /></a><a href="https://t.me/+R3ecNqESCwmxJIJt" target="_blank" rel="noopener noreferrer">Join on Telegram<ExternalLink size={14} aria-hidden="true" /></a></div></div>
-      </div>
+        <div className="web-hero-copy"><p className="web-eyebrow"><span />A college of Vedic studies</p><h1>ISKCON Bhagavata<br /><em>Mahavidyalaya</em></h1><p>Study the Bhagavad-gita, Srimad-Bhagavatam and the teachings of the Vaishnava acharyas. Discover online and onsite learning rooted in Srila Prabhupada&apos;s teachings, from your first introduction to advanced shastric study.</p><div className="web-hero-actions"><Link className="web-btn web-btn-gold" href="/website/bhagavata-mahavidyalaya">Explore courses<ArrowRight size={18} aria-hidden="true" /></Link><Link className="web-text-link" href="/website/iskcon-bhagavata-mahavidyalaya">About the Mahavidyalaya<ArrowRight size={17} aria-hidden="true" /></Link></div><HeroCommunityLinks /></div>
+                <WebsiteHeroStats />
+              </div>
       <div className="web-container web-hero-bottom"><span>31,500+ learners across online and onsite courses, as reported by IBMV.</span><a href="#learning-paths">Discover your path <ArrowDown size={15} aria-hidden="true" /></a></div>
     </section>
     <nav className="web-home-jump" aria-label="Explore the homepage"><div className="web-container"><span>Explore IBMV</span><a href="#learning-paths"><Compass size={16} aria-hidden="true" />Learning paths</a><a href="#testimonials"><Heart size={16} aria-hidden="true" />Testimonials</a><a href="#videos"><Sparkles size={16} aria-hidden="true" />Videos</a><a href="#publications"><BookOpen size={16} aria-hidden="true" />Publications</a><a href="#magazine"><BookOpen size={16} aria-hidden="true" />E-Magazine</a></div></nav>
