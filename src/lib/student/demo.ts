@@ -59,21 +59,6 @@ export function progress(course: Course) {
   return Math.round((course.completed / course.lessons.length) * 100);
 }
 
-export const initialStudentProfile: Record<string, string> = {
-  name: "Demo Learner", username: "demo-learner", email: "learner@example.com",
-};
-
-export const profileChecklist = [
-  { key: "name", label: "Student name" }, { key: "username", label: "Username" },
-  { key: "email", label: "Email" }, { key: "mobile", label: "Mobile number" },
-  { key: "city", label: "City" }, { key: "address", label: "Residential address" },
-] as const;
-
-export function profileCompletion(values: Record<string, string>) {
-  const completed = profileChecklist.filter(({ key }) => values[key]?.trim()).length;
-  return { completed, total: profileChecklist.length, percent: Math.round(completed / profileChecklist.length * 100) };
-}
-
 export const courseBanners = [
   {
     title: "Bhakti Vedanta · Module 3", image: "/student-course-launch.jpg", width: 1920, height: 574,

@@ -1,4 +1,6 @@
-import { collections, publicBooks, publicCourses, publicFaq } from "@/lib/website/content";
+import type { SiteSettings } from "@/lib/website/site-defaults";
+import { publicFaq } from "@/lib/website/static";
+import type { PublicBook, PublicCollection, PublicCourse, PublicTestimonial, PublicVideo } from "@/lib/website/types";
 import { ArrowDown, ArrowRight, BookOpen, Compass, ExternalLink, Heart, Layers3, Leaf, Smartphone, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -32,50 +34,61 @@ function HeroArtwork() {
   </div>;
 }
 
-function HeroCommunityLinks() {
+function HeroCommunityLinks({ urls }: { urls: SiteSettings["links"] }) {
   return <nav className="web-hero-values" aria-label="Join the IBMV community">
-    <a className="web-community-card web-community-whatsapp" href="https://chat.whatsapp.com/JoCb24xIIJ31f9t1KNrh3W" target="_blank" rel="noopener noreferrer">
+    <a className="web-community-card web-community-whatsapp" href={urls.whatsappCommunity} target="_blank" rel="noopener noreferrer">
       <span className="web-community-icon" aria-hidden="true"><span className="web-community-whatsapp-icon" /></span>
       <span className="web-community-label"><small>Join our community</small><strong>WhatsApp</strong></span>
       <ExternalLink size={16} aria-hidden="true" />
     </a>
-    <a className="web-community-card web-community-telegram" href="https://t.me/+R3ecNqESCwmxJIJt" target="_blank" rel="noopener noreferrer">
+    <a className="web-community-card web-community-telegram" href={urls.telegramCommunity} target="_blank" rel="noopener noreferrer">
       <span className="web-community-icon" aria-hidden="true"><Image src="/website/social-telegram.svg" alt="" width={28} height={28} /></span>
       <span className="web-community-label"><small>Stay connected</small><strong>Telegram</strong></span>
       <ExternalLink size={16} aria-hidden="true" />
     </a>
-    <a className="web-community-app" href="https://play.google.com/store/apps/details?id=com.edmingle.iskconbhagavatamahavidyalaya" target="_blank" rel="noopener noreferrer">
+    <a className="web-community-app" href={urls.app} target="_blank" rel="noopener noreferrer">
       <Smartphone size={20} aria-hidden="true" /><span>Learn on the go <strong>Get the learner app</strong></span><ExternalLink size={16} aria-hidden="true" />
     </a>
   </nav>;
 }
 
-export function WebsiteHome() {
+type HomeProps = {
+  collections: PublicCollection[];
+  courses: PublicCourse[];
+  books: PublicBook[];
+  testimonials: PublicTestimonial[];
+  videos: PublicVideo[];
+  settings: SiteSettings;
+};
+
+export function WebsiteHome({ collections, courses: allCourses, books, testimonials, videos, settings }: HomeProps) {
+  const featured = collections[0];
+  const coverBooks = [books[0], books[2] ?? books[1]].filter((book): book is PublicBook => Boolean(book));
   return <>
     <section className="web-hero">
       <HeroArtwork />
       <div className="web-container web-hero-grid">
-        <div className="web-hero-copy"><p className="web-eyebrow"><span />A college of Vedic studies</p><h1>ISKCON Bhagavata<br /><em>Mahavidyalaya</em></h1><p>Study the Bhagavad-gita, Srimad-Bhagavatam and the teachings of the Vaishnava acharyas. Discover online and onsite learning rooted in Srila Prabhupada&apos;s teachings, from your first introduction to advanced shastric study.</p><div className="web-hero-actions"><Link className="web-btn web-btn-gold" href="/website/bhagavata-mahavidyalaya">Explore courses<ArrowRight size={18} aria-hidden="true" /></Link><Link className="web-text-link" href="/website/iskcon-bhagavata-mahavidyalaya">About the Mahavidyalaya<ArrowRight size={17} aria-hidden="true" /></Link></div><HeroCommunityLinks /></div>
-                <WebsiteHeroStats />
-              </div>
-      <div className="web-container web-hero-bottom"><span>31,500+ learners across online and onsite courses, as reported by IBMV.</span><a href="#learning-paths">Discover your path <ArrowDown size={15} aria-hidden="true" /></a></div>
+        <div className="web-hero-copy"><p className="web-eyebrow"><span />A college of Vedic studies</p><h1>ISKCON Bhagavata<br /><em>Mahavidyalaya</em></h1><p>Study the Bhagavad-gita, Srimad-Bhagavatam and the teachings of the Vaishnava acharyas. Discover online and onsite learning rooted in Srila Prabhupada&apos;s teachings, from your first introduction to advanced shastric study.</p><div className="web-hero-actions"><Link className="web-btn web-btn-gold" href="/website/bhagavata-mahavidyalaya">Explore courses<ArrowRight size={18} aria-hidden="true" /></Link><Link className="web-text-link" href="/website/iskcon-bhagavata-mahavidyalaya">About the Mahavidyalaya<ArrowRight size={17} aria-hidden="true" /></Link></div><HeroCommunityLinks urls={settings.links} /></div>
+        <WebsiteHeroStats stats={settings.hero.stats} />
+      </div>
+      <div className="web-container web-hero-bottom"><span>{settings.hero.reportedLearners} learners across online and onsite courses, as reported by IBMV.</span><a href="#learning-paths">Discover your path <ArrowDown size={15} aria-hidden="true" /></a></div>
     </section>
     <nav className="web-home-jump" aria-label="Explore the homepage"><div className="web-container"><span>Explore IBMV</span><a href="#learning-paths"><Compass size={16} aria-hidden="true" />Learning paths</a><a href="#testimonials"><Heart size={16} aria-hidden="true" />Testimonials</a><a href="#videos"><Sparkles size={16} aria-hidden="true" />Videos</a><a href="#publications"><BookOpen size={16} aria-hidden="true" />Publications</a><a href="#magazine"><BookOpen size={16} aria-hidden="true" />E-Magazine</a></div></nav>
     <section id="learning-paths" className="web-section web-container">
       <div className="web-section-heading"><div><p className="web-eyebrow">Six pathways into Vedic education</p><h2>Find your path<br /><em>through the shastras.</em></h2></div><p>Choose structured study, self-paced courses, family learning or live classes. Explore scripture, Sanskrit and devotional practice at a level suited to your experience.</p></div>
-      <div className="web-collection-grid">{collections.map((item, index) => { const Icon = [BookOpen, Leaf, Sparkles, Heart, Layers3, Compass][index]; return <Link href={`/website/${item.slug}`} className={`web-collection web-art-${item.color}`} key={item.slug}><span className="web-collection-icon"><Icon size={25} aria-hidden="true" /></span><span className="web-collection-number">0{index + 1}</span><span className="web-eyebrow">{item.short}</span><h3>{item.title}</h3><p>{item.description}</p><span className="web-collection-action">Explore collection<ArrowRight size={18} aria-hidden="true" /></span></Link>; })}</div>
+      <div className="web-collection-grid">{collections.map((item, index) => { const Icon = [BookOpen, Leaf, Sparkles, Heart, Layers3, Compass][index % 6]; return <Link href={`/website/${item.slug}`} className={`web-collection web-art-${item.color}`} key={item.slug}><span className="web-collection-icon"><Icon size={25} aria-hidden="true" /></span><span className="web-collection-number">0{index + 1}</span><span className="web-eyebrow">{item.short}</span><h3>{item.title}</h3><p>{item.description}</p><span className="web-collection-action">Explore collection<ArrowRight size={18} aria-hidden="true" /></span></Link>; })}</div>
     </section>
-    <section className="web-section web-courses-section"><div className="web-container"><div className="web-section-heading"><div><p className="web-eyebrow">ISKCON Board of Examination Courses</p><h2>Go deeper into<br /><em>shastric study.</em></h2></div><div><p>{collections[0].description}</p><Link href="/website/bhagavata-mahavidyalaya" className="web-text-link">Explore structured study<ArrowRight size={17} aria-hidden="true" /></Link></div></div><div className="web-course-grid web-home-course-row">{publicCourses.slice(0, 3).map((course) => <PublicCourseCard course={course} key={course.slug} />)}</div><p className="web-source-note">Confirm current batches, fees and availability on the official course page before enrolling.</p></div></section>
+    {featured ? <section className="web-section web-courses-section"><div className="web-container"><div className="web-section-heading"><div><p className="web-eyebrow">{featured.title}</p><h2>Go deeper into<br /><em>shastric study.</em></h2></div><div><p>{featured.description}</p><Link href={`/website/${featured.slug}`} className="web-text-link">Explore structured study<ArrowRight size={17} aria-hidden="true" /></Link></div></div><div className="web-course-grid web-home-course-row">{allCourses.filter((course) => course.collection === featured.slug).slice(0, 3).map((course) => <PublicCourseCard course={course} key={course.slug} />)}</div><p className="web-source-note">Confirm current batches, fees and availability on the official course page before enrolling.</p></div></section> : null}
     {collections.slice(1).map((collection) => {
-      const courses = publicCourses.filter((course) => course.collection === collection.slug);
+      const courses = allCourses.filter((course) => course.collection === collection.slug);
       return <section className={`web-section web-collection-showcase web-showcase-${collection.color}`} key={collection.slug}><div className="web-container"><div className="web-section-heading"><div><p className="web-eyebrow">{collection.short}</p><h2>{collection.title}</h2></div><div><p>{collection.description}</p><Link className="web-text-link" href={`/website/${collection.slug}`}>View all {courses.length} courses<ArrowRight size={17} aria-hidden="true" /></Link></div></div><p className="web-swipe-hint">Swipe to explore the courses →</p><div className="web-course-grid web-home-course-row">{courses.slice(0, 3).map((course) => <PublicCourseCard course={course} key={course.slug} />)}</div></div></section>;
     })}
-    <WebsiteTestimonials />
+    <WebsiteTestimonials testimonials={testimonials} figures={settings.communityFigures} sourceUrl={settings.links.testimonialsSource} />
     <section className="web-section web-container"><div className="web-launch-panel"><div><p className="web-eyebrow">Bhakti Vedanta · Module 3</p><h2>Study the final cantos<br /><em>of the Bhagavatam.</em></h2><p>Explore the Eleventh and Twelfth Cantos of Srimad-Bhagavatam in Bhakti Vedanta Module 3. Visit the official course page for the schedule, eligibility and enrollment details.</p><a className="web-btn web-btn-gold" href="https://www.ibmedu.org/course-details/BhaktiVedantaModule-3-115238" target="_blank" rel="noopener noreferrer">View official offering<ExternalLink size={16} aria-hidden="true" /></a></div><a href="https://www.ibmedu.org/course-details/BhaktiVedantaModule-3-115238" target="_blank" rel="noopener noreferrer"><Image src="/student-course-launch.jpg" alt="Bhakti Vedanta Module 3 official IBMV banner; opens the official course page" width={1920} height={574} sizes="(min-width: 1024px) 55vw, 90vw" /></a></div></section>
     <section className="web-mission"><div className="web-container web-mission-grid"><div className="web-mission-art" aria-hidden="true"><span /><BookOpen size={100} strokeWidth={0.8} /><span className="web-mission-art-word">STUDY<br />PRACTISE · SHARE</span></div><div><p className="web-eyebrow">Our mission · Sri Govardhan dhama</p><h2>Learn the Bhagavatam.<br /><em>Live its teachings.</em></h2><p>Based in Sri Govardhan dhama, ISKCON Bhagavata Mahavidyalaya brings the study of Srimad-Bhagavatam and the Gaudiya Vaishnava tradition into daily practice. Guided by Srila Prabhupada&apos;s teachings, the institution nurtures a taste for scripture and prepares learners to share that knowledge through teaching and service.</p><Link href="/website/iskcon-bhagavata-mahavidyalaya" className="web-text-link">Discover our educational mission<ArrowRight size={18} aria-hidden="true" /></Link></div></div></section>
-    <WebsiteVideos />
-    <section id="publications" className="web-section web-container web-reading-grid"><div><p className="web-eyebrow">IBMV publications · English and Hindi</p><h2>Read, reflect<br /><em>and deepen your study.</em></h2><p className="web-body-copy">Explore Srimad Bhagavata Mahapuranam, Sri Damodar Lila and other publications on the personalities, prayers and teachings of the bhakti tradition. Find English and Hindi titles to support your reading and study.</p><Link href="/website/books" className="web-btn">Explore publications<ArrowRight size={17} aria-hidden="true" /></Link></div><Link href="/website/books" className="web-publication-art web-publication-covers" aria-label="Explore books and reading resources">{[publicBooks[0], publicBooks[2]].map((book) => <Image key={book.image} src={book.image} alt={book.title} width={600} height={840} sizes="(min-width: 1024px) 230px, 40vw" />)}</Link></section>
-    <section id="magazine" className="web-section web-magazine" aria-labelledby="web-magazine-title"><div className="web-container web-faq-grid"><div><p className="web-eyebrow">Read. Live. Inspire.</p><h2 id="web-magazine-title">Nityam<br /><em>Bhagavata-sevaya</em></h2></div><div><p className="web-body-copy">Return to the wisdom of Srimad-Bhagavatam every fortnight. IBMV&apos;s e-magazine brings its teachings together with insights from Srila Visvanatha Cakravarti Thakura, Srila Bhaktivinoda Thakura, Srila Bhaktisiddhanta Saraswati and Srila Prabhupada.</p><a className="web-btn" href="https://www.ibmedu.org/" target="_blank" rel="noopener noreferrer">Magazine subscriptions on IBMV<ExternalLink size={16} aria-hidden="true" /></a><p className="web-source-note">Subscription requests are handled on the official IBMV website.</p></div></div></section>
+    <WebsiteVideos videos={videos} playlistUrl={settings.links.videoPlaylist} />
+    <section id="publications" className="web-section web-container web-reading-grid"><div><p className="web-eyebrow">IBMV publications · English and Hindi</p><h2>Read, reflect<br /><em>and deepen your study.</em></h2><p className="web-body-copy">Explore Srimad Bhagavata Mahapuranam, Sri Damodar Lila and other publications on the personalities, prayers and teachings of the bhakti tradition. Find English and Hindi titles to support your reading and study.</p><Link href="/website/books" className="web-btn">Explore publications<ArrowRight size={17} aria-hidden="true" /></Link></div><Link href="/website/books" className="web-publication-art web-publication-covers" aria-label="Explore books and reading resources">{coverBooks.map((book) => <Image key={book.id} src={book.image.src} alt={book.title} width={book.image.width} height={book.image.height} sizes="(min-width: 1024px) 230px, 40vw" />)}</Link></section>
+    <section id="magazine" className="web-section web-magazine" aria-labelledby="web-magazine-title"><div className="web-container web-faq-grid"><div><p className="web-eyebrow">Read. Live. Inspire.</p><h2 id="web-magazine-title">Nityam<br /><em>Bhagavata-sevaya</em></h2></div><div><p className="web-body-copy">Return to the wisdom of Srimad-Bhagavatam every fortnight. IBMV&apos;s e-magazine brings its teachings together with insights from Srila Visvanatha Cakravarti Thakura, Srila Bhaktivinoda Thakura, Srila Bhaktisiddhanta Saraswati and Srila Prabhupada.</p><a className="web-btn" href={settings.links.officialSite} target="_blank" rel="noopener noreferrer">Magazine subscriptions on IBMV<ExternalLink size={16} aria-hidden="true" /></a><p className="web-source-note">Subscription requests are handled on the official IBMV website.</p></div></div></section>
     <section className="web-section web-faq-section"><div className="web-container web-faq-grid"><div><p className="web-eyebrow">Planning your studies</p><h2>Questions before<br /><em>you begin?</em></h2><Link href="/website/contact" className="web-text-link">Contact the IBMV team<ArrowRight size={17} aria-hidden="true" /></Link></div><WebsiteFaq items={publicFaq} /></div></section>
   </>;
 }

@@ -1,6 +1,5 @@
-import type { ListConfig, Row } from "./types";
-import { assetForm, batchForm, certificateForm, eventForm, feedbackForm } from "./editor-definitions";
 import { formatDate } from "@/lib/format";
+import { announcementTags } from "./announcements";
 import {
   DEMO_TODAY,
   addDays,
@@ -12,6 +11,8 @@ import {
   instructors,
   people,
 } from "./demo-data";
+import { assetForm, batchForm, certificateForm, eventForm, feedbackForm } from "./editor-definitions";
+import type { FormField, ListConfig, Row } from "./types";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -161,37 +162,6 @@ const configs: Record<string, () => ListConfig> = {
         conversions: int(12, 640),
       })),
       form: feedbackForm,
-      rowActions: ["edit", "duplicate", "delete"],
-    };
-  },
-
-  "learning/module-library": () => {
-    const { int } = helpers(51);
-    const names = ["Introduction to the Gita", "Karma Yoga", "Jnana Yoga", "Bhakti Yoga", "Sanskrit Alphabet", "Sandhi Rules", "Stories for Children", "Parenting with Values", "Canto 1 – Chapters 1–5", "Nectar of Devotion – Part 1"];
-    return {
-      title: "Module Library",
-      description: "Reusable modules that can be added to any course or batch.",
-      entityName: "module",
-      primaryAction: "Add Module",
-      searchKeys: ["name"],
-      searchPlaceholder: "Search modules",
-      tabs: { key: "_all", items: [{ label: "All" }] },
-      columns: [
-        { key: "name", label: "Module name", type: "primary", subKey: "usedIn" },
-        { key: "content", label: "Content" },
-      ],
-      rows: rows(names.length, (i) => ({
-        name: names[i],
-        usedIn: `Used in ${int(1, 4)} course(s)`,
-        content: `${int(3, 14)} lessons · ${int(1, 6)} PDFs · ${int(0, 3)} quizzes`,
-      })),
-      form: {
-        fields: [
-          { key: "name", label: "Module name", type: "text", required: true },
-          { key: "description", label: "Description", type: "textarea" },
-        ],
-        defaults: { usedIn: "Not used yet", content: "0 lessons" },
-      },
       rowActions: ["edit", "duplicate", "delete"],
     };
   },
@@ -527,14 +497,14 @@ const configs: Record<string, () => ListConfig> = {
       form: {
         fields: [
           { key: "name", label: "Full name", type: "text", required: true },
-          { key: "email", label: "Email", type: "email", required: true },
+          { key: "email", label: "Email", type: "email", required: true, help: "Cannot be changed after the account is created." },
           { key: "phone", label: "Mobile", type: "tel" },
           { key: "role", label: "Role", type: "select", options: ["Administrator", "Instructor", "Content Editor", "Finance", "Support"], required: true },
           { key: "branch", label: "Branch", type: "select", options: ["Head Office – Mumbai", "Pune Centre", "Online"], required: true },
         ],
         defaults: { addedOn: DEMO_TODAY, state: "Active" },
       },
-      rowActions: ["edit", "archive"],
+      rowActions: ["edit", "archive", "restore"],
     };
   },
 
@@ -689,46 +659,40 @@ const configs: Record<string, () => ListConfig> = {
     rowActions: ["edit", "delete"],
   }),
 
-  "marketing/leads": () => {
-    const { int, pick } = helpers(171);
-    const list = people(18, 172);
-    return {
-      title: "Leads",
-      description: "Enquiries from the website contact form, bulk book enquiries and campaigns.",
-      entityName: "lead",
-      exportable: true,
-      searchKeys: ["name", "email", "phone"],
-      dateFilterKey: "receivedOn",
-      tabs: { key: "stage", items: [{ label: "All" }, { label: "New", value: "New" }, { label: "Contacted", value: "Contacted" }, { label: "Converted", value: "Converted" }, { label: "Closed", value: "Closed" }] },
-      filters: [{ key: "source", label: "Source", options: ["Contact form", "Bulk book enquiry", "Campaign", "Event"] }],
-      columns: [
-        { key: "name", label: "Name", type: "primary", subKey: "city" },
-        { key: "email", label: "Contact", type: "primary", subKey: "phone" },
-        { key: "source", label: "Source" },
-        { key: "interest", label: "Interested in" },
-        { key: "receivedOn", label: "Received on", type: "date", sortable: true },
-        { key: "stage", label: "Stage", type: "badge", tones: { New: "info", Contacted: "warning", Converted: "success", Closed: "neutral" } },
+  "marketing/leads": () => ({
+    title: "Leads",
+    description: "Enquiries from the website bulk-book form and manual entries. Follow up and move each lead forward.",
+    entityName: "lead",
+    primaryAction: "Add Lead",
+    exportable: true,
+    searchKeys: ["name", "email", "phone"],
+    searchPlaceholder: "Search name, email or phone",
+    dateFilterKey: "receivedOn",
+    tabs: { key: "stage", items: [{ label: "All" }, { label: "New", value: "New" }, { label: "Contacted", value: "Contacted" }, { label: "Converted", value: "Converted" }, { label: "Closed", value: "Closed" }] },
+    filters: [{ key: "source", label: "Source", options: ["Contact form", "Bulk book enquiry", "Campaign", "Event", "Manual entry"] }],
+    columns: [
+      { key: "name", label: "Name", type: "primary", subKey: "city", sortable: true },
+      { key: "email", label: "Contact", type: "primary", subKey: "phone" },
+      { key: "source", label: "Source" },
+      { key: "interest", label: "Interested in" },
+      { key: "receivedOn", label: "Received on", type: "date", sortable: true },
+      { key: "stage", label: "Stage", type: "badge", tones: { New: "info", Contacted: "warning", Converted: "success", Closed: "neutral" } },
+      { key: "details", label: "Details", hidden: true },
+      { key: "consent", label: "Agreed to be contacted", hidden: true },
+    ],
+    rows: [],
+    form: {
+      fields: [
+        { key: "name", label: "Name", type: "text", required: true },
+        { key: "email", label: "Email", type: "email", required: true },
+        { key: "phone", label: "Mobile", type: "tel" },
+        { key: "interest", label: "Interested in", type: "text" },
+        { key: "stage", label: "Stage", type: "select", options: ["New", "Contacted", "Converted", "Closed"], required: true, help: "Move the lead forward after each follow-up." },
       ],
-      rows: rows(list.length, () => ({})).map((r, i) => ({
-        ...r,
-        ...list[i],
-        source: pick(["Contact form", "Bulk book enquiry", "Campaign", "Event"]),
-        interest: pick([...courses.slice(0, 5), "Bhagavad Gita (bulk, 50 copies)"]),
-        receivedOn: addDays(DEMO_TODAY, -int(0, 45)),
-        stage: pick(["New", "New", "Contacted", "Converted", "Closed"]),
-      })),
-      form: {
-        fields: [
-          { key: "name", label: "Name", type: "text", required: true },
-          { key: "email", label: "Email", type: "email", required: true },
-          { key: "phone", label: "Mobile", type: "tel" },
-          { key: "interest", label: "Interested in", type: "text" },
-          { key: "stage", label: "Stage", type: "select", options: ["New", "Contacted", "Converted", "Closed"], required: true, help: "Move the lead forward after each follow-up." },
-        ],
-      },
-      rowActions: ["view", "edit", "delete"],
-    };
-  },
+      defaults: { stage: "New" },
+    },
+    rowActions: ["view", "edit", "delete"],
+  }),
 
   "marketing/promo-codes": () => {
     const { int, pick } = helpers(181);
@@ -766,36 +730,6 @@ const configs: Record<string, () => ListConfig> = {
           { key: "validUntil", label: "Valid until", type: "date", required: true },
         ],
         defaults: { used: "0 / 100", status: "Active" },
-      },
-      rowActions: ["edit", "delete"],
-    };
-  },
-
-  "marketing/testimonials": () => {
-    const { pick } = helpers(191);
-    const list = people(6, 192);
-    return {
-      title: "Testimonials",
-      description: "Learner testimonials and videos shown on the public website.",
-      entityName: "testimonial",
-      primaryAction: "Add Testimonial",
-      searchKeys: ["name", "course"],
-      columns: [
-        { key: "name", label: "Learner", type: "primary", subKey: "city" },
-        { key: "course", label: "Course" },
-        { key: "format", label: "Format", type: "badge", tones: { Text: "neutral", Video: "accent" } },
-        { key: "rating", label: "Rating", type: "number" },
-        { key: "status", label: "Status", type: "badge" },
-      ],
-      rows: rows(list.length, (i) => ({ ...list[i], course: pick(courses), format: i % 2 ? "Video" : "Text", rating: pick([4, 5, 5]), status: i === 5 ? "Hidden" : "Published" })),
-      form: {
-        fields: [
-          { key: "name", label: "Learner name", type: "text", required: true },
-          { key: "course", label: "Course", type: "select", options: [...courses], required: true },
-          { key: "format", label: "Format", type: "select", options: ["Text", "Video"], required: true },
-          { key: "quote", label: "Testimonial", type: "textarea", required: true },
-        ],
-        defaults: { rating: 5, status: "Hidden", city: "—" },
       },
       rowActions: ["edit", "delete"],
     };
@@ -976,11 +910,408 @@ const configs: Record<string, () => ListConfig> = {
   },
 };
 
+const statusTones = { Published: "success", Draft: "neutral", Hidden: "neutral", Archived: "warning" } as const;
+const statusTabs = [{ label: "All" }, { label: "Published", value: "Published" }, { label: "Draft", value: "Draft" }, { label: "Archived", value: "Archived" }];
+const statusSelect: FormField = { key: "status", label: "Status", type: "select", options: ["Draft", "Published", "Archived"], required: true, defaultValue: "Draft" };
+const orderField: FormField = { key: "sortOrder", label: "Display order", type: "number", min: 0, help: "Lower numbers appear first. Leave empty to keep the current position." };
+
+// Screens backed by the database: rows come from the API, so `rows` stays empty here.
+const catalogConfigs: Record<string, () => ListConfig> = {
+  "learning/module-library": () => ({
+    title: "Module Library",
+    description: "Reusable modules of lessons. Add a module to a course (Products > Courses) and its lessons appear in the learner's course player.",
+    entityName: "module",
+    primaryAction: "Add Module",
+    searchKeys: ["name", "description"],
+    searchPlaceholder: "Search modules",
+    tabs: { key: "status", items: statusTabs },
+    columns: [
+      { key: "name", label: "Module name", type: "primary", subKey: "usedIn", sortable: true },
+      { key: "content", label: "Content" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "updatedOn", label: "Updated", type: "date", sortable: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Published" },
+      fields: [
+        { key: "name", label: "Module name", type: "text", required: true },
+        { key: "description", label: "Description", type: "textarea" },
+        { key: "status", label: "Status", type: "select", options: ["Published", "Draft", "Archived"], required: true, defaultValue: "Published", help: "Learners see only published modules that a course includes." },
+        {
+          key: "lessons",
+          label: "Lesson",
+          type: "repeat",
+          itemFields: [
+            { key: "title", label: "Lesson title", type: "text", required: true },
+            { key: "type", label: "Type", type: "select", options: ["Text", "Video", "Link"], defaultValue: "Text", required: true, help: "Text is written here. Video is a YouTube address. Link opens another website." },
+            { key: "minutes", label: "Minutes (optional)", type: "number", min: 1, max: 600 },
+            { key: "content", label: "Lesson text (Markdown)", type: "textarea", format: "markdown", required: true, showWhen: { key: "type", values: ["Text"] } },
+            { key: "url", label: "Address", type: "url", required: true, placeholder: "https://", showWhen: { key: "type", values: ["Video", "Link"] } },
+          ],
+        },
+      ],
+    },
+    rowActions: ["edit", "duplicate", "archive", "delete"],
+  }),
+  "users/learners": () => ({
+    title: "Learners",
+    description: "Everyone registered on the platform, with enrolment status worked out from batches.",
+    entityName: "learner",
+    primaryAction: "Add Learner",
+    exportable: true,
+    configurableColumns: true,
+    searchKeys: ["name", "email", "phone", "regNo"],
+    searchPlaceholder: "Search name, email, phone or reg. no.",
+    dateFilterKey: "addedOn",
+    tabs: { key: "status", items: [{ label: "All" }, { label: "Registered", value: "Registered" }, { label: "Enrolled", value: "Enrolled" }, { label: "Completed", value: "Completed" }, { label: "On Leave", value: "On leave" }, { label: "Archived", value: "Archived" }] },
+    filters: [{ key: "course", label: "Course", options: [] }, { key: "batch", label: "Batch", options: [] }, { key: "branch", label: "Branch", options: [] }, { key: "city", label: "City", options: [] }],
+    columns: [
+      { key: "name", label: "Learner's name", type: "primary", subKey: "city", sortable: true },
+      { key: "email", label: "Contact details", type: "primary", subKey: "phone" },
+      { key: "addedOn", label: "Date added", type: "date", sortable: true },
+      { key: "status", label: "Status", type: "badge", tones: { Registered: "info", Enrolled: "success", Completed: "accent", "On leave": "warning", Archived: "neutral" } },
+      { key: "regNo", label: "Registration no." },
+      { key: "branch", label: "Branch", hidden: true },
+      { key: "course", label: "Course", hidden: true },
+      { key: "batch", label: "Batch", hidden: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { standing: "Registered" },
+      fields: [
+        { key: "name", label: "Full name", type: "text", required: true },
+        { key: "email", label: "Email", type: "email", required: true, help: "The sign-in address. It cannot be changed after the account is created; the learner is emailed a link to choose a password." },
+        { key: "phone", label: "Mobile (with country code)", type: "tel", placeholder: "+91 98xxxxxxxx" },
+        { key: "city", label: "City", type: "text" },
+        { key: "branch", label: "Branch", type: "select", options: [] },
+        { key: "standing", label: "Account status", type: "select", options: ["Registered", "On leave", "Archived"], required: true, defaultValue: "Registered", help: "Enrolled and Completed are worked out from the learner's batches. On leave pauses a learner without blocking sign-in; Archived blocks it." },
+      ],
+    },
+    rowActions: ["view", "edit", "reset-password", "archive", "restore"],
+  }),
+
+  "learning/announcements": () => ({
+    title: "Announcements",
+    description: "Share notices with learners. Urgency controls how prominently they appear; a notice with a later publish time stays hidden until then.",
+    entityName: "announcement",
+    primaryAction: "New Announcement",
+    showIndex: true,
+    searchKeys: ["name"],
+    searchPlaceholder: "Search by name",
+    dateFilterKey: "date",
+    filters: [{ key: "tags", label: "Tag", options: [...announcementTags] }],
+    columns: [
+      { key: "date", label: "Date & time", type: "datetime", sortable: true },
+      { key: "name", label: "Name", type: "primary", subKey: "audience", sortable: true },
+      { key: "urgency", label: "Urgency", type: "badge", tones: { High: "danger", Medium: "warning", Low: "neutral" } },
+      { key: "tags", label: "Tags", type: "tags" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+    ],
+    rows: [],
+    form: {
+      defaults: { urgency: "Medium", status: "Published", tags: ["General"] },
+      fields: [
+        { key: "name", label: "Title", type: "text", required: true },
+        { key: "audience", label: "Audience", type: "select", options: [], required: true, help: "Everyone, or the learners enrolled in one batch." },
+        { key: "urgency", label: "Urgency", type: "select", options: ["High", "Medium", "Low"], required: true, defaultValue: "Medium" },
+        { key: "date", label: "Publish at (IST)", type: "datetime-local", required: true, help: "Choose a later time to schedule it; learners see it from then on." },
+        { key: "tags", label: "Tags", type: "multiselect", options: [...announcementTags] },
+        { key: "message", label: "Message", type: "textarea", required: true },
+        { key: "status", label: "Status", type: "select", options: ["Published", "Draft", "Archived"], required: true, defaultValue: "Published", help: "Drafts and archived notices are not shown to learners." },
+      ],
+    },
+    rowActions: ["edit", "duplicate", "archive", "delete"],
+  }),
+
+  "learning/batches": () => ({
+    title: "Batches",
+    description: "Course batches with their instructor, managers and progress. Modules and batch communities arrive with the module library and communities.",
+    entityName: "batch",
+    primaryAction: "Create Batch",
+    showIndex: true,
+    configurableColumns: true,
+    searchKeys: ["name", "course"],
+    searchPlaceholder: "Search batches",
+    tabs: { key: "status", items: [{ label: "Active", value: "Active" }, { label: "Completed", value: "Completed" }, { label: "Archived", value: "Archived" }, { label: "All" }] },
+    filters: [{ key: "course", label: "Course", options: [] }, { key: "instructor", label: "Instructor", options: [] }],
+    columns: [
+      { key: "name", label: "Batch name", type: "primary", sortable: true },
+      { key: "course", label: "Course", sortable: true },
+      { key: "duration", label: "Duration" },
+      { key: "instructor", label: "Instructor" },
+      { key: "manager", label: "Batch manager" },
+      { key: "learners", label: "Learners", type: "number" },
+      { key: "progress", label: "Batch progress", type: "progress" },
+      { key: "branch", label: "Branch", hidden: true },
+      { key: "status", label: "Status", type: "badge", hidden: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Active" },
+      fields: [
+        { key: "name", label: "Batch name", type: "text", required: true },
+        { key: "course", label: "Course", type: "select", options: [], required: true },
+        { key: "startDate", label: "Start date", type: "date", required: true },
+        { key: "endDate", label: "End date", type: "date", required: true },
+        { key: "instructor", label: "Instructor", type: "select", options: [], required: true },
+        { key: "manager", label: "Primary manager", type: "select", options: [], required: true },
+        { key: "additionalManagers", label: "Additional managers", type: "multiselect", options: [] },
+        { key: "branch", label: "Branch", type: "select", options: [], help: "Leave empty for a batch that belongs to no branch." },
+        { key: "status", label: "Status", type: "select", options: ["Active", "Completed", "Archived"], required: true, defaultValue: "Active", help: "Completing a batch stops new sessions and enrolments; archiving keeps every record." },
+      ],
+    },
+    rowActions: ["edit", "duplicate", "archive"],
+  }),
+  "products/courses": () => ({
+    title: "Courses",
+    description: "The public course catalog. Published courses appear on the website under their collection.",
+    entityName: "course",
+    primaryAction: "Add Course",
+    showIndex: true,
+    searchKeys: ["title", "slug", "instructorName"],
+    searchPlaceholder: "Search title, URL name or teacher",
+    tabs: { key: "status", items: statusTabs },
+    filters: [{ key: "category", label: "Category", options: [] }, { key: "language", label: "Language", options: [] }],
+    columns: [
+      { key: "title", label: "Course", type: "primary", subKey: "slug", sortable: true },
+      { key: "category", label: "Category" },
+      { key: "language", label: "Language" },
+      { key: "format", label: "Format" },
+      { key: "instructorName", label: "Teacher or team" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "updatedOn", label: "Updated", type: "date", sortable: true },
+    ],
+    rows: [],
+    form: {
+      steps: ["Basics", "Offer and details", "Publishing"],
+      defaults: { isFree: "No", certificateOffered: "No", comingSoon: "No", status: "Draft", language: "Not listed", format: "Self-paced" },
+      fields: [
+        { key: "title", label: "Course title", type: "text", required: true, step: 0 },
+        { key: "slug", label: "URL name", type: "text", step: 0, placeholder: "bhakti-shastri-english", help: "Leave blank to create it from the title. Lowercase letters, numbers, dashes and underscores." },
+        { key: "category", label: "Category (collection)", type: "select", options: [], required: true, step: 0 },
+        { key: "language", label: "Language", type: "select", options: ["English", "Hindi", "Not listed"], step: 0 },
+        { key: "format", label: "Study format", type: "select", options: ["Self-paced", "Live classes", "Structured study"], step: 0 },
+        { key: "instructorName", label: "Teacher or team", type: "text", step: 0 },
+        { key: "duration", label: "Listed duration", type: "text", placeholder: "96 Hours", step: 0 },
+        { key: "summary", label: "Short summary", type: "textarea", required: true, step: 0, help: "Shown on cards and at the top of the course page." },
+        { key: "description", label: "Description (Markdown)", type: "textarea", format: "markdown", step: 0 },
+        { key: "isFree", label: "Free course", type: "select", options: ["No", "Yes"], defaultValue: "No", step: 1 },
+        { key: "price", label: "Price (₹)", type: "number", min: 0, step: 1, showWhen: { key: "isFree", values: ["No"] }, help: "Leave empty to show \"see the official page\"." },
+        { key: "certificateOffered", label: "Certificate offered", type: "select", options: ["No", "Yes"], defaultValue: "No", step: 1 },
+        { key: "startDate", label: "Start date", type: "date", step: 1 },
+        { key: "endDate", label: "End date", type: "date", step: 1 },
+        { key: "scheduleNote", label: "Schedule details", type: "textarea", step: 1, help: "Class days, times and time zone." },
+        { key: "officialUrl", label: "Official course page", type: "url", required: true, step: 1, placeholder: "https://www.ibmedu.org/course-details/…" },
+        { key: "enrollmentUrl", label: "Enrollment link (optional)", type: "url", step: 1 },
+        { key: "eligibility", label: "Eligibility", type: "textarea", step: 1 },
+        { key: "materials", label: "Course materials", type: "textarea", step: 1 },
+        { key: "audience", label: "Who it is for", type: "textarea", step: 1 },
+        { key: "assessmentPlan", label: "Assessment", type: "textarea", step: 1 },
+        { key: "requirements", label: "Requirements", type: "textarea", step: 1 },
+        { key: "imageUrl", label: "Image path or URL", type: "text", step: 2, placeholder: "/website/courses/course-112924.webp", help: "A site path or an https:// link. Uploading arrives with the asset library." },
+        { ...statusSelect, step: 2 },
+        { key: "comingSoon", label: "Show as coming soon", type: "select", options: ["No", "Yes"], defaultValue: "No", step: 2 },
+        { ...orderField, step: 2 },
+        { key: "faqs", label: "FAQs", type: "repeat", step: 2, itemFields: [{ key: "question", label: "Question", type: "text", required: true }, { key: "answer", label: "Answer", type: "textarea", required: true }] },
+        { key: "modules", label: "Module", type: "repeat", step: 2, itemFields: [{ key: "module", label: "Module", type: "select", options: [], required: true }], help: "Lessons that enrolled learners study, in order. Build them under Learning > Module Library." },
+      ],
+    },
+    rowActions: ["edit", "duplicate", "archive", "delete"],
+  }),
+
+  "website/books": () => ({
+    title: "Books",
+    description: "Publications shown on the website Books page, grouped by language.",
+    entityName: "book",
+    primaryAction: "Add Book",
+    searchKeys: ["title", "publisher"],
+    searchPlaceholder: "Search title or publisher",
+    tabs: { key: "status", items: statusTabs },
+    filters: [{ key: "language", label: "Language", options: ["English", "Hindi"] }],
+    columns: [
+      { key: "title", label: "Title", type: "primary", subKey: "publisher", sortable: true },
+      { key: "language", label: "Language", type: "badge", tones: { English: "info", Hindi: "gold" } },
+      { key: "linkCount", label: "Retailer links", type: "number" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "updatedOn", label: "Updated", type: "date", sortable: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Draft", language: "English" },
+      fields: [
+        { key: "title", label: "Title", type: "text", required: true },
+        { key: "language", label: "Language", type: "select", options: ["English", "Hindi"], required: true },
+        { key: "publisher", label: "Publisher", type: "text" },
+        { key: "imageUrl", label: "Cover image path or URL", type: "text", placeholder: "/website/books/cover.webp", help: "600 x 840 pixels works best." },
+        { key: "links", label: "Retailer links", type: "repeat", itemFields: [{ key: "format", label: "Format", type: "select", options: ["Print", "Digital"], defaultValue: "Print", required: true }, { key: "retailer", label: "Retailer", type: "text", required: true }, { key: "url", label: "Link", type: "url", required: true }] },
+        statusSelect,
+        orderField,
+      ],
+    },
+    rowActions: ["edit", "archive", "delete"],
+  }),
+
+  "website/people": () => ({
+    title: "People",
+    description: "Advisory board members and the team listed on the About pages. Only published entries appear.",
+    entityName: "person",
+    primaryAction: "Add Person",
+    searchKeys: ["name", "roleTitle"],
+    searchPlaceholder: "Search name or role",
+    tabs: { key: "status", items: statusTabs },
+    filters: [{ key: "group", label: "Group", options: ["Advisory Board", "Team"] }],
+    columns: [
+      { key: "name", label: "Name", type: "primary", subKey: "roleTitle", sortable: true },
+      { key: "group", label: "Group", type: "badge", tones: { "Advisory Board": "gold", Team: "info" } },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "updatedOn", label: "Updated", type: "date", sortable: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Draft", group: "Team" },
+      fields: [
+        { key: "name", label: "Name", type: "text", required: true },
+        { key: "roleTitle", label: "Role or title", type: "text", required: true },
+        { key: "group", label: "Group", type: "select", options: ["Advisory Board", "Team"], required: true },
+        { key: "bio", label: "Short biography", type: "textarea", help: "Publish only text the person has approved." },
+        { key: "imageUrl", label: "Photo path or URL", type: "text" },
+        statusSelect,
+        orderField,
+      ],
+    },
+    rowActions: ["edit", "archive", "delete"],
+  }),
+
+  "website/magazines": () => ({
+    title: "Magazines",
+    description: "Issues of the e-magazine shown in the public archive, newest first.",
+    entityName: "magazine issue",
+    primaryAction: "Add Issue",
+    searchKeys: ["title", "issueLabel"],
+    searchPlaceholder: "Search title or issue",
+    tabs: { key: "status", items: statusTabs },
+    columns: [
+      { key: "title", label: "Title", type: "primary", subKey: "issueLabel", sortable: true },
+      { key: "language", label: "Language" },
+      { key: "issueDate", label: "Issue date", type: "date" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Draft", language: "English" },
+      fields: [
+        { key: "title", label: "Title", type: "text", required: true },
+        { key: "issueLabel", label: "Issue label", type: "text", placeholder: "Issue 12" },
+        { key: "issueDate", label: "Issue date", type: "date" },
+        { key: "language", label: "Language", type: "select", options: ["English", "Hindi"], required: true },
+        { key: "coverUrl", label: "Cover image path or URL", type: "text" },
+        { key: "fileUrl", label: "Reading or download link", type: "url" },
+        statusSelect,
+        orderField,
+      ],
+    },
+    rowActions: ["edit", "archive", "delete"],
+  }),
+
+  "website/videos": () => ({
+    title: "Videos",
+    description: "Videos shown in the home page video section. Playback loads from YouTube only after a visitor chooses a video.",
+    entityName: "video",
+    primaryAction: "Add Video",
+    searchKeys: ["title", "speaker"],
+    searchPlaceholder: "Search title or speaker",
+    tabs: { key: "status", items: statusTabs },
+    columns: [
+      { key: "title", label: "Title", type: "primary", subKey: "speaker", sortable: true },
+      { key: "youtubeId", label: "YouTube id" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "updatedOn", label: "Updated", type: "date", sortable: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Draft" },
+      fields: [
+        { key: "youtubeId", label: "YouTube link or video id", type: "text", required: true, placeholder: "https://www.youtube.com/watch?v=…" },
+        { key: "speaker", label: "Speaker", type: "text", required: true },
+        { key: "title", label: "Title", type: "text", required: true },
+        { key: "thumbnailUrl", label: "Thumbnail path or URL", type: "text", help: "Thumbnails are hosted on this site so YouTube loads only on play. 960 x 540 works best." },
+        statusSelect,
+        orderField,
+      ],
+    },
+    rowActions: ["edit", "archive", "delete"],
+  }),
+
+  "website/legal-pages": () => ({
+    title: "Legal Pages",
+    description: "Terms and Privacy text. Published text is not edited; create a new version instead.",
+    entityName: "legal document",
+    primaryAction: "New Document",
+    searchKeys: ["title"],
+    searchPlaceholder: "Search title",
+    tabs: { key: "status", items: statusTabs },
+    filters: [{ key: "type", label: "Type", options: ["Terms", "Privacy"] }],
+    columns: [
+      { key: "title", label: "Title", type: "primary", subKey: "type" },
+      { key: "version", label: "Version", type: "number" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "publishedOn", label: "Published on", type: "date" },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Draft", type: "Privacy" },
+      fields: [
+        { key: "type", label: "Document", type: "select", options: ["Terms", "Privacy"], required: true },
+        { key: "title", label: "Title", type: "text", required: true },
+        { key: "body", label: "Text (Markdown)", type: "textarea", format: "markdown", required: true, help: "Only institution-approved wording should be published." },
+        { key: "status", label: "Status", type: "select", options: ["Draft", "Published"], required: true, defaultValue: "Draft", help: "Publishing needs an administrator and archives the previous published version." },
+      ],
+    },
+    rowActions: ["edit", "duplicate", "archive", "delete"],
+  }),
+
+  "marketing/testimonials": () => ({
+    title: "Testimonials",
+    description: "Testimonials shown on the public website home page. Only published entries appear.",
+    entityName: "testimonial",
+    primaryAction: "Add Testimonial",
+    searchKeys: ["name", "course"],
+    searchPlaceholder: "Search name or course",
+    tabs: { key: "status", items: [{ label: "All" }, { label: "Published", value: "Published" }, { label: "Hidden", value: "Hidden" }, { label: "Archived", value: "Archived" }] },
+    columns: [
+      { key: "name", label: "Name", type: "primary", subKey: "city", sortable: true },
+      { key: "course", label: "Course" },
+      { key: "format", label: "Format", type: "badge", tones: { Text: "neutral", Video: "accent" } },
+      { key: "rating", label: "Rating", type: "number" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "updatedOn", label: "Updated", type: "date", sortable: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Hidden", format: "Text" },
+      fields: [
+        { key: "name", label: "Name", type: "text", required: true },
+        { key: "city", label: "City", type: "text" },
+        { key: "course", label: "Course (optional)", type: "text" },
+        { key: "format", label: "Format", type: "select", options: ["Text", "Video"], required: true },
+        { key: "quote", label: "Testimonial", type: "textarea", required: true },
+        { key: "imageUrl", label: "Photo path or URL", type: "text" },
+        { key: "sourceUrl", label: "Source link", type: "url", help: "Where the full testimonial can be read." },
+        { key: "rating", label: "Rating (1-5)", type: "number", min: 1, max: 5 },
+        { key: "status", label: "Status", type: "select", options: ["Hidden", "Published", "Archived"], required: true, defaultValue: "Hidden", help: "Publish only with the person's consent." },
+        orderField,
+      ],
+    },
+    rowActions: ["edit", "archive", "delete"],
+  }),
+};
+
 export function getListConfig(key: string): ListConfig | null {
-  const make = configs[key];
+  const make = catalogConfigs[key] ?? configs[key];
   return make ? make() : null;
 }
 
 export function listConfigKeys() {
-  return Object.keys(configs);
+  return [...new Set([...Object.keys(configs), ...Object.keys(catalogConfigs)])];
 }

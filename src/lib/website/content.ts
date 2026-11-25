@@ -1,4 +1,6 @@
 import officialCourses from "./official-courses.json" with { type: "json" };
+import { filterPublicCourses, institutionLinks, publicFaq, staticPageSlugs } from "./static";
+import type { PublicCourse } from "./types";
 
 export const collections = [
   { slug: "bhagavata-mahavidyalaya", title: "ISKCON Board of Examination Courses", short: "Structured shastric study", description: "Study the Bhagavad-gita and Srimad-Bhagavatam through Bhakti Shastri, Bhakti Vaibhava and Bhakti Vedanta courses, grounded in Srila Prabhupada's teachings.", color: "plum" },
@@ -10,12 +12,7 @@ export const collections = [
 ] as const;
 
 export type CollectionSlug = (typeof collections)[number]["slug"];
-export type PublicCourse = {
-  slug: string; title: string; summary: string; collection: CollectionSlug;
-  language: string; mode: string; duration: string; instructor: string;
-  color: string; officialUrl: string;
-  image: { src: string; width: number; height: number };
-};
+export type { PublicCourse };
 
 export const publicCourses: PublicCourse[] = officialCourses.map((course) => {
   const collection = collections[course.group];
@@ -38,16 +35,10 @@ export const publicCourses: PublicCourse[] = officialCourses.map((course) => {
 
 export const publicPages = [
   ...collections.map((item) => item.slug),
-  "books", "e-magazines", "iskcon-bhagavata-mahavidyalaya", "srila-prabhupada",
-  "our-advisory-board-members", "our-team", "contact", "account", "terms", "privacy",
+  ...staticPageSlugs,
 ];
 
-export const institutionLinks = [
-  { slug: "iskcon-bhagavata-mahavidyalaya", title: "About IBMV" },
-  { slug: "srila-prabhupada", title: "Srila Prabhupada" },
-  { slug: "our-advisory-board-members", title: "Advisory Board" },
-  { slug: "our-team", title: "Our Team" },
-];
+export { filterPublicCourses, institutionLinks, publicFaq };
 
 export const publicBooks = [
   { title: "SRIMAD BHAGAVATA MAHAPURANAM - Vol 1", language: "English", image: "/website/books/vol1.webp" },
@@ -59,20 +50,4 @@ export const publicBooks = [
   { title: "Bhishma Stuti", language: "Hindi", image: "/website/books/bhisma.webp" },
   { title: "Grihastho ke Sadachar", language: "Hindi", image: "/website/books/gahestu.webp" },
   { title: "Ajamil Upakhyan", language: "Hindi", image: "/website/books/ajamil.webp" },
-];
-
-export function filterPublicCourses(items: PublicCourse[], filters: { query: string; language: string; format: string; teacher: string }) {
-  const query = filters.query.trim().toLocaleLowerCase("en");
-  return items.filter((course) =>
-    (!query || `${course.title} ${course.summary} ${course.instructor}`.toLocaleLowerCase("en").includes(query))
-    && (filters.language === "all" || course.language === filters.language)
-    && (filters.format === "all" || course.mode === filters.format)
-    && (filters.teacher === "all" || course.instructor === filters.teacher));
-}
-
-export const publicFaq = [
-  { question: "Where should I begin?", answer: "Choose from six collections to match your interests and experience. Vedvarsity and Ancient Wisdom offer self-study subjects; Board of Examination courses and Level Wise Shastric Study provide structured pathways. Check each course for prerequisites." },
-  { question: "How do I enroll in a course?", answer: "Open the course details and follow the official IBMV course link to check current batches, fees, eligibility and enrollment. Registration and payments are handled on the official IBMV website, not on this page." },
-  { question: "Can I study at my own pace?", answer: "Vedvarsity, Ancient Wisdom and Kids & Parents include self-study courses. Live classes follow a schedule. Confirm access periods, language and study requirements on the official page for your chosen course." },
-  { question: "Will I receive a certificate?", answer: "Many IBMV offerings include a certificate, subject to their completion and assessment requirements. Please confirm the certificate details on the official course page before enrolling." },
 ];

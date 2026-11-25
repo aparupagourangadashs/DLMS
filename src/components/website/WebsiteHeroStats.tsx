@@ -1,18 +1,14 @@
 "use client";
 
+import type { HeroStat } from "@/lib/website/site-defaults";
 import { BookOpenCheck, Globe2, GraduationCap, UsersRound } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-const stats = [
-  { icon: GraduationCap, value: 31500, suffix: "+", label: "Students taught", detail: "Online and onsite courses" },
-  { icon: BookOpenCheck, value: 250, suffix: "+", label: "Courses", detail: "Across six collections" },
-  { icon: Globe2, value: 42, suffix: "+", label: "Countries", detail: "Learners worldwide" },
-  { icon: UsersRound, value: 100, suffix: "K+", label: "Community", detail: "Members and followers" },
-] as const;
+const icons = [GraduationCap, BookOpenCheck, Globe2, UsersRound];
 
 const format = new Intl.NumberFormat("en-US");
 
-export function WebsiteHeroStats() {
+export function WebsiteHeroStats({ stats }: { stats: HeroStat[] }) {
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,13 +34,15 @@ export function WebsiteHeroStats() {
   return <div className="web-hero-stats" ref={root}>
     <p className="web-hero-stats-title"><span aria-hidden="true" />IBMV at a glance</p>
     <ul aria-label="IBMV figures as reported by IBMV">
-      {stats.map(({ icon: Icon, value, suffix, label, detail }) => <li key={label}>
-        <Icon size={20} aria-hidden="true" />
-        <strong aria-hidden="true"><span data-count={value}>{format.format(value)}</span>{suffix}</strong>
-        <span className="web-visually-hidden">{format.format(value)}{suffix} </span>
-        <span className="web-hero-stat-label">{label}</span>
-        <small>{detail}</small>
-      </li>)}
+      {stats.map(({ value, suffix, label, detail }, index) => {
+        const Icon = icons[index % icons.length]; return <li key={label}>
+          <Icon size={20} aria-hidden="true" />
+          <strong aria-hidden="true"><span data-count={value}>{format.format(value)}</span>{suffix}</strong>
+          <span className="web-visually-hidden">{format.format(value)}{suffix} </span>
+          <span className="web-hero-stat-label">{label}</span>
+          <small>{detail}</small>
+        </li>;
+      })}
     </ul>
   </div>;
 }

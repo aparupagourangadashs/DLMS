@@ -1,7 +1,7 @@
-import Link from "next/link";
-import Image from "next/image";
+import type { PublicCourse } from "@/lib/website/types";
 import { ArrowRight, Clock3, ExternalLink, UserRound } from "lucide-react";
-import type { PublicCourse } from "@/lib/website/content";
+import Image from "next/image";
+import Link from "next/link";
 
 export function WebsiteIntro({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
   return <section className="web-page-hero"><div className="web-container"><Link className="web-breadcrumb" href="/website">Home / <span>{eyebrow}</span></Link><p className="web-eyebrow">{eyebrow}</p><h1>{title}</h1><p className="web-intro-copy">{description}</p></div></section>;

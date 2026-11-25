@@ -1,5 +1,6 @@
 import {
   ChartColumn,
+  Globe,
   GraduationCap,
   House,
   Megaphone,
@@ -53,6 +54,7 @@ const sections: Omit<NavSection, "landingPage">[] = [
       { slug: "ebooks", label: "eBooks", description: "Sell and distribute digital books.", status: "decision" },
       { slug: "test-series", label: "Test Series", description: "Bundled practice tests sold as a product.", status: "decision" },
       { slug: "playlists", label: "Playlists", description: "Curated collections of recorded content.", status: "decision" },
+      { slug: "courses", label: "Courses", description: "The public course catalog: details, pricing, FAQs, order and publishing.", status: "ready" },
     ],
   },
   {
@@ -91,6 +93,7 @@ const sections: Omit<NavSection, "landingPage">[] = [
     pages: [
       { slug: "community", label: "Community", description: "Learner communities, members, messages and pins.", status: "ready" },
       { slug: "discussions", label: "Discussions", description: "Course discussion threads.", status: "decision" },
+      { slug: "support", label: "Support Inbox", description: "Learner help requests: read, reply, assign and resolve.", status: "proposed" },
     ],
   },
   {
@@ -148,6 +151,19 @@ const sections: Omit<NavSection, "landingPage">[] = [
       { slug: "international-selling", label: "International Selling", description: "Demo currencies, branch availability and pricing.", status: "ready" },
       { slug: "learner-experience", label: "Learner Experience", description: "Learner-menu configuration and visibility preview.", status: "ready" },
       { slug: "utility-wallet", label: "Utility Wallet", description: "Synthetic messaging credits, usage and recharge history.", status: "ready" },
+    ],
+  },
+  {
+    slug: "website",
+    label: "Website",
+    icon: Globe,
+    pages: [
+      { slug: "site-settings", label: "Site Settings", description: "Contact details, social links, official links and the figures shown on the public website.", status: "ready" },
+      { slug: "books", label: "Books", description: "Publications shown on the website with their retailer links.", status: "ready" },
+      { slug: "people", label: "People", description: "Advisory board members and team shown on the About pages.", status: "ready" },
+      { slug: "magazines", label: "Magazines", description: "E-magazine issues for the public archive.", status: "proposed" },
+      { slug: "videos", label: "Videos", description: "Videos shown on the website home page.", status: "ready" },
+      { slug: "legal-pages", label: "Legal Pages", description: "Terms and Privacy text with versions and publishing.", status: "proposed" },
     ],
   },
 ];

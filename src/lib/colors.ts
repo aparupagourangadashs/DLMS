@@ -88,6 +88,7 @@ export const sectionColor: Record<string, ColorKey> = {
   sales: "emerald",
   analytics: "amber",
   settings: "slate",
+  website: "sky",
   help: "sky",
 };
 

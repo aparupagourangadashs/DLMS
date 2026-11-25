@@ -54,5 +54,5 @@ export type ListConfig = {
   selectable?: boolean;
   configurableColumns?: boolean;
   showIndex?: boolean;
-  rowActions?: Array<"edit" | "duplicate" | "archive" | "delete" | "review" | "view">;
+  rowActions?: Array<"edit" | "duplicate" | "archive" | "restore" | "delete" | "review" | "view" | "reset-password">;
 };

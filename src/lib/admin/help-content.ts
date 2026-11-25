@@ -70,12 +70,12 @@ export const generalGuides: Array<HelpTask & { id: string }> = [
   },
   {
     id: "demo",
-    title: "Demo mode and sample data",
+    title: "Live screens and sample data",
     steps: [
-      "All names, numbers and records are sample data for review. They are not real learners or payments.",
-      "You can create, edit, archive and delete records to try the screens. A message at the top right confirms each action.",
-      "Most changes reset when you leave or reload the page. Screens explicitly marked local browser storage retain their demo drafts on this device only.",
-      "Nothing is saved to a production database or sent to learners, payment gateways or notification providers.",
+      "Screens whose help article says **connected to the database** (for example Team, Learners, Support Inbox, Courses, Categories, Leads and the Website group) save real changes. Each change is recorded in the audit log, and what you can do depends on your role.",
+      "All other screens still show sample names, numbers and records for review. They are not real learners or payments.",
+      "On sample screens you can create, edit, archive and delete records to try the screens. Most changes reset when you leave or reload the page; screens explicitly marked local browser storage keep their demo drafts on this device only.",
+      "Sample screens never send anything to learners, payment gateways or notification providers.",
     ],
   },
   {
@@ -172,60 +172,140 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["learning/announcements", "marketing/campaigns", "analytics/sales-enrollment"],
   },
   "products/mentorships": { summary: "One-to-one or small-group mentorship programmes that learners can book." },
+  "products/courses": {
+    summary: "The public course catalog: every course shown on the website, with its category, details, FAQs and publishing state.",
+    whoUses: "Content editors and administrators.",
+    tasks: [
+      {
+        title: "Publish a new course on the website",
+        steps: [
+          "Select **Add Course** and fill in the title, **Category (collection)**, short summary and the official course link.",
+          "Continue through the steps. Add FAQs, schedule notes and an image path if you have them.",
+          "On the last step set **Status** to **Published** and save. The course appears on its collection page and gets its own page straight away.",
+        ],
+      },
+      {
+        title: "Take a course off the website",
+        steps: ["Select **⋯** on the course and choose **Archive**. It disappears from the website at once and stays here for reference.", "Published courses cannot be deleted. Archive them first."],
+      },
+      {
+        title: "Give a course lessons for its learners",
+        steps: ["Build the lessons first under Learning > Module Library.", "Edit the course and, on the last step, select **Add module** under **Module** for each module, in the order learners should study them.", "Learners enrolled in the course open the lessons from My Learning."],
+      },
+    ],
+    tips: [
+      "A course shows on the website only when it is **Published** and its category is published too.",
+      "Leave **URL name** blank to create it from the title. Changing it later breaks old links.",
+      "Prices are in rupees. Leave the price empty for a free course or when the price is only on the official site.",
+      "Use **Duplicate** to start a similar course as a draft.",
+    ],
+    related: ["settings/categories", "marketing/testimonials", "website/site-settings"],
+  },
   "products/ebooks": { summary: "Selling or giving access to digital books inside the platform." },
   "products/test-series": { summary: "A bundle of practice tests sold as one product." },
   "products/playlists": { summary: "Curated collections of recordings and videos." },
 
   "learning/batches": {
-    summary: "A batch is one running group of a course, with its own learners, schedule, instructor and batch manager. Use this page to create batches and follow their progress.",
+    summary: "A batch is one running group of a course, with its own learners, schedule, instructor and batch manager. Create batches here, then enrol learners and schedule sessions for them.",
     whoUses: "Academic coordinators and batch managers.",
+    tasks: [
+      {
+        title: "Create a batch",
+        steps: [
+          "Select **Create Batch**.",
+          "Enter a unique name, choose the course, and set the start and end dates. The end date must be after the start.",
+          "Choose the instructor (instructors and administrators can teach) and the primary manager. Add other managers if needed.",
+          "Choose a branch, or leave it empty for a batch that belongs to no branch, then save.",
+        ],
+      },
+      {
+        title: "Complete or archive a batch",
+        steps: ["Edit the batch and change **Status**, or choose **Archive** on its row.", "A completed or archived batch takes no new enrolments or sessions. Every learner, session and record is kept, and you can reopen it by setting the status back to Active."],
+      },
+      { title: "Start a similar batch", steps: ["Choose **Duplicate** on the row. The copy keeps the course, dates, instructor and managers but not the learners. Rename it and adjust the dates."] },
+    ],
     tips: [
       "Name batches consistently, such as course code, year and batch number (BGFC-2026-B3), so they are easy to find in filters across the panel.",
-      "**Batch progress** shows how far the batch has moved through its course.",
-      "Archive batches you no longer need day to day. They stay available in the **Archived** tab.",
+      "**Learners** counts the people currently enrolled. **Batch progress** is the average of what those learners have completed in the course player.",
+      "Staff tied to a branch see and edit only their own branch's batches and batches that belong to no branch.",
+      "Batch communities arrive with Communities; choosing modules per batch is not built yet, so every batch of a course uses the course's modules.",
     ],
     related: ["learning/sessions", "users/new-enrolment", "learning/session-recordings", "analytics/batch-progress"],
   },
   "learning/sessions": {
-    summary: "A calendar of every live class across all batches, where you schedule, review and cancel sessions.",
+    summary: "A calendar of every live class across all batches, where you schedule, reschedule, cancel and take attendance for sessions.",
     whoUses: "Batch managers, instructors and administrators.",
     tasks: [
       {
         title: "Switch between calendar views",
         steps: [
-          "Use **List**, **Day**, **Week** or **Month** at the top right of the calendar.",
-          "Use the arrows to move backward or forward, and **Today** to return to the current date.",
+          "Use **List**, **Day**, **Week** or **Month** at the top of the calendar.",
+          "Use the arrows to move backward or forward, **Today** to return to the current date, and the batch filter to look at one batch.",
         ],
       },
       {
         title: "Create a session",
         steps: [
-          "Select **Create Session** (or **New → Session** in the top bar).",
-          "Enter the title, batch, date, start time (IST) and duration. Add the live-class link if you have it.",
+          "Select **Create Session** (or **New \u2192 Session** in the top bar).",
+          "Enter the title, batch, date, start time (IST) and duration. Add the live-class link (https) and topics if you have them.",
+          "To repeat the class every week, enter the number of weeks in **Repeat weekly for**. Holidays and dates after the batch ends are skipped.",
           "Select **Create session**. The calendar moves to that date and shows the new session.",
         ],
       },
-      { title: "See a session's details", steps: ["Select any session in the calendar. A panel shows its status, batch, course, instructor, attendance and topics."] },
+      { title: "See a session's details", steps: ["Select any session in the calendar. A panel shows its status, batch, course, instructor, class link, topics and the class list."] },
+      {
+        title: "Reschedule or edit a session",
+        steps: ["Open the session and choose **Edit or reschedule**.", "Change the date, time, duration, link or topics. The instructor cannot be double-booked, and a holiday cannot be chosen."],
+      },
+      {
+        title: "Take attendance",
+        steps: ["Open a session that has started.", "Mark each learner **Present** or **Absent**, or choose **Mark everyone present** and change the exceptions.", "Select **Save attendance**. You can correct it later in the same way."],
+      },
       {
         title: "Cancel a session",
-        steps: ["Open the session.", "Select **Cancel session**. It stays on the calendar, crossed out, with the status **Cancelled**."],
+        steps: ["Open the session and choose **Cancel session**.", "Say why it is cancelled. Learners of that batch see the reason. The session stays on the calendar, crossed out, with the status **Cancelled**."],
+      },
+      {
+        title: "Mark a holiday",
+        steps: [
+          "Select **Mark as Holiday**, then choose the date, a reason and a branch (or all branches).",
+          "Every scheduled session of those batches on that day is cancelled with the holiday as the reason, and learners see the holiday on their calendar.",
+          "To remove a holiday, select the \u00d7 on its label above the calendar. Sessions already cancelled stay cancelled.",
+        ],
       },
       { title: "Open a busy day from Month view", steps: ["In Month view, select the date number or **+N more** to open that date in Day view."] },
     ],
     tips: [
-      "Colours: blue means scheduled, green means completed, and red crossed out means cancelled.",
-      "Times here are in IST. The student portal will show each learner times in their own timezone.",
-      "To cancel every session on a day (for a festival or holiday), use **Mark as Holiday** on the Dashboard.",
+      "Colours identify the course. Cancelled sessions are crossed out.",
+      "All times here are in IST.",
+      "Learners get the class link 15 minutes before the start and until the session ends; before that it stays hidden.",
+      "Attendance can only be marked once a session has started, and only for learners enrolled in the batch.",
+      "Staff tied to a branch see only their own branch's batches, and can mark holidays only for their own branch.",
     ],
     related: ["home/dashboard", "learning/batches", "learning/session-recordings", "analytics/trainer"],
   },
   "learning/announcements": {
     summary: "Post notices to all learners or to one batch: schedule changes, holidays, exam guidance and more.",
     whoUses: "Batch managers, instructors and administrators.",
+    tasks: [
+      {
+        title: "Publish an announcement",
+        steps: [
+          "Select **New Announcement**.",
+          "Enter the title and message, choose the audience (all learners, or the learners of one batch) and the urgency.",
+          "Set **Publish at** (IST) and choose the status **Published**. Learners see it from that time.",
+        ],
+      },
+      {
+        title: "Schedule or hold back a notice",
+        steps: ["Choose a later **Publish at** time to schedule it. It stays hidden until then.", "Choose **Draft** to keep it private while you write it."],
+      },
+    ],
     tips: [
-      "Keep **High** urgency for changes learners must act on, such as a rescheduled class.",
-      "Choose a future **Publish at** time to schedule an announcement in advance.",
-      "Announcements appear in the student portal. To also send them by email or WhatsApp, create a campaign.",
+      "Keep **High** urgency for changes learners must act on, such as a rescheduled class. High notices are shown first.",
+      "Only drafts can be deleted. Archive a published notice to remove it from learners; it stays in the list.",
+      "Each learner has their own read status. Editing a published notice does not mark it unread again.",
+      "Announcements appear in the student portal. Email, SMS and WhatsApp delivery arrives with the messaging phase.",
     ],
     related: ["marketing/campaigns", "learning/sessions", "settings/system-notifications"],
   },
@@ -240,13 +320,37 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["analytics/feedback-rating", "learning/batches"],
   },
   "learning/module-library": {
-    summary: "Reusable modules (groups of lessons, PDFs and quizzes) that you build once and add to any course or batch.",
+    summary: "Reusable modules of lessons that you build once and add to any course. Enrolled learners study them in the course player.",
     whoUses: "Content editors and instructors.",
-    tips: [
-      "Changing a module changes it everywhere it is used. Duplicate it first if only one course needs the change.",
-      "The line under each module name shows how many courses use it.",
+    tasks: [
+      {
+        title: "Build a module",
+        steps: [
+          "Select **Add Module** and enter a name and, if you like, a description.",
+          "Under **Lesson**, select **Add lesson**. Choose the type: **Text** (written here, with simple formatting), **Video** (a YouTube address) or **Link** (a page on another website).",
+          "Use **Move up** to put the lessons in order, then save. Set the status to **Published** when the module is ready for learners.",
+        ],
+      },
+      {
+        title: "Add a module to a course",
+        steps: ["Open Products > Courses and edit the course.", "On the last step, under **Module**, select **Add module** for each module, in the order learners should study them.", "Learners enrolled in the course see the lessons straight away."],
+      },
+      {
+        title: "Change a module that is already in use",
+        steps: [
+          "Edit the module and change, reorder or add lessons. A lesson you keep, even renamed or moved, keeps each learner's completion.",
+          "A lesson you remove disappears from every course, together with the progress on it.",
+        ],
+      },
     ],
-    related: ["learning/asset-library", "learning/question-bank", "learning/batches"],
+    tips: [
+      "Changing a module changes it in every course that includes it. Duplicate it first if only one course needs the change.",
+      "The line under each module name shows how many courses use it. A module in use cannot be deleted; take it out of the courses first, or archive it.",
+      "Learners see only **Published** modules. Draft and archived ones are hidden but keep their lessons.",
+      "Learners mark each lesson complete themselves. Opening or watching a lesson does not complete it, and a course completes when every lesson is done.",
+      "PDFs, audio and quizzes arrive with the Asset Library and assessments. Until then, link to a page or a YouTube video.",
+    ],
+    related: ["products/courses", "learning/asset-library", "learning/batches"],
   },
   "learning/question-bank": {
     summary: "Collections of questions organised by exam, subject, topic and difficulty, used to build assessments and tests.",
@@ -320,21 +424,42 @@ export const helpContent: Record<string, HelpEntry> = {
   },
 
   "users/learners": {
-    summary: "The directory of everyone registered on the platform, with contact details, enrollment status and registration number.",
+    summary: "The directory of everyone registered on the platform, with contact details, status and registration number. Learners added here receive an email link to choose their own password.",
     whoUses: "Administrators, batch managers and support staff.",
+    tasks: [
+      {
+        title: "Add a learner",
+        steps: [
+          "Select **Add Learner**, then enter the name and email. Phone, city and branch are optional.",
+          "Select **Add Learner**. The learner gets a registration number such as IBMV/26/00042 and an email with a link to set a password. Staff never see or set passwords.",
+          "If the email already has an account, you are told so instead of creating a duplicate.",
+        ],
+      },
+      {
+        title: "Send a password reset",
+        steps: ["Select **\u22ef** on the learner and choose **Send password reset**. A one-hour link is emailed to the learner.", "Archived learners must be restored first."],
+      },
+      {
+        title: "Archive or restore a learner",
+        steps: ["Select **\u22ef** and choose **Archive**. The learner is signed out everywhere and cannot sign in, but their record and history are kept.", "Open the **Archived** tab and choose **Restore** to bring them back."],
+      },
+    ],
     tips: [
-      "Statuses: **Registered** has an account but no enrollment; **Enrolled** is in an active batch; **Completed** has finished their course; **On leave** is paused; **Archived** is no longer active.",
+      "Statuses: **Registered** has an account but no active enrolment; **Enrolled** is in at least one batch; **Completed** has finished every course; **On leave** is paused but can still sign in; **Archived** is no longer active. Enrolled and Completed follow the learner's enrolments; set On leave or Archived by editing the learner's account status.",
+      "Filter by course, batch, branch or city to find the learners of one group.",
+      "The sign-in email cannot be changed here. The learner can ask support if it must change.",
+      "Staff assigned to one branch only see and manage that branch's learners.",
       "To enrol an existing learner into a batch, use New Enrolment.",
       "Learner details are personal data. Export only what you need and store files securely.",
     ],
-    related: ["users/new-enrolment", "users/segments", "analytics/batch-progress"],
+    related: ["users/new-enrolment", "engage/support", "users/segments"],
   },
   "users/team": {
     summary: "Staff accounts (administrators, instructors, content editors, finance and support), with their role and branch.",
     whoUses: "Administrators.",
     tips: [
       "Give each person the lowest role that lets them do their work.",
-      "Archive staff who leave rather than deleting them, so their past actions stay traceable.",
+      "Archive staff who leave rather than deleting them, so their past actions stay traceable. Choose **Restore** on an archived person to bring them back.",
       "Roles and permissions are still being finalised with IBMV; this list shows the proposed roles.",
     ],
     related: ["settings/sub-organizations", "settings/my-profile"],
@@ -349,25 +474,25 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["marketing/campaigns", "users/learners"],
   },
   "users/new-enrolment": {
-    summary: "Add learners to batches one at a time, by pasting a list of emails, or by uploading a CSV file.",
+    summary: "Add learners to batches one at a time, by pasting a list of emails, or by uploading a CSV file. New email addresses get an account and a link to choose a password.",
     whoUses: "Administrators, batch managers and support staff.",
     tasks: [
       {
         title: "Enrol one learner",
         steps: [
           "Choose **Single Enrollment**.",
-          "Enter the learner's email and choose a batch.",
-          "Select **Proceed**. An existing learner is enrolled straight away.",
-          "If no account exists for that email, enter the learner's full name and select **Register and enrol**.",
+          "Enter the learner's email and choose a batch, then select **Enrol learner**. An existing learner is enrolled straight away.",
+          "If no account exists for that email, the form asks for the learner's full name (and optionally a mobile number). Select **Register and enrol**.",
+          "Someone already enrolled in the same course is told so and is not enrolled twice.",
         ],
       },
       {
         title: "Enrol many learners into one batch",
         steps: [
           "Choose **Bulk Enrollment**.",
-          "Paste email addresses, one per line or separated by commas.",
-          "Check the counts that appear: valid, new accounts, invalid and duplicates. Invalid addresses are listed so you can fix them.",
-          "Choose the batch and select **Enrol N learners**.",
+          "Paste email addresses, one per line or separated by commas, and choose the batch.",
+          "Check the counts that appear: valid, invalid and duplicates. Select **Check list** to see what would happen to every address before anything is saved.",
+          "Select **Enrol N learners**. Addresses with no account get one, named from the address; the learner can correct their name later.",
         ],
       },
       {
@@ -378,15 +503,17 @@ export const helpContent: Record<string, HelpEntry> = {
         title: "Enrol learners from a CSV file",
         steps: [
           "Choose **Advanced Bulk Enrollment**.",
-          "Prepare a CSV file with the columns **email**, **name** and **batch**. The batch must match an existing batch name exactly.",
-          "Select **Choose CSV file** (2 MB maximum), or **Use sample file** to try it out.",
-          "Review the results: each row shows **Ready** or the problem to fix.",
-          "Select **Enrol N valid rows**. Fix the skipped rows and upload them again.",
+          "Prepare a CSV file with the columns **email**, **batch** and, for new learners, **name**. The batch must match an active batch name exactly (capital letters do not matter).",
+          "Select **Choose CSV file** (500 KB and 500 rows at most), or **Use sample file** to try it out.",
+          "Every row is checked first and shows what would happen or the problem to fix. Nothing is saved yet.",
+          "Select **Enrol N learners**. Fix the rows that need it and upload them again; **Download results** saves the outcome of every row.",
         ],
       },
     ],
     tips: [
-      "Advanced bulk enrollment checks every row before anything is enrolled, so one bad row never blocks the others.",
+      "A bad row never blocks the others: every row is reported on its own.",
+      "Only active batches take enrolments. Reopen a completed batch first. A learner can have one active enrolment per course.",
+      "Staff tied to one branch can enrol only into their own branch's batches (and batches with no branch), and only learners of their own branch.",
       "Paid enrollments will normally come through checkout. Use this page for scholarships, offline payments and corrections.",
     ],
     related: ["users/learners", "learning/batches"],
@@ -416,6 +543,28 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["engage/discussions", "analytics/community-analytics"],
   },
   "engage/discussions": { summary: "Course-level discussion threads with replies." },
+  "engage/support": {
+    summary: "Help requests that learners write from the Help page of the student portal. Read them, reply by email, assign them and mark them resolved.",
+    whoUses: "Support staff and administrators.",
+    tasks: [
+      {
+        title: "Answer a request",
+        steps: [
+          "Choose a request in the list. Use the tabs to switch between **Open**, **In progress** and **Resolved**.",
+          "Write your answer under **Reply** and select **Send reply**. The learner is emailed and also sees the reply on their Help page.",
+          "Replying to an open request moves it to **In progress** and assigns it to you.",
+          "When the issue is dealt with, select **Mark resolved**. Select **Reopen** if the learner writes again.",
+        ],
+      },
+      { title: "Take or hand back a request", steps: ["Select **Assign to me** to claim a request, or **Unassign me** to return it to the queue."] },
+    ],
+    tips: [
+      "Never ask a learner for a password or payment details.",
+      "Messages are personal data. Share them only with colleagues who need them.",
+      "Roles that can read requests but not write see them without the reply box.",
+    ],
+    related: ["users/learners", "marketing/leads"],
+  },
 
   "marketing/campaigns": {
     summary: "Send bulk messages to learners by email, WhatsApp, SMS or push notification, either now or at a scheduled time.",
@@ -459,7 +608,8 @@ export const helpContent: Record<string, HelpEntry> = {
     tips: [
       "Stages run **New** → **Contacted** → **Converted** or **Closed**.",
       "Follow up new leads within one working day.",
-      "Leads are created automatically from website forms, so there is no create button.",
+      "Bulk book enquiries from the website arrive here automatically with the book, quantity and delivery address. You can also add a lead by hand.",
+      "Lead details are personal data. Only export what you need.",
     ],
     related: ["marketing/campaigns", "users/learners"],
   },
@@ -564,7 +714,7 @@ export const helpContent: Record<string, HelpEntry> = {
         steps: [
           "Select **Change password**.",
           "Enter your current password, then the new password twice. Use at least 10 characters, with both letters and numbers.",
-          "Select **Update password**. (Password change works once sign-in is connected in the backend phase.)",
+          "Select **Update password**. Your other signed-in devices are signed out.",
         ],
       },
     ],
@@ -577,8 +727,8 @@ export const helpContent: Record<string, HelpEntry> = {
   "settings/sub-organizations": {
     summary: "Branches and centres (for example Head Office, Pune Centre and Online), each with its own admins and learners.",
     whoUses: "Super administrators.",
-    tasks: [{ title: "Configure a demo branch", steps: ["Enter the branch name, city and manager in the branch form.", "Add the branch to the local list. Manager and activity are visible on each branch.", "Use Pause or Reactivate to try a local status change, then Save changes. No real learners or permissions are moved."] }],
-    tips: ["Branch activity and manager assignments are synthetic; real access isolation requires backend authorization."],
+    tasks: [{ title: "Add or pause a branch", steps: ["Enter the branch name, city and manager in the branch form and add it.", "Use **Pause** to stop a branch taking new enrolments, or **Reactivate** to bring it back. Existing learners and history are kept.", "Select **Save changes**."] }],
+    tips: ["The manager must be a staff member. Branch-scoped staff only see people and records from their own branch."],
     related: ["users/team"],
   },
   "settings/system-notifications": {
@@ -602,11 +752,15 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["analytics/notification-logs", "settings/utility-wallet", "marketing/campaigns"],
   },
   "settings/categories": {
-    summary: "Categories group courses on the website catalog pages and in reports. Each one has its own web address, such as /self-study.",
+    summary: "Categories are the course collections shown on the website, such as Self-study Courses. Each has its own web address, such as /self-study. Every course belongs to one top-level category.",
     whoUses: "Administrators and content editors.",
-    tasks: [{ title: "Build a category hierarchy", steps: ["Add a category or choose its parent when adding a subcategory.", "Use the move-up and move-down icon buttons to reorder categories or their subcategories.", "Save changes to validate the local structure. The live catalog is not changed."] }],
-    tips: ["Changing a URL path breaks old links and bookmarks. Plan a redirect when you change one."],
-    related: ["products/events", "marketing/blogs"],
+    tasks: [
+      { title: "Add a category", steps: ["Select **Add category** and enter the name and a short description. The description is shown at the top of the collection page.", "Leave **URL name** blank to create it from the name, or enter your own.", "Choose **Draft** to prepare it quietly, or **Published** to show it on the website."] },
+      { title: "Reorder or hide a category", steps: ["Use the up and down arrows to change the order shown on the website.", "Use the eye button to hide a category without deleting it."] },
+      { title: "Delete a category", steps: ["Select the bin button and confirm.", "A category that still has sub-categories or courses cannot be deleted. Archive or move those first, or hide the category instead."] },
+    ],
+    tips: ["Changing a URL name breaks old links and bookmarks. Plan a redirect when you change one.", "Some names are reserved for fixed pages, such as books, contact and terms.", "Sub-categories group topics inside a collection; courses are assigned to the top-level category."],
+    related: ["products/courses", "website/site-settings"],
   },
   "settings/custom-fields": {
     summary: "Extra fields captured on learner profiles, registration and kids' enrolment forms.",
@@ -652,5 +806,84 @@ export const helpContent: Record<string, HelpEntry> = {
     ],
     tasks: [{ title: "Review demo wallet activity", steps: ["Open Notification credits to inspect usage, channel and running balance.", "Filter recharge history and export matching demo rows.", "AI credits are marked unavailable; no real balance is recharged or spent."] }],
     related: ["marketing/campaigns", "settings/system-notifications"],
+  },
+
+  "website/site-settings": {
+    summary: "Contact details, social links, official links and the figures shown across the public website.",
+    whoUses: "Content editors and administrators.",
+    tasks: [
+      {
+        title: "Change the contact details",
+        steps: [
+          "Edit the email, phone, address or map link under **Contact details**.",
+          "The **dial link** is the phone number in international form, for example +919528006565.",
+          "Select **Save settings**. The website shows the new details immediately.",
+        ],
+      },
+      {
+        title: "Update the home page figures",
+        steps: [
+          "Change **Learners reported by IBMV** or the hero statistics, or add and remove items.",
+          "Select **Save settings**. If a field is not accepted, the message appears under it.",
+        ],
+      },
+    ],
+    tips: [
+      "Links must start with https://. Anything else is rejected.",
+      "The figures are numbers reported by IBMV, not live counts. Keep the wording honest.",
+    ],
+    related: ["website/legal-pages", "settings/categories", "products/courses"],
+  },
+  "website/books": {
+    summary: "Publications listed on the website Books page, with the shops where each can be bought.",
+    whoUses: "Publications and content staff.",
+    tips: [
+      "Add one link per shop. Each link needs the shop name, a format (Print or Digital) and an https:// address.",
+      "Only **Published** books appear on the website. Visitors can ask for bulk copies of a published book; those requests arrive under **Leads**.",
+    ],
+    related: ["marketing/leads", "website/magazines"],
+  },
+  "website/people": {
+    summary: "The Advisory Board and Our Team pages: names, roles and short biographies.",
+    whoUses: "Content editors and administrators.",
+    tips: [
+      "Get each person's agreement before publishing their name, photo or biography.",
+      "Choose **Advisory Board** or **Team** to decide which website page the person appears on.",
+    ],
+    related: ["website/site-settings"],
+  },
+  "website/magazines": {
+    summary: "E-magazine issues listed on the website. Until an issue is published the page explains that an approved archive is awaited.",
+    whoUses: "Publications and content staff.",
+    tips: ["Only publish issues IBMV has approved for the website.", "Use an https:// address for the cover and the issue file."],
+    related: ["website/books"],
+  },
+  "website/videos": {
+    summary: "The introduction videos shown on the website home page.",
+    whoUses: "Content editors.",
+    tips: [
+      "Paste a YouTube link or the 11-character video id. Other websites are rejected.",
+      "Visitors load the player only when they select a video.",
+    ],
+    related: ["marketing/testimonials", "website/site-settings"],
+  },
+  "website/legal-pages": {
+    summary: "The Terms and Privacy text shown on the website, kept as numbered versions.",
+    whoUses: "Administrators. Content editors can prepare drafts.",
+    tasks: [
+      {
+        title: "Publish a new version",
+        steps: [
+          "Select **\u22ef** on the current version and choose **Duplicate** to start a new draft, or add a new one.",
+          "Edit the text while it is a **Draft** and save.",
+          "An administrator sets the **Status** to **Published**. The previous version is archived and the website shows the new text.",
+        ],
+      },
+    ],
+    tips: [
+      "Published text cannot be edited. Create a new version instead, so earlier wording stays on record.",
+      "Only administrators can publish legal text, and IBMV should approve the wording first.",
+    ],
+    related: ["website/site-settings"],
   },
 };

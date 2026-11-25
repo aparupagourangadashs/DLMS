@@ -1,13 +1,24 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calendarDays, courseBanners, courses, initialStudentProfile, profileCompletion, progress, sessions, shiftCalendarDate, studentHref, studentNav, studentToday } from "./demo.ts";
 import { existsSync } from "node:fs";
+import { test } from "node:test";
+import { calendarDays, courseBanners, courses, progress, sessions, shiftCalendarDate, studentHref, studentNav, studentToday } from "./demo.ts";
+import { allowedPromotionalChannels, missingProfileItems, profileCompletion } from "./profile.ts";
 
-test("profile completion is calculated from the shared fictional profile", () => {
-  assert.deepEqual(profileCompletion(initialStudentProfile), { completed: 3, total: 6, percent: 50 });
+const sample = { name: "Asha Rao", username: "asha", email: "asha@example.com" };
+
+test("profile completion counts the checklist fields that have a value", () => {
+  assert.deepEqual(profileCompletion(sample), { completed: 3, total: 6, percent: 50 });
   assert.equal(profileCompletion({}).percent, 0);
-  assert.equal(profileCompletion({ ...initialStudentProfile, mobile: " ", city: "", address: "\t" }).percent, 50);
-  assert.equal(profileCompletion({ ...initialStudentProfile, mobile: "demo", city: "demo", address: "demo" }).percent, 100);
+  assert.equal(profileCompletion({ ...sample, mobile: " ", city: "", address: "\t" }).percent, 50);
+  assert.equal(profileCompletion({ ...sample, mobile: "98765", city: "Pune", address: "1 Temple Road" }).percent, 100);
+  assert.deepEqual(missingProfileItems(sample), ["Mobile number", "City", "Residential address"]);
+});
+
+test("promotional messages need the promotional switch and a channel switch", () => {
+  const off = { promotional: false, whatsapp: true, email: true, sms: true, push: true };
+  assert.deepEqual(allowedPromotionalChannels(off), [], "channels alone are not consent");
+  assert.deepEqual(allowedPromotionalChannels({ ...off, promotional: true, sms: false, push: false }), ["whatsapp", "email"]);
+  assert.deepEqual(allowedPromotionalChannels({ promotional: true, whatsapp: false, email: false, sms: false, push: false }), []);
 });
 
 test("both reference carousel artworks are stored locally with official destinations", () => {

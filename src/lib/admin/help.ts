@@ -3,6 +3,7 @@ import { analytics } from "./analytics";
 import { decisions } from "./decisions";
 import { helpContent, type HelpTask } from "./help-content";
 import { getListConfig } from "./list-configs";
+import { liveScreens } from "./live-screens";
 import { adminNav, findPage, quickCreate, type NavPage, type NavSection } from "./navigation";
 import type { ListConfig } from "./types";
 
@@ -10,6 +11,8 @@ export type HelpArticleData = {
   key: string;
   section: NavSection;
   page: NavPage;
+  /** True when the screen reads and writes the database. */
+  live: boolean;
   summary: string;
   whoUses?: string;
   screen: Array<{ heading: string; items: string[] }>;
@@ -146,7 +149,7 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
 
   const decision = found.page.status === "decision" ? decisions[key] : undefined;
   const customManaged = ["marketing/promotional-templates", "marketing/promo-codes", "sales/cheque-management"].includes(key);
-  const customSettings = sectionSlug === "settings" && pageSlug !== "my-profile";
+  const customSettings = sectionSlug === "settings" && pageSlug !== "my-profile" && !liveScreens.has(key);
   const list = decision || customManaged || customSettings ? null : getListConfig(key);
   const report = sectionSlug === "analytics" ? analytics[pageSlug] : undefined;
 
@@ -208,6 +211,7 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
     key,
     section: found.section,
     page: found.page,
+    live: liveScreens.has(key),
     summary: report ? "Filter, preview and export deterministic synthetic reports. These are not live figures or verified production calculations." : customManaged ? found.page.description : content.summary,
     whoUses: content.whoUses,
     screen,
