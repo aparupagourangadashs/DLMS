@@ -1,7 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { inputClass } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
+import { Popover } from "@/components/ui/Popover";
+import { Select } from "@/components/ui/Select";
+import { StatCard, statColor } from "@/components/ui/StatCard";
+import { TableHeading, TableScroll } from "@/components/ui/Table";
+import { Tabs } from "@/components/ui/Tabs";
+import type { ScreenStatus } from "@/lib/admin/navigation";
+import type { CellValue, Column, ListConfig, Row } from "@/lib/admin/types";
+import { ApiError, apiClient, buildQuery, type QueryParams } from "@/lib/api/client";
+import { useResourceList } from "@/lib/api/hooks";
+import { cn } from "@/lib/cn";
+import { cardCycle, type ColorKey } from "@/lib/colors";
+import { useAdminUi } from "@/store/admin-ui";
 import {
   Archive,
   ArrowDown,
@@ -18,32 +34,21 @@ import {
   Ellipsis,
   Eye,
   Inbox,
+  KeyRound,
   LayoutList,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   SearchX,
   SlidersHorizontal,
   Trash2,
+  TriangleAlert,
   X,
   type LucideIcon,
 } from "lucide-react";
-import type { ScreenStatus } from "@/lib/admin/navigation";
-import type { CellValue, Column, ListConfig, Row } from "@/lib/admin/types";
-import { cn } from "@/lib/cn";
-import { cardCycle, type ColorKey } from "@/lib/colors";
-import { useAdminUi } from "@/store/admin-ui";
-import { Button, IconButton } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { inputClass } from "@/components/ui/Field";
-import { Modal } from "@/components/ui/Modal";
-import { Popover } from "@/components/ui/Popover";
-import { StatCard, statColor } from "@/components/ui/StatCard";
-import { Tabs } from "@/components/ui/Tabs";
-import { TableHeading, TableScroll } from "@/components/ui/Table";
-import { Select } from "@/components/ui/Select";
-import { DatePicker } from "@/components/ui/DatePicker";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { CellView, cellText, columnIcon, columnIcons } from "./CellView";
 import { FormDrawer } from "./FormDrawer";
 import { DemoNotice, PageHeader } from "./PageHeader";
@@ -57,8 +62,10 @@ const actionLabel: Record<Action, string> = {
   edit: "Edit",
   duplicate: "Duplicate",
   archive: "Archive",
+  restore: "Restore",
   delete: "Delete",
   review: "Review",
+  "reset-password": "Send password reset",
 };
 
 const actionIcon: Record<Action, LucideIcon> = {
@@ -66,8 +73,10 @@ const actionIcon: Record<Action, LucideIcon> = {
   edit: Pencil,
   duplicate: Copy,
   archive: Archive,
+  restore: RotateCcw,
   delete: Trash2,
   review: ClipboardCheck,
+  "reset-password": KeyRound,
 };
 
 // Colour by meaning: view = sky, edit = blue, duplicate = violet, archive = amber, delete = red, review = green.
@@ -76,11 +85,19 @@ const actionColor: Record<Action, string> = {
   edit: "text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/15",
   duplicate: "text-violet-600 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-500/15",
   archive: "text-amber-600 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-500/15",
+  restore: "text-teal-600 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-500/15",
   delete: "text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/15",
   review: "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/15",
+  "reset-password": "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-500/15",
 };
 
 const inlineActions: Action[] = ["view", "edit", "delete"];
+
+// Archive only applies to live rows, Restore only to archived ones, and archived people cannot be sent a reset link.
+const isArchivedRow = (row: Row) => ["status", "state"].some((key) => row[key] === "Archived");
+/** The column that names a row: the primary one, else the first. A list may lead with a date and still name its rows by title. */
+const nameKeyOf = (config: ListConfig) => (config.columns.find((column) => column.type === "primary") ?? config.columns[0]).key;
+const appliesTo = (row: Row, action: Action) => (action === "restore" ? isArchivedRow(row) : action === "archive" || action === "reset-password" ? !isArchivedRow(row) : true);
 
 function tabColor(value?: string): ColorKey {
   if (!value) return "violet";
@@ -111,8 +128,8 @@ function plural(s: string) {
   return `${s}s`;
 }
 
-export function ListPage({ pageKey, status, config }: { pageKey: string; status: ScreenStatus; config: ListConfig }) {
-  const [rows, setRows] = useState<Row[]>(config.rows);
+export function ListPage({ pageKey, status, config, remote = false }: { pageKey: string; status: ScreenStatus; config: ListConfig; remote?: boolean }) {
+  const [localRows, setRows] = useState<Row[]>(config.rows);
   const [tab, setTab] = useState<string>(config.tabs?.items[0]?.value ?? ALL);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -127,6 +144,13 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
   const [confirm, setConfirm] = useState<{ row: Row; action: "archive" | "delete" } | null>(null);
   const [reviewing, setReviewing] = useState<Row | null>(null);
 
+  const tabKey = config.tabs?.key;
+  const resourceUrl = `/api/admin/resources/${pageKey}`;
+  const filterParams = Object.fromEntries(Object.entries(filters).filter(([, value]) => value).map(([key, value]) => [`filter.${key}`, value]));
+  const baseParams: QueryParams = { q: query, tab: tabKey && tab !== ALL ? tab : undefined, from: dateFrom, to: dateTo, sort: sort?.key, dir: sort?.dir, ...filterParams };
+  const remoteList = useResourceList<Row>(resourceUrl, { ...baseParams, page, pageSize: PAGE_SIZE }, { enabled: remote });
+  const rows = useMemo(() => (remote ? remoteList.rows ?? [] : localRows), [remote, remoteList.rows, localRows]);
+  const remoteTotal = remoteList.meta?.total;
   const pendingCreate = useAdminUi((s) => s.pendingCreate === pageKey);
   const setPendingCreate = useAdminUi((s) => s.setPendingCreate);
   const formOpen = editing !== null || (pendingCreate && Boolean(config.form));
@@ -134,9 +158,9 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
 
   const entity = config.entityName;
   const visibleColumns = config.columns.filter((c) => !hidden.has(c.key));
-  const tabKey = config.tabs?.key;
 
   const baseFiltered = useMemo(() => {
+    if (remote) return rows;
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (q && !(config.searchKeys ?? []).some((k) => String(r[k] ?? "").toLowerCase().includes(q))) return false;
@@ -148,18 +172,20 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
       }
       return true;
     });
-  }, [rows, query, filters, dateFrom, dateTo, config.searchKeys, config.dateFilterKey]);
+  }, [remote, rows, query, filters, dateFrom, dateTo, config.searchKeys, config.dateFilterKey]);
 
   const filtered = useMemo(() => {
+    if (remote) return baseFiltered;
     const list = tabKey && tab !== ALL ? baseFiltered.filter((r) => matches(r[tabKey], tab)) : baseFiltered;
     if (!sort) return list;
     const sorted = [...list].sort((a, b) => compare(a[sort.key], b[sort.key]));
     return sort.dir === "desc" ? sorted.reverse() : sorted;
-  }, [baseFiltered, tab, tabKey, sort]);
+  }, [remote, baseFiltered, tab, tabKey, sort]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const total = remote ? (remoteTotal ?? 0) : filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageRows = remote ? filtered : filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const hasActiveFilters = Boolean(query || dateFrom || dateTo || Object.values(filters).some(Boolean));
 
   const resetPage = () => setPage(1);
@@ -177,6 +203,14 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
   };
 
   const exportCsv = () => {
+    if (remote) {
+      // The server exports every matching row, not just this page.
+      const link = document.createElement("a");
+      link.href = `${resourceUrl}/export${buildQuery(baseParams)}`;
+      link.click();
+      toast.success("Export started", { description: "Includes all rows that match the current filters." });
+      return;
+    }
     const header = visibleColumns.map((c) => c.label);
     const escape = (s: string) => `"${s.replace(/"/g, '""')}"`;
     const lines = [header, ...filtered.map((r) => visibleColumns.map((c) => cellText(c, r[c.key])))].map((l) => l.map(escape).join(","));
@@ -192,12 +226,53 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
     });
   };
 
+  const reportFailure = (error: unknown) => {
+    toast.error(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
+  };
+
+  const runRemote = async (request: () => Promise<unknown>, message: string, removesRow = false) => {
+    try {
+      await request();
+      toast.success(message);
+      // Deleting or archiving the only row on the last page steps back one page.
+      if (removesRow && rows.length === 1 && page > 1) setPage(page - 1);
+      else remoteList.refetch();
+      return true;
+    } catch (error) {
+      reportFailure(error);
+      return false;
+    }
+  };
+
+  const openEditor = async (row: Row) => {
+    try {
+      // Table rows only carry list columns, so the editor starts from the full record.
+      setEditing((await apiClient.get<Row>(`${resourceUrl}/${row.id}`)).data);
+    } catch (error) {
+      reportFailure(error);
+    }
+  };
+
   const runAction = (row: Row, action: Action) => {
-    if (action === "edit") setEditing(row);
+    if (action === "edit") {
+      if (remote) void openEditor(row);
+      else setEditing(row);
+    }
     else if (action === "view") setViewing(row);
     else if (action === "review") setReviewing(row);
+    else if (action === "restore" || action === "reset-password") {
+      void runRemote(
+        () => apiClient.post(`${resourceUrl}/${row.id}/${action}`),
+        action === "restore" ? `${cap(entity)} restored` : "Password reset link sent",
+        action === "restore",
+      );
+    }
     else if (action === "duplicate") {
-      const nameKey = config.columns[0].key;
+      if (remote) {
+        void runRemote(() => apiClient.post(`${resourceUrl}/${row.id}/duplicate`), `${cap(entity)} duplicated`);
+        return;
+      }
+      const nameKey = nameKeyOf(config);
       const copy: Row = { ...row, id: `copy-${row.id}-${rows.length + 1}`, [nameKey]: `${row[nameKey]} (copy)` };
       setRows((prev) => [copy, ...prev]);
       toast.success(`${cap(entity)} duplicated`);
@@ -207,6 +282,11 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
   const applyConfirm = () => {
     if (!confirm) return;
     const { row, action } = confirm;
+    if (remote) {
+      const request = action === "archive" ? () => apiClient.post(`${resourceUrl}/${row.id}/archive`) : () => apiClient.delete(`${resourceUrl}/${row.id}`);
+      void runRemote(request, `${cap(entity)} ${action === "archive" ? "archived" : "deleted"}`, true).then((done) => { if (done) setConfirm(null); });
+      return;
+    }
     const stateKey = ["status", "state"].find((k) => k in row);
     if (action === "archive" && stateKey) {
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, [stateKey]: "Archived" } : r)));
@@ -218,7 +298,8 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
   };
 
   const allOnPageSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
-  const nameOf = (row: Row) => String(row[config.columns[0].key] ?? entity);
+  const nameOf = (row: Row) => String(row[nameKeyOf(config)] ?? entity);
+  const actionsFor = (row: Row) => (config.rowActions ?? []).filter((action) => appliesTo(row, action));
 
   return (
     <>
@@ -280,7 +361,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
         }
       />
 
-      <DemoNotice />
+      {remote ? null : <DemoNotice />}
 
       {config.summary ? (
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -306,7 +387,11 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                 label: t.label,
                 color: tabColor(t.value),
                 icon: t.value === "Archived" ? Archive : t.value === "Completed" ? CircleCheck : t.value ? CircleDot : LayoutList,
-                count: t.value && tabKey ? baseFiltered.filter((r) => matches(r[tabKey], t.value!)).length : baseFiltered.length,
+                count: remote
+                  ? t.value
+                    ? remoteList.meta?.tabCounts?.[t.value]
+                    : remoteList.meta?.tabCounts ? Object.values(remoteList.meta.tabCounts).reduce((sum, n) => sum + n, 0) : undefined
+                  : t.value && tabKey ? baseFiltered.filter((r) => matches(r[tabKey], t.value!)).length : baseFiltered.length,
               }))}
             />
           ) : null}
@@ -328,18 +413,18 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
               </div>
             ) : null}
             {config.filters?.map((f) => (
-                <Select
-                  key={f.key}
-                  aria-label={`Filter by ${f.label.toLowerCase()}`}
-                  value={filters[f.key] ?? ""}
-                  onValueChange={(value) => {
-                    setFilters((prev) => ({ ...prev, [f.key]: value }));
-                    resetPage();
-                  }}
-                  className="w-full min-w-0 sm:w-56"
-                  icon={SlidersHorizontal}
-                  options={[{ value: "", label: `All ${plural(f.label.toLowerCase())}` }, ...(f.options ?? []).map((value) => ({ value, label: value }))]}
-                />
+              <Select
+                key={f.key}
+                aria-label={`Filter by ${f.label.toLowerCase()}`}
+                value={filters[f.key] ?? ""}
+                onValueChange={(value) => {
+                  setFilters((prev) => ({ ...prev, [f.key]: value }));
+                  resetPage();
+                }}
+                className="w-full min-w-0 sm:w-56"
+                icon={SlidersHorizontal}
+                options={[{ value: "", label: `All ${plural(f.label.toLowerCase())}` }, ...(f.options ?? []).map((value) => ({ value, label: value }))]}
+              />
             ))}
             {config.dateFilterKey ? (
               <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:w-auto">
@@ -385,8 +470,17 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
           </div>
         </div>
 
-        {filtered.length === 0 ? (
-          rows.length === 0 ? (
+        {remote && remoteList.status === "error" ? (
+          <EmptyState
+            icon={<TriangleAlert className="size-5" />}
+            title={`Could not load ${plural(entity)}`}
+            description={remoteList.error?.message ?? "Something went wrong."}
+            action={<Button onClick={remoteList.refetch}>Try again</Button>}
+          />
+        ) : remote && remoteList.status === "loading" && remoteList.rows === undefined ? (
+          <p role="status" className="px-4 py-12 text-center text-sm text-muted">Loading {plural(entity)}…</p>
+        ) : filtered.length === 0 ? (
+          (remote ? !hasActiveFilters && Object.values(remoteList.meta?.tabCounts ?? { all: total }).every((n) => n === 0) : rows.length === 0) ? (
             <EmptyState
               icon={<Inbox className="size-5" />}
               title={`No ${plural(entity)} yet`}
@@ -412,7 +506,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
           <TableScroll label={`${config.title} table; scroll horizontally to see more columns`}>
             <table className="admin-data-table">
               <caption className="sr-only">
-                {config.title}, {filtered.length} results, page {currentPage} of {pageCount}
+                {config.title}, {total} results, page {currentPage} of {pageCount}
               </caption>
               <thead>
                 <tr>
@@ -491,7 +585,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                           })()
                         ) : (
                           <div className="flex items-center justify-end gap-1.5">
-                            {config.rowActions
+                            {actionsFor(r)
                               .filter((a) => inlineActions.includes(a))
                               .map((a) => {
                                 const Icon = actionIcon[a];
@@ -501,7 +595,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                                   </IconButton>
                                 );
                               })}
-                            {config.rowActions.some((a) => !inlineActions.includes(a)) ? (
+                            {actionsFor(r).some((a) => !inlineActions.includes(a)) ? (
                               <Popover
                                 label={`More actions for ${nameOf(r)}`}
                                 panelClassName="min-w-40"
@@ -512,7 +606,7 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
                                 )}
                               >
                                 {(close) =>
-                                  config.rowActions!
+                                  actionsFor(r)
                                     .filter((a) => !inlineActions.includes(a))
                                     .map((a) => {
                                       const Icon = actionIcon[a];
@@ -545,12 +639,12 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
           </TableScroll>
         )}
 
-        {filtered.length > 0 ? (
+        {total > 0 ? (
           <div className="admin-table-footer">
             <p role="status" aria-live="polite" aria-atomic="true">
               Showing <span className="font-medium text-foreground">{(currentPage - 1) * PAGE_SIZE + 1}</span>–
-              <span className="font-medium text-foreground">{Math.min(currentPage * PAGE_SIZE, filtered.length)}</span> of{" "}
-              <span className="font-medium text-foreground">{filtered.length}</span> {filtered.length === 1 ? entity : plural(entity)}
+              <span className="font-medium text-foreground">{Math.min(currentPage * PAGE_SIZE, total)}</span> of{" "}
+              <span className="font-medium text-foreground">{total}</span> {total === 1 ? entity : plural(entity)}
             </p>
             <nav aria-label="Pagination" className="flex items-center gap-1">
               <IconButton label="Previous page" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
@@ -594,7 +688,22 @@ export function ListPage({ pageKey, status, config }: { pageKey: string; status:
           initial={formRow ?? config.form.defaults}
           submitLabel={formRow ? "Save changes" : `Create ${entity}`}
           onClose={closeForm}
-          onSubmit={(values) => {
+          onSubmit={async (values) => {
+            if (remote) {
+              try {
+                if (formRow) await apiClient.patch(`${resourceUrl}/${formRow.id}`, values);
+                else await apiClient.post(resourceUrl, values);
+              } catch (error) {
+                if (error instanceof ApiError && Object.keys(error.fields).length > 0) return error.fields;
+                reportFailure(error);
+                return;
+              }
+              toast.success(`${cap(entity)} ${formRow ? "updated" : "created"}`);
+              if (!formRow) setPage(1);
+              remoteList.refetch();
+              closeForm();
+              return;
+            }
             if (formRow) {
               setRows((prev) => prev.map((r) => (r.id === formRow.id ? { ...r, ...values } : r)));
               toast.success(`${cap(entity)} updated locally`, { description: "Demo only: changes are cleared when this page reloads." });

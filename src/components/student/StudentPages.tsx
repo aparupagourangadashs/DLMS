@@ -1,34 +1,49 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
-import { Award, Bell, BookOpen, ClipboardCheck, Copy, Download, Gift, HeartHandshake, LifeBuoy, MessagesSquare, Receipt, Search } from "lucide-react";
-import { announcements, courses } from "@/lib/student/demo";
 import { Badge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Field, inputClass } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
+import { apiClient } from "@/lib/api/client";
+import { courses } from "@/lib/student/demo";
+import type { StudentAnnouncement } from "@/lib/student/learning-types";
+import { istDateTime } from "@/lib/student/when";
+import { Award, Bell, ClipboardCheck, Copy, Download, Gift, HeartHandshake, MessagesSquare, Receipt, Search } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { StudentEmpty, StudentHeading, StudentPanel } from "./StudentUi";
 
-export function StudentAnnouncements() {
+const urgencyTone = { High: "warning", Medium: "info", Low: "neutral" } as const;
+const urgencyLabel = { High: "Important", Medium: "Update", Low: "Note" } as const;
+
+export function StudentAnnouncements({ initial }: { initial: StudentAnnouncement[] }) {
+  const [items, setItems] = useState(initial);
   const [search, setSearch] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const [read, setRead] = useState<string[]>([]);
-  const [selected, setSelected] = useState<(typeof announcements)[number] | null>(null);
-  const unread = (item: (typeof announcements)[number]) => item.unread && !read.includes(item.id);
-  const items = announcements.filter((a) => (!unreadOnly || unread(a)) && `${a.title} ${a.body}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const [selected, setSelected] = useState<StudentAnnouncement | null>(null);
+  const shown = items.filter((a) => (!unreadOnly || !a.read) && `${a.title} ${a.body} ${a.tags.join(" ")}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const setRead = (id: string, read: boolean) => setItems((list) => list.map((a) => (a.id === id ? { ...a, read } : a)));
+  const open = (item: StudentAnnouncement) => {
+    setSelected(item);
+    if (item.read) return;
+    setRead(item.id, true);
+    apiClient.post(`/api/student/announcements/${item.id}/read`).catch(() => {
+      setRead(item.id, false);
+      toast.error("Could not save that you read this announcement.");
+    });
+  };
   return (
     <>
-      <StudentHeading title="Announcements" description="Stay close to your learning community. Read status changes are temporary in this preview." icon={Bell} />
+      <StudentHeading title="Announcements" description="Stay close to your learning community. Notices from IBMV and your batches appear here." icon={Bell} />
       <StudentPanel className="mb-5">
         <Field id="announcement-search" label="Search Announcement"><input id="announcement-search" type="search" className={inputClass} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find an announcement" /></Field>
         <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm"><input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} className="size-5 accent-teal-600" />Show Unread</label>
       </StudentPanel>
-      <p role="status" className="mb-3 text-xs text-muted">{items.length} announcements found</p>
-      <div className="space-y-4">{items.map((a) => <StudentPanel key={a.id}><div className="mb-3 flex flex-wrap items-center gap-2"><Badge tone={a.priority === "Important" ? "warning" : "info"}>{a.priority}</Badge><Badge tone={unread(a) ? "success" : "neutral"}>{unread(a) ? "Unread" : "Read"}</Badge><span className="text-xs text-muted">{a.category}</span></div><h2 className="font-serif text-xl font-semibold">{a.title}</h2><p className="mt-2 text-sm text-muted">{a.body.slice(0, 115)}...</p><p className="mt-3 text-xs text-muted">{a.date}</p><Button className="mt-4" variant="soft-info" onClick={() => { setSelected(a); setRead((ids) => ids.includes(a.id) ? ids : [...ids, a.id]); }}>Read announcement</Button></StudentPanel>)}</div>
-      {!items.length ? <StudentEmpty title="No matching announcements" description="Clear the search or turn off Show Unread to see more." icon={Search} /> : null}
-      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title={selected?.title ?? "Announcement"}>{selected ? <><p className="mb-4 text-xs text-muted">{selected.date}</p><p className="text-sm leading-relaxed">{selected.body}</p></> : null}</Modal>
+      <p role="status" className="mb-3 text-xs text-muted">{shown.length} {shown.length === 1 ? "announcement" : "announcements"} found</p>
+      <div className="space-y-4">{shown.map((a) => <StudentPanel key={a.id}><div className="mb-3 flex flex-wrap items-center gap-2"><Badge tone={urgencyTone[a.urgency]}>{urgencyLabel[a.urgency]}</Badge><Badge tone={a.read ? "neutral" : "success"}>{a.read ? "Read" : "Unread"}</Badge>{a.tags.length ? <span className="text-xs text-muted">{a.tags.join(", ")}</span> : null}</div><h2 className="font-serif text-xl font-semibold">{a.title}</h2><p className="mt-2 text-sm text-muted">{a.body.length > 115 ? `${a.body.slice(0, 115)}…` : a.body}</p><p className="mt-3 text-xs text-muted">{istDateTime(a.publishedAt)}</p><Button className="mt-4" variant="soft-info" onClick={() => open(a)}>Read announcement</Button></StudentPanel>)}</div>
+      {!shown.length ? (items.length ? <StudentEmpty title="No matching announcements" description="Clear the search or turn off Show Unread to see more." icon={Search} /> : <StudentEmpty title="No announcements yet" description="Notices from IBMV and your batches will appear here." icon={Bell} />) : null}
+      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title={selected?.title ?? "Announcement"}>{selected ? <><p className="mb-4 text-xs text-muted">{istDateTime(selected.publishedAt)}{selected.tags.length ? ` · ${selected.tags.join(", ")}` : ""}</p><p className="text-sm leading-relaxed whitespace-pre-wrap">{selected.body}</p></> : null}</Modal>
     </>
   );
 }
@@ -100,27 +115,4 @@ export function StudentReferrals() {
     catch { setCopyError("Clipboard access is unavailable. Select and copy IBMV-DEMO-ONLY manually."); toast.error("Could not access clipboard."); }
   }
   return <><StudentHeading title="Refer & Earn" description="A preview of referral tools. No rewards program or redemption service is active." icon={Gift} /><div className="grid gap-5 md:grid-cols-2"><StudentPanel title="Your sample referral code"><p className="rounded-xl border border-dashed border-accent/40 bg-accent-soft p-4 font-mono text-lg font-semibold break-all">IBMV-DEMO-ONLY</p><Button className="mt-4" variant="soft-violet" onClick={copy}><Copy className="size-4" aria-hidden="true" />Copy demo code</Button>{copyError ? <p role="alert" className="mt-3 text-sm text-danger">{copyError}</p> : null}<p className="mt-3 text-xs text-muted">Not redeemable. Sharing destinations and reward terms are not configured.</p></StudentPanel><StudentPanel title="Sample credit balance"><p className="text-4xl font-semibold text-accent">0</p><p className="mt-2 text-sm text-muted">No cash value. No referral transactions.</p><Button className="mt-4" onClick={() => setTransactions(true)}>View Transactions</Button></StudentPanel></div><StudentPanel title="Before referrals go live" className="mt-5"><ol className="list-decimal space-y-2 pl-5 text-sm text-muted"><li>IBMV must confirm eligibility, reward amounts and expiry.</li><li>Terms and referral privacy must be reviewed.</li><li>Rewards must be validated on the server, not in browser storage.</li></ol></StudentPanel><Modal open={transactions} onClose={() => setTransactions(false)} title="Referral transactions"><StudentEmpty title="No sample transactions" description="This demo has not earned or redeemed any credits." icon={Gift} /></Modal></>;
-}
-
-export function StudentHelp() {
-  const [message, setMessage] = useState("");
-  const [saved, setSaved] = useState("");
-  const [error, setError] = useState("");
-  return (
-    <>
-      <StudentHeading title="Help Centre" description="Find your way around the student portal and preview a support request." icon={LifeBuoy} />
-      <div className="grid gap-5 xl:grid-cols-2">
-        <StudentPanel title="How can we help?">
-          <form onSubmit={(event) => { event.preventDefault(); if (message.trim().length < 10) { setError("Please write at least 10 characters to describe the issue."); return; } setError(""); setSaved(message.trim()); toast.success("Draft preview prepared. Nothing has been sent."); }}>
-            <Field id="support-message" label="Support message" required error={error} help="Demo only. Do not include personal information."><textarea id="support-message" required maxLength={2000} value={message} onChange={(e) => { setMessage(e.target.value); setSaved(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? "support-message-error" : "support-message-help"} className={`${inputClass} min-h-36 py-3`} placeholder="Describe a sample issue..." /></Field>
-            <p className="mt-2 text-xs text-muted">{message.length}/2000 characters</p>
-            <Button className="mt-4" type="submit" variant="soft-success">Preview request · Not sent</Button>
-          </form>
-          {saved ? <div className="mt-4 rounded-xl bg-teal-500/10 p-4" role="status"><p className="text-sm font-semibold">Unsent draft preview</p><p className="mt-2 text-sm whitespace-pre-wrap break-words">{saved}</p></div> : null}
-          <p className="mt-4 text-xs leading-relaxed text-muted">Support delivery, verified email/telephone, social and app-download destinations are not configured. There is no Send action until a service is connected.</p>
-        </StudentPanel>
-        <StudentPanel title="Quick answers">{[{ title: "Where are my courses?", body: "Open My Learning. Filter by stream or switch between Active and Completed Learning." }, { title: "Does opening a lesson change my progress?", body: "No. All progress is fixed sample data. Reading previews do not submit work." }, { title: "Are these real certificates or purchases?", body: "No. Every record is fictional. Sample downloads are visibly marked as invalid." }, { title: "Can I save profile changes?", body: "You can preview edits temporarily. Nothing is saved to a server or shared with admin." }].map((faq) => <details key={faq.title} className="border-b border-border py-3 last:border-0"><summary className="min-h-8 cursor-pointer text-sm font-semibold">{faq.title}</summary><p className="mt-3 text-sm leading-relaxed text-muted">{faq.body}</p></details>)}<div className="mt-4"><LinkButton href="/student/my-learning" variant="soft-info"><BookOpen className="size-4" aria-hidden="true" />Go to My Learning</LinkButton></div></StudentPanel>
-      </div>
-    </>
-  );
 }

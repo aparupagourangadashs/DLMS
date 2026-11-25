@@ -1,32 +1,43 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { ListPage } from "@/components/admin/ListPage";
 import { AnalyticsPage } from "@/components/admin/pages/AnalyticsPage";
+import { CategoriesPage } from "@/components/admin/pages/CategoriesPage";
 import { ChequeManagement } from "@/components/admin/pages/ChequeManagement";
-import { PromotionalTemplates } from "@/components/admin/pages/PromotionalTemplates";
-import { PromoCodes } from "@/components/admin/pages/PromoCodes";
 import { CommunityPage } from "@/components/admin/pages/CommunityPage";
 import { DecisionPage } from "@/components/admin/pages/DecisionPage";
 import { MyProfile } from "@/components/admin/pages/MyProfile";
 import { NewEnrolment } from "@/components/admin/pages/NewEnrolment";
+import { PromoCodes } from "@/components/admin/pages/PromoCodes";
+import { PromotionalTemplates } from "@/components/admin/pages/PromotionalTemplates";
 import { SessionsCalendar } from "@/components/admin/pages/SessionsCalendar";
 import {
-  CategoriesSettingsPage,
   CustomFieldsSettingsPage,
   GradingSystemSettingsPage,
   InternationalSellingPage,
   LearnerExperiencePage,
   MiscellaneousFeesSettingsPage,
-  SubOrganizationsSettingsPage,
   UtilityWalletSettingsPage,
 } from "@/components/admin/pages/SettingsPages";
+import { SiteSettingsPage } from "@/components/admin/pages/SiteSettingsPage";
+import { SubOrganizationsPage } from "@/components/admin/pages/SubOrganizations";
+import { SupportInbox } from "@/components/admin/pages/SupportInbox";
 import { SystemNotifications } from "@/components/admin/pages/SystemNotifications";
 import { analytics } from "@/lib/admin/analytics";
 import { demoCommunities } from "@/lib/admin/community";
+import { withOptions } from "@/lib/admin/config-options";
 import { decisions } from "@/lib/admin/decisions";
-import { demoSessions } from "@/lib/admin/demo-data";
 import { getListConfig } from "@/lib/admin/list-configs";
 import { adminNav, findPage } from "@/lib/admin/navigation";
+import { canViewPage } from "@/lib/admin/page-permissions";
+import { istToday } from "@/lib/ist";
+import { getResource, resourceKeys } from "@/server/admin/resources";
+import { can } from "@/server/auth/permissions";
+import { pageStaff } from "@/server/auth/session";
+import { listEnrolBatches } from "@/server/services/enrolments";
+import { getMyProfile } from "@/server/services/profile";
+import { getSiteSettings } from "@/server/services/public/site";
+import { listHolidayBranches } from "@/server/services/sessions";
+import type { Metadata } from "next";
+import { notFound, redirect } from "next/navigation";
 
 export const dynamicParams = false;
 
@@ -43,6 +54,8 @@ export default async function AdminSectionPage({ params }: PageProps<"/admin/[se
   const { section, page } = await params;
   const found = findPage(section, page);
   if (!found || section === "home") notFound();
+  const user = await pageStaff();
+  if (!canViewPage(user.role, section, page)) redirect("/access-denied");
   const key = `${section}/${page}`;
 
   switch (key) {
@@ -63,22 +76,26 @@ export default async function AdminSectionPage({ params }: PageProps<"/admin/[se
   }
 
   switch (key) {
-    case "learning/sessions":
-      return <SessionsCalendar sessions={demoSessions()} />;
-    case "users/new-enrolment": {
-      const learners = getListConfig("users/learners");
-      return <NewEnrolment knownEmails={(learners?.rows ?? []).map((r) => String(r.email))} />;
+    case "learning/sessions": {
+      const holidayBranches = await listHolidayBranches(user);
+      return <SessionsCalendar today={istToday()} batches={await listEnrolBatches(user)} branches={holidayBranches.branches} branchRequired={holidayBranches.required} canWrite={can(user.role, "sessions:write")} />;
     }
+    case "users/new-enrolment":
+      return <NewEnrolment batches={await listEnrolBatches(user)} />;
+    case "engage/support":
+      return <SupportInbox currentUserId={user.id} canWrite={can(user.role, "supportRequests:write")} status={found.page.status} />;
     case "engage/community":
       return <CommunityPage communities={demoCommunities()} />;
     case "settings/my-profile":
-      return <MyProfile />;
+      return <MyProfile initial={await getMyProfile(user.id)} />;
     case "settings/categories":
-      return <CategoriesSettingsPage />;
+      return <CategoriesPage />;
+    case "website/site-settings":
+      return <SiteSettingsPage initial={await getSiteSettings()} />;
     case "settings/custom-fields":
       return <CustomFieldsSettingsPage />;
     case "settings/sub-organizations":
-      return <SubOrganizationsSettingsPage />;
+      return <SubOrganizationsPage />;
     case "settings/grading-system":
       return <GradingSystemSettingsPage />;
     case "settings/miscellaneous-fees":
@@ -94,7 +111,15 @@ export default async function AdminSectionPage({ params }: PageProps<"/admin/[se
   }
 
   const config = getListConfig(key);
-  if (config) return <ListPage pageKey={key} status={found.page.status} config={config} />;
+  if (config) {
+    // Migrated screens load rows from the API; the fixture rows are not sent to the browser.
+    const remote = resourceKeys().includes(key);
+    if (remote) {
+      const options = (await getResource(key).options?.()) ?? {};
+      return <ListPage pageKey={key} status={found.page.status} config={withOptions({ ...config, rows: [] }, options)} remote />;
+    }
+    return <ListPage pageKey={key} status={found.page.status} config={config} remote={false} />;
+  }
 
   notFound();
 }

@@ -1,15 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Award, Bell, BookOpen, CalendarDays, ChevronDown, ChevronRight, Gift, HeartHandshake, House, LifeBuoy, Menu, MessagesSquare, PanelLeftClose, PanelLeftOpen, Receipt, Settings, Sparkles, UserRound, ClipboardCheck, type LucideIcon } from "lucide-react";
-import { studentHref, studentNav } from "@/lib/student/demo";
-import { cn } from "@/lib/cn";
-import { palette, type ColorKey } from "@/lib/colors";
 import { Logo } from "@/components/Logo";
 import { Modal } from "@/components/ui/Modal";
 import { Popover } from "@/components/ui/Popover";
+import { cn } from "@/lib/cn";
+import { palette, type ColorKey } from "@/lib/colors";
+import { courses, studentHref, studentNav } from "@/lib/student/demo";
+import { Award, Bell, BookOpen, CalendarDays, ChevronDown, ChevronRight, ClipboardCheck, Gift, HeartHandshake, House, LifeBuoy, LogOut, Menu, MessagesSquare, PanelLeftClose, PanelLeftOpen, Receipt, Settings, Sparkles, UserRound, type LucideIcon } from "lucide-react";
+import { signOut } from "next-auth/react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { StudentAvatar } from "./StudentAvatar";
 
 const icons: Record<string, LucideIcon> = {
@@ -24,8 +25,14 @@ const navColors: Record<string, ColorKey> = {
   "my-learning": "emerald", "my-purchases": "sky", "refer-and-earn": "violet", "settings/profile": "slate",
 };
 
-export function StudentShell({ children }: { children: React.ReactNode }) {
+// Pages that read the learner's own records. The rest still show sample content and carry a notice saying so.
+const livePaths = ["/student", "/student/my-learning", "/student/calendar", "/student/announcements", "/student/help"];
+// The three reading previews are sample content; any other course page is the learner's own.
+const sampleSlugs = courses.map((course) => course.slug);
+
+export function StudentShell({ children, userName }: { children: React.ReactNode; userName: string }) {
   const path = usePathname();
+  const livePage = livePaths.includes(path) || path.startsWith("/student/settings/") || (path.startsWith("/student/learning/") && !sampleSlugs.includes(path.split("/")[3]));
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
@@ -45,30 +52,30 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     return (
       <nav id={mobile ? undefined : "student-desktop-navigation"} aria-label={mobile ? "Mobile student navigation" : "Student navigation"}>
         <ul className="space-y-1">
-        {studentNav.filter((item) => item.slug !== "announcements").map((item) => {
-          const Icon = icons[item.slug];
-          const color = palette[navColors[item.slug]];
-          const href = studentHref(item.slug);
-          const active = item.slug === "" ? path === href
-            : item.slug === "my-learning" ? path === href || path.startsWith("/student/learning/")
-              : item.slug === "settings/profile" ? path.startsWith("/student/settings/") : path === href;
-          return (
-            <li key={item.slug}>
-              <Link href={href} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined}
-                aria-label={iconOnly ? item.label : undefined} title={iconOnly ? item.label : undefined}
-                className={cn("student-nav-link group relative flex min-h-11 items-center gap-3 rounded-xl border py-1.5 text-sm font-medium transition-colors",
-                  iconOnly ? "justify-center px-1" : "px-2.5",
-                  active ? "border-accent/30 bg-linear-to-r from-accent-soft to-surface font-semibold text-foreground shadow-sm" : "border-transparent hover:border-border hover:bg-surface/80")}>
-                {active ? <span className="absolute top-3 bottom-3 left-0 w-0.5 rounded-full bg-accent" aria-hidden="true" /> : null}
-                <span className={cn("student-nav-icon flex size-9 shrink-0 items-center justify-center rounded-xl", color.solid)}>
-                  <Icon className="student-duotone-icon size-5" strokeWidth={1.8} aria-hidden="true" />
-                </span>
-                {!iconOnly ? <><span className="min-w-0 flex-1">{item.label}</span>
-                <ChevronRight className={cn("size-3.5 shrink-0", active ? "text-accent" : "text-muted/40 group-hover:text-accent")} aria-hidden="true" /></> : null}
-              </Link>
-            </li>
-          );
-        })}
+          {studentNav.filter((item) => item.slug !== "announcements").map((item) => {
+            const Icon = icons[item.slug];
+            const color = palette[navColors[item.slug]];
+            const href = studentHref(item.slug);
+            const active = item.slug === "" ? path === href
+              : item.slug === "my-learning" ? path === href || path.startsWith("/student/learning/")
+                : item.slug === "settings/profile" ? path.startsWith("/student/settings/") : path === href;
+            return (
+              <li key={item.slug}>
+                <Link href={href} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined}
+                  aria-label={iconOnly ? item.label : undefined} title={iconOnly ? item.label : undefined}
+                  className={cn("student-nav-link group relative flex min-h-11 items-center gap-3 rounded-xl border py-1.5 text-sm font-medium transition-colors",
+                    iconOnly ? "justify-center px-1" : "px-2.5",
+                    active ? "border-accent/30 bg-linear-to-r from-accent-soft to-surface font-semibold text-foreground shadow-sm" : "border-transparent hover:border-border hover:bg-surface/80")}>
+                  {active ? <span className="absolute top-3 bottom-3 left-0 w-0.5 rounded-full bg-accent" aria-hidden="true" /> : null}
+                  <span className={cn("student-nav-icon flex size-9 shrink-0 items-center justify-center rounded-xl", color.solid)}>
+                    <Icon className="student-duotone-icon size-5" strokeWidth={1.8} aria-hidden="true" />
+                  </span>
+                  {!iconOnly ? <><span className="min-w-0 flex-1">{item.label}</span>
+                    <ChevronRight className={cn("size-3.5 shrink-0", active ? "text-accent" : "text-muted/40 group-hover:text-accent")} aria-hidden="true" /></> : null}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
     );
@@ -89,16 +96,15 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             <Popover label="Student account" panelClassName="w-64 student-account-menu" trigger={({ open: accountOpen, toggle, ref }) => (
               <button ref={ref} type="button" aria-label="Student account menu" aria-expanded={accountOpen} onClick={toggle} className="student-header-control student-header-account flex min-h-11 items-center gap-2 rounded-full p-1 text-left sm:rounded-2xl sm:pr-3">
                 <StudentAvatar />
-                <span className="hidden sm:block"><span className="block text-xs font-semibold">Demo Learner</span><span className="student-header-subtitle block text-[10px]">Your account</span></span>
+                <span className="hidden sm:block"><span className="block text-xs font-semibold">{userName}</span><span className="student-header-subtitle block text-[10px]">Your account</span></span>
                 <ChevronDown className="student-header-subtitle hidden size-3.5 sm:block" aria-hidden="true" />
               </button>
             )}>
-              {(close) => <div><div className="student-account-identity m-1 mb-2 rounded-xl p-3"><p className="text-sm font-semibold">Demo Learner</p><p className="mt-1 text-xs text-muted">Illustrated avatar · Demo account</p></div><nav aria-label="Student account links">{[
+              {(close) => <div><div className="student-account-identity m-1 mb-2 rounded-xl p-3"><p className="text-sm font-semibold">{userName}</p><p className="mt-1 text-xs text-muted">Signed in</p></div><nav aria-label="Student account links">{[
                 { href: "/student/help", label: "Help Centre", Icon: LifeBuoy },
                 { href: "/student/settings/preferences", label: "Preferences", Icon: Settings },
                 { href: "/student/settings/profile", label: "Profile", Icon: UserRound },
-                { href: "/", label: "Exit demo / All portals", Icon: ArrowLeft },
-              ].map(({ href, label, Icon }) => <Link key={href} href={href} onClick={close} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent-soft"><Icon className="size-4 text-accent" aria-hidden="true" />{label}</Link>)}</nav></div>}
+              ].map(({ href, label, Icon }) => <Link key={href} href={href} onClick={close} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent-soft"><Icon className="size-4 text-accent" aria-hidden="true" />{label}</Link>)}<button type="button" onClick={() => void signOut({ redirectTo: "/login" })} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent-soft"><LogOut className="size-4 text-accent" aria-hidden="true" />Sign out</button></nav></div>}
             </Popover>
           </div>
         </div>
@@ -122,21 +128,21 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="student-nav-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3">{navigation()}</div>
             <div className="shrink-0 border-t border-border bg-surface/70 p-2">
-              <Link href="/" aria-label={collapsed ? "Exit demo / All portals" : undefined} title={collapsed ? "Exit demo / All portals" : undefined} className={cn("flex min-h-11 items-center gap-3 rounded-xl px-3 text-xs font-medium text-muted hover:bg-accent-soft hover:text-accent", collapsed && "justify-center")}><ArrowLeft className="size-4 shrink-0" aria-hidden="true" />{!collapsed ? "Exit demo / All portals" : null}</Link>
+              <button type="button" onClick={() => void signOut({ redirectTo: "/login" })} aria-label={collapsed ? "Sign out" : undefined} title={collapsed ? "Sign out" : undefined} className={cn("flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-xs font-medium text-muted hover:bg-accent-soft hover:text-accent", collapsed && "justify-center")}><LogOut className="size-4 shrink-0" aria-hidden="true" />{!collapsed ? "Sign out" : null}</button>
             </div>
           </div>
         </aside>
         <main id="student-main" className="mx-auto min-w-0 max-w-7xl flex-1 px-4 py-5 sm:px-6 sm:py-7">
-          <p className="student-demo-note mb-5 rounded-xl border px-4 py-3 text-xs leading-relaxed">
-            <strong>Public demo preview.</strong> All learner records are fictional. No sign-in, real enrollment, payment, message delivery or progress tracking is connected. Changes are temporary; do not enter personal information.
-          </p>
+          {!livePage ? <p className="student-demo-note mb-5 rounded-xl border px-4 py-3 text-xs leading-relaxed">
+            <strong>Preview data.</strong> You are signed in, but this page still shows fictional learner records until its backend phase is released. Changes are temporary; do not enter personal information.
+          </p> : null}
           {children}
           <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5 text-xs text-muted"><span>IBMV · A space to learn, reflect and grow</span><Link href="/student/help" className="font-medium text-accent hover:underline">Need help?</Link></footer>
         </main>
       </div>
       <Modal open={open} onClose={() => setOpen(false)} title="Student navigation" variant="drawer" side="left">
         <div className="rounded-2xl border border-border bg-linear-to-b from-accent-soft via-surface to-teal-500/5 p-2">{navigation(true)}</div>
-        <Link href="/" onClick={() => setOpen(false)} className="mt-5 flex min-h-11 items-center gap-2 text-sm text-accent"><ArrowLeft className="size-4" aria-hidden="true" />Exit demo / All portals</Link>
+        <button type="button" onClick={() => void signOut({ redirectTo: "/login" })} className="mt-5 flex min-h-11 items-center gap-2 text-sm text-accent"><LogOut className="size-4" aria-hidden="true" />Sign out</button>
       </Modal>
     </div>
   );

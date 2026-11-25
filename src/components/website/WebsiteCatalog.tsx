@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { filterPublicCourses } from "@/lib/website/static";
+import type { PublicCollection, PublicCourse } from "@/lib/website/types";
 import { BookOpen, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
-import { collections, filterPublicCourses, publicCourses, type CollectionSlug } from "@/lib/website/content";
+import { useState } from "react";
 import { PublicCourseCard, WebsiteIntro } from "./WebsiteUi";
 
-export function WebsiteCatalog({ slug }: { slug: CollectionSlug }) {
-  const collection = collections.find((item) => item.slug === slug)!;
+export function WebsiteCatalog({ collection, items }: { collection: PublicCollection; items: PublicCourse[] }) {
   const [query, setQuery] = useState("");
   const [language, setLanguage] = useState("all");
   const [format, setFormat] = useState("all");
   const [teacher, setTeacher] = useState("all");
   const [limit, setLimit] = useState(12);
-  const items = publicCourses.filter((course) => course.collection === slug);
   const filtered = filterPublicCourses(items, { query, language, format, teacher });
   function reset() { setQuery(""); setLanguage("all"); setFormat("all"); setTeacher("all"); setLimit(12); }
   return <>
@@ -27,7 +26,7 @@ export function WebsiteCatalog({ slug }: { slug: CollectionSlug }) {
           <details open><summary>Teachers</summary><label><span>Listed teaching team</span><select value={teacher} onChange={(event) => { setTeacher(event.target.value); setLimit(12); }}><option value="all">All teams</option>{[...new Set(items.map((course) => course.instructor))].map((name) => <option key={name}>{name}</option>)}</select></label></details>
           <button className="web-text-button" onClick={reset}><RotateCcw size={15} aria-hidden="true" />Reset filters</button>
         </aside>
-        <div><p className="web-results" role="status">{filtered.length} {filtered.length === 1 ? "course" : "courses"} found</p>{filtered.length ? <><div className="web-course-grid web-catalog-grid">{filtered.slice(0, limit).map((course) => <PublicCourseCard key={course.slug} course={course} />)}</div>{filtered.length > limit && <div className="web-load-more"><p>Showing {limit} of {filtered.length} courses</p><button className="web-btn" onClick={() => setLimit((value) => value + 12)}>Show more courses</button></div>}</> : <div className="web-empty"><BookOpen size={42} aria-hidden="true" /><h2>A different path, perhaps?</h2><p>No courses match these filters. Try a different search or reset your choices.</p><button className="web-btn" onClick={reset}>Clear filters</button></div>}</div>
+        <div><p className="web-results" role="status">{filtered.length} {filtered.length === 1 ? "course" : "courses"} found</p>{filtered.length ? <><div className="web-course-grid web-catalog-grid">{filtered.slice(0, limit).map((course) => <PublicCourseCard key={course.slug} course={course} />)}</div>{filtered.length > limit && <div className="web-load-more"><p>Showing {limit} of {filtered.length} courses</p><button className="web-btn" onClick={() => setLimit((value) => value + 12)}>Show more courses</button></div>}</> : items.length === 0 ? <div className="web-empty"><BookOpen size={42} aria-hidden="true" /><h2>Courses are coming soon.</h2><p>No courses are published in this collection yet. Please check again shortly, or explore another collection.</p></div> : <div className="web-empty"><BookOpen size={42} aria-hidden="true" /><h2>A different path, perhaps?</h2><p>No courses match these filters. Try a different search or reset your choices.</p><button className="web-btn" onClick={reset}>Clear filters</button></div>}</div>
       </div>
     </section>
   </>;

@@ -1,13 +1,13 @@
-import Link from "next/link";
-import { ArrowLeft, ArrowRight, CircleHelp, Info, Lightbulb, Link2, ListChecks, Monitor, TextCursorInput, Users } from "lucide-react";
-import type { HelpArticleData } from "@/lib/admin/help";
-import { HELP_HOME, helpHref, pageHref, statusLabel, type ScreenStatus } from "@/lib/admin/navigation";
-import { cn } from "@/lib/cn";
-import { cardCycle, colorFor, palette } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClass } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TableHeading, TableScroll } from "@/components/ui/Table";
+import type { HelpArticleData } from "@/lib/admin/help";
+import { HELP_HOME, helpHref, pageHref, statusLabel, type ScreenStatus } from "@/lib/admin/navigation";
+import { cn } from "@/lib/cn";
+import { cardCycle, colorFor, palette } from "@/lib/colors";
+import { ArrowLeft, ArrowRight, CircleHelp, Info, Lightbulb, Link2, ListChecks, Monitor, TextCursorInput, Users } from "lucide-react";
+import Link from "next/link";
 import { RichText } from "./RichText";
 
 const statusTone = { ready: "success", proposed: "info", decision: "warning" } as const;
@@ -17,6 +17,8 @@ const statusNote: Record<ScreenStatus, string> = {
   proposed: "The specification listed this menu item but not its contents, so the layout and fields are our proposal. Please review them and tell us what to change.",
   decision: "What this screen must do is still to be agreed with IBMV. Once the questions above are answered, we'll design the screen and update this help article.",
 };
+
+const liveNote = "This screen is connected to the database. Changes are saved, recorded in the audit log, and visible to everyone with access. What you can do depends on your role.";
 
 const sectionColors = {
   purpose: "sky", screen: "violet", tasks: "teal", fields: "indigo",
@@ -140,27 +142,27 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
             <Section id="fields" title="Form fields" icon={<TextCursorInput className="size-5" />}>
               <Card className="admin-table-card">
                 <TableScroll label={`Fields in the ${page.label} form`}>
-                <table className="admin-data-table">
-                  <caption className="sr-only">Fields in the {page.label} form</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col"><TableHeading icon={TextCursorInput}>Field</TableHeading></th>
-                      <th scope="col"><TableHeading icon={ListChecks}>Required</TableHeading></th>
-                      <th scope="col"><TableHeading icon={Info}>Notes</TableHeading></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.formFields.map((f) => (
-                      <tr key={f.label} className="border-b border-border last:border-0">
-                        <th scope="row" className="px-4 py-3 text-left font-medium">
-                          {f.label}
-                        </th>
-                        <td className="px-4 py-3">{f.required ? <Badge tone="accent">Required</Badge> : <span className="text-muted">Optional</span>}</td>
-                        <td className="px-4 py-3 text-muted">{f.note ?? "—"}</td>
+                  <table className="admin-data-table">
+                    <caption className="sr-only">Fields in the {page.label} form</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col"><TableHeading icon={TextCursorInput}>Field</TableHeading></th>
+                        <th scope="col"><TableHeading icon={ListChecks}>Required</TableHeading></th>
+                        <th scope="col"><TableHeading icon={Info}>Notes</TableHeading></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {data.formFields.map((f) => (
+                        <tr key={f.label} className="border-b border-border last:border-0">
+                          <th scope="row" className="px-4 py-3 text-left font-medium">
+                            {f.label}
+                          </th>
+                          <td className="px-4 py-3">{f.required ? <Badge tone="accent">Required</Badge> : <span className="text-muted">Optional</span>}</td>
+                          <td className="px-4 py-3 text-muted">{f.note ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </TableScroll>
               </Card>
             </Section>
@@ -202,7 +204,7 @@ export function HelpArticle({ data }: { data: HelpArticleData }) {
           ) : null}
 
           <Section id="status" title="About this screen" icon={<Info className="size-5" />}>
-            <p className="max-w-3xl text-sm leading-relaxed text-muted">{statusNote[page.status]}</p>
+            <p className="max-w-3xl text-sm leading-relaxed text-muted">{data.live ? liveNote : statusNote[page.status]}</p>
             <p className="mt-2 max-w-3xl text-sm text-muted">
               Shortcut: press <kbd className="rounded border border-border px-1.5 text-xs">?</kbd> on any admin page to open its help.
             </p>

@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
-import { AtSign, Bell, CalendarDays, Clock3, ContactRound, House, KeyRound, Mail, MapPin, MapPinned, Pencil, Phone, Save, Settings2, Smartphone, UserRound, UserRoundCog, X, type LucideIcon } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { palette, type ColorKey } from "@/lib/colors";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { Field, inputClass } from "@/components/ui/Field";
-import { Select } from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Field, inputClass } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
-import { DemoNotice, PageHeader } from "../PageHeader";
+import { Select } from "@/components/ui/Select";
+import { ApiError, apiClient } from "@/lib/api/client";
+import { cn } from "@/lib/cn";
+import { palette, type ColorKey } from "@/lib/colors";
+import { AtSign, Bell, CalendarDays, Clock3, ContactRound, House, KeyRound, Mail, MapPin, MapPinned, Pencil, Phone, Save, Settings2, Smartphone, UserRound, UserRoundCog, X, type LucideIcon } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { PageHeader } from "../PageHeader";
 
 type Profile = Record<string, string>;
 
-const sections: Array<{ title: string; description: string; icon: LucideIcon; color: ColorKey; fields: Array<{ key: string; label: string; type?: string; options?: string[]; required?: boolean; wide?: boolean }> }> = [
+const sections: Array<{ title: string; description: string; icon: LucideIcon; color: ColorKey; fields: Array<{ key: string; label: string; type?: string; options?: string[]; required?: boolean; wide?: boolean; readOnly?: boolean }> }> = [
   {
     title: "Personal details",
     description: "Your name and personal information",
@@ -36,7 +38,7 @@ const sections: Array<{ title: string; description: string; icon: LucideIcon; co
     fields: [
       { key: "mobile", label: "Mobile", type: "tel", required: true },
       { key: "altMobile", label: "Alternate mobile", type: "tel" },
-      { key: "email", label: "Email", type: "email", required: true, wide: true },
+      { key: "email", label: "Email (sign-in address)", type: "email", required: true, wide: true, readOnly: true },
     ],
   },
   {
@@ -71,23 +73,6 @@ const fieldIcons: Record<string, LucideIcon> = {
   timezone: Clock3, notifications: Bell,
 };
 
-const initial: Profile = {
-  name: "Demo Admin",
-  username: "demo.admin",
-  dob: "1990-01-15",
-  gender: "Prefer not to say",
-  mobile: "+91 98200 00000",
-  altMobile: "",
-  email: "admin@example.com",
-  permanentAddress: "IBMV Campus",
-  state: "Maharashtra",
-  city: "Mumbai",
-  pincode: "400001",
-  residentialAddress: "",
-  timezone: "Asia/Kolkata (IST, UTC+05:30)",
-  notifications: "Email and WhatsApp",
-};
-
 function validateProfile(p: Profile) {
   const e: Record<string, string> = {};
   if (!p.name.trim()) e.name = "Name is required.";
@@ -99,13 +84,40 @@ function validateProfile(p: Profile) {
   return e;
 }
 
-export function MyProfile() {
+export function MyProfile({ initial }: { initial: Profile }) {
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState(initial);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pwOpen, setPwOpen] = useState(false);
   const values = editing ? draft : saved;
+
+  async function save() {
+    const errs = validateProfile(draft);
+    setErrors(errs);
+    const first = Object.keys(errs)[0];
+    if (first) {
+      document.getElementById(`p-${first}`)?.focus();
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await apiClient.patch<Profile>("/api/admin/me", draft);
+      setSaved(result.data);
+      setEditing(false);
+      toast.success("Profile updated");
+    } catch (error) {
+      if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
+        setErrors(error.fields);
+        document.getElementById(`p-${Object.keys(error.fields)[0]}`)?.focus();
+      } else {
+        toast.error(error instanceof ApiError ? error.message : "Could not save your profile.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -134,7 +146,6 @@ export function MyProfile() {
           )
         }
       />
-      <DemoNotice />
 
       <section className="profile-identity mb-5" aria-label="Profile overview">
         <span className="profile-avatar" aria-hidden="true">{saved.name.split(" ").filter(Boolean).slice(0, 2).map((word) => word[0]).join("")}</span>
@@ -155,79 +166,70 @@ export function MyProfile() {
         className="grid min-w-0 items-start gap-5 xl:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
-          const errs = validateProfile(draft);
-          setErrors(errs);
-          const first = Object.keys(errs)[0];
-          if (first) {
-            document.getElementById(`p-${first}`)?.focus();
-            return;
-          }
-          setSaved(draft);
-          setEditing(false);
-          toast.success("Profile updated");
+          void save();
         }}
       >
         {sections.map((s) => {
           const color = palette[s.color];
           return (
-          <Card key={s.title} className="h-full min-w-0 overflow-hidden">
-            <div className={cn("h-1", color.bar)} />
-            <CardHeader
-              className="bg-surface-muted/40"
-              title={<span className="flex items-center gap-3"><span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", color.tile)} aria-hidden="true"><s.icon className="size-5" /></span><span>{s.title}</span></span>}
-              description={s.description}
-            />
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
-              {s.fields.map((f) => {
-                const id = `p-${f.key}`;
-                const Icon = fieldIcons[f.key];
-                if (!editing) {
+            <Card key={s.title} className="h-full min-w-0 overflow-hidden">
+              <div className={cn("h-1", color.bar)} />
+              <CardHeader
+                className="bg-surface-muted/40"
+                title={<span className="flex items-center gap-3"><span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", color.tile)} aria-hidden="true"><s.icon className="size-5" /></span><span>{s.title}</span></span>}
+                description={s.description}
+              />
+              <div className="grid gap-4 p-5 sm:grid-cols-2">
+                {s.fields.map((f) => {
+                  const id = `p-${f.key}`;
+                  const Icon = fieldIcons[f.key];
+                  if (!editing || f.readOnly) {
+                    return (
+                      <dl key={f.key} className={cn("profile-detail", f.wide && "sm:col-span-2")}>
+                        <dt className="flex items-center gap-2 text-xs font-medium text-muted"><Icon className={cn("size-4 shrink-0", color.text)} aria-hidden="true" />{f.label}</dt>
+                        <dd className="mt-2 text-sm font-medium break-words">{values[f.key] || <span className="font-normal text-muted">Not provided</span>}</dd>
+                      </dl>
+                    );
+                  }
+                  const common = {
+                    id,
+                    value: draft[f.key],
+                    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+                      setDraft((d) => ({ ...d, [f.key]: e.target.value }));
+                      if (errors[f.key]) setErrors((x) => ({ ...x, [f.key]: "" }));
+                    },
+                    className: inputClass,
+                    "aria-invalid": errors[f.key] ? true : undefined,
+                    "aria-describedby": errors[f.key] ? `${id}-error` : undefined,
+                  };
                   return (
-                    <dl key={f.key} className={cn("profile-detail", f.wide && "sm:col-span-2")}>
-                      <dt className="flex items-center gap-2 text-xs font-medium text-muted"><Icon className={cn("size-4 shrink-0", color.text)} aria-hidden="true" />{f.label}</dt>
-                      <dd className="mt-2 text-sm font-medium break-words">{values[f.key] || <span className="font-normal text-muted">Not provided</span>}</dd>
-                    </dl>
-                  );
-                }
-                const common = {
-                  id,
-                  value: draft[f.key],
-                  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-                    setDraft((d) => ({ ...d, [f.key]: e.target.value }));
-                    if (errors[f.key]) setErrors((x) => ({ ...x, [f.key]: "" }));
-                  },
-                  className: inputClass,
-                  "aria-invalid": errors[f.key] ? true : undefined,
-                  "aria-describedby": errors[f.key] ? `${id}-error` : undefined,
-                };
-                return (
-                  <Field key={f.key} id={id} label={f.label} required={f.required} error={errors[f.key]} className={f.wide ? "sm:col-span-2" : undefined}>
-                    {f.options ? (
-                      <Select
-                        id={id}
-                        value={draft[f.key]}
-                        options={f.options.map((value) => ({ value, label: value }))}
-                        onValueChange={(value) => {
+                    <Field key={f.key} id={id} label={f.label} required={f.required} error={errors[f.key]} className={f.wide ? "sm:col-span-2" : undefined}>
+                      {f.options ? (
+                        <Select
+                          id={id}
+                          value={draft[f.key]}
+                          options={f.options.map((value) => ({ value, label: value }))}
+                          onValueChange={(value) => {
+                            setDraft((d) => ({ ...d, [f.key]: value }));
+                            if (errors[f.key]) setErrors((x) => ({ ...x, [f.key]: "" }));
+                          }}
+                          required={f.required}
+                          aria-invalid={errors[f.key] ? true : undefined}
+                          aria-describedby={errors[f.key] ? `${id}-error` : undefined}
+                        />
+                      ) : f.type === "date" ? (
+                        <DatePicker id={id} value={draft[f.key]} onValueChange={(value) => {
                           setDraft((d) => ({ ...d, [f.key]: value }));
                           if (errors[f.key]) setErrors((x) => ({ ...x, [f.key]: "" }));
-                        }}
-                        required={f.required}
-                        aria-invalid={errors[f.key] ? true : undefined}
-                        aria-describedby={errors[f.key] ? `${id}-error` : undefined}
-                      />
-                    ) : f.type === "date" ? (
-                      <DatePicker id={id} value={draft[f.key]} onValueChange={(value) => {
-                        setDraft((d) => ({ ...d, [f.key]: value }));
-                        if (errors[f.key]) setErrors((x) => ({ ...x, [f.key]: "" }));
-                      }} aria-invalid={errors[f.key] ? true : undefined} aria-describedby={errors[f.key] ? `${id}-error` : undefined} />
-                    ) : (
-                      <input {...common} type={f.type ?? "text"} />
-                    )}
-                  </Field>
-                );
-              })}
-            </div>
-          </Card>
+                        }} aria-invalid={errors[f.key] ? true : undefined} aria-describedby={errors[f.key] ? `${id}-error` : undefined} />
+                      ) : (
+                        <input {...common} type={f.type ?? "text"} />
+                      )}
+                    </Field>
+                  );
+                })}
+              </div>
+            </Card>
           );
         })}
         {editing ? (
@@ -242,9 +244,9 @@ export function MyProfile() {
               <X className="size-4" aria-hidden="true" />
               Cancel
             </Button>
-            <Button type="submit" variant="success">
+            <Button type="submit" variant="success" disabled={saving}>
               <Save className="size-4" aria-hidden="true" />
-              Save changes
+              {saving ? "Saving…" : "Save changes"}
             </Button>
           </div>
         ) : null}
@@ -260,6 +262,7 @@ export function MyProfile() {
 function PasswordForm({ onDone }: { onDone: () => void }) {
   const [v, setV] = useState({ current: "", next: "", confirm: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState(false);
   const fields = [
     ["current", "Current password", "current-password"],
     ["next", "New password", "new-password"],
@@ -270,7 +273,7 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
     <form
       noValidate
       className="flex flex-col gap-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         const errs: Record<string, string> = {};
         if (!v.current) errs.current = "Enter your current password.";
@@ -279,8 +282,17 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
         if (v.confirm !== v.next) errs.confirm = "Passwords don't match.";
         setErrors(errs);
         if (Object.keys(errs).length) return;
-        toast.info("Password change is ready to connect", { description: "It will work once sign-in is added in the backend phase." });
-        onDone();
+        setPending(true);
+        try {
+          await apiClient.post("/api/account/password", { currentPassword: v.current, newPassword: v.next });
+          toast.success("Password changed", { description: "Please sign in again." });
+          await signOut({ redirectTo: "/login" });
+        } catch (error) {
+          setPending(false);
+          if (error instanceof ApiError && error.fields.currentPassword) setErrors({ current: error.fields.currentPassword });
+          else if (error instanceof ApiError && error.fields.newPassword) setErrors({ next: error.fields.newPassword });
+          else toast.error(error instanceof ApiError ? error.message : "Could not change the password.");
+        }
       }}
     >
       {fields.map(([k, label, auto]) => (
@@ -299,8 +311,8 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
       ))}
       <div className="flex justify-end gap-2">
         <Button onClick={onDone}>Cancel</Button>
-        <Button type="submit" variant="success">
-          Update password
+        <Button type="submit" variant="success" disabled={pending}>
+          {pending ? "Updating…" : "Update password"}
         </Button>
       </div>
     </form>

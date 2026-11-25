@@ -6,15 +6,32 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npm run test:unit && npm run test:server",
+    "test:unit": "tsx --test \"src/**/*.test.mjs\"",
+    "test:server": "tsx --conditions=react-server --test --test-concurrency=1 \"src/**/*.test.ts\"",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
+    "@prisma/adapter-mariadb": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^18.0.10",
     "framer-motion": "^13.5.1",
     "lucide-react": "^1.61.0",
     "next": "^16.4.3",
+    "next-auth": "^5.0.0-beta.32",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
     "sonner": "^2.0.8",
+    "zod": "^4.6.7",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
@@ -25,7 +42,9 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "^16.4.3",
+    "prisma": "^7.10.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

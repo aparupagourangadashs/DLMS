@@ -1,12 +1,13 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CircleHelp, CornerDownLeft, Search } from "lucide-react";
 import { HELP_HOME, adminNav, findPage, helpHref, pageHref, parseAdminPath } from "@/lib/admin/navigation";
 import { cn } from "@/lib/cn";
 import { colorFor } from "@/lib/colors";
 import { useAdminUi } from "@/store/admin-ui";
+import { CircleHelp, CornerDownLeft, Search } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useVisibleNav } from "./AdminAccess";
 
 const allPages = [
   ...adminNav.flatMap((s) =>
@@ -49,6 +50,9 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const nav = useVisibleNav();
+  const allowed = useMemo(() => new Set(nav.flatMap((s) => s.pages.map((p) => `${s.slug}/${p.slug}`))), [nav]);
+  const pages = useMemo(() => allPages.filter((p) => p.key === "help" || allowed.has(p.key)), [allowed]);
 
   useEffect(() => {
     ref.current?.showModal();
@@ -56,7 +60,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return allPages;
+    if (!q) return pages;
     const score = (p: (typeof allPages)[number]) => {
       const label = p.label.toLowerCase();
       if (label.startsWith(q)) return 0;
@@ -65,12 +69,12 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
       if (p.description.toLowerCase().includes(q)) return 3;
       return -1;
     };
-    return allPages
+    return pages
       .map((p) => ({ p, s: score(p) }))
       .filter((x) => x.s >= 0)
       .sort((a, b) => a.s - b.s)
       .map((x) => x.p);
-  }, [query]);
+  }, [query, pages]);
 
   const go = (href: string) => {
     onClose();

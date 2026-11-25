@@ -2,7 +2,7 @@
 
 import { Logo } from "@/components/Logo";
 import { IconButton } from "@/components/ui/Button";
-import { HELP_HOME, adminNav, findSectionByPath, helpHref, pageHref, parseAdminPath, type NavSection } from "@/lib/admin/navigation";
+import { HELP_HOME, findSectionByPath, helpHref, pageHref, parseAdminPath, type NavSection } from "@/lib/admin/navigation";
 import { cn } from "@/lib/cn";
 import { colorFor } from "@/lib/colors";
 import { siteConfig } from "@/lib/site";
@@ -12,6 +12,7 @@ import { Headset, Sparkles, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { useVisibleNav } from "./AdminAccess";
 
 function Brand() {
   return (
@@ -87,8 +88,11 @@ function RailItem({ href, label, icon: Icon, active }: { href: string; label: st
 
 export function Sidebar() {
   const pathname = usePathname();
+  const nav = useVisibleNav();
   const { help, section: helpSection } = parseAdminPath(pathname);
-  const current = findSectionByPath(pathname);
+  const currentFull = findSectionByPath(pathname);
+  // The submenu lists only pages this role may open.
+  const current = nav.find((s) => s.slug === currentFull.slug) ?? currentFull;
   const showSubNav = help ? Boolean(helpSection) && current.pages.length > 1 : current.pages.length > 1;
 
   return (
@@ -104,7 +108,7 @@ export function Sidebar() {
           </Link>
         </div>
         <ul className="admin-nav-scroll flex min-h-0 w-full flex-1 flex-col gap-0.5 overflow-y-auto px-2">
-          {adminNav.map((s) => (
+          {nav.map((s) => (
             <li key={s.slug}>
               <RailItem href={pageHref(s.slug, s.landingPage)} label={s.label} icon={s.icon} active={!help && s.slug === current.slug} />
             </li>
@@ -158,6 +162,7 @@ export function MobileNav() {
   const open = useAdminUi((s) => s.mobileNavOpen);
   const setOpen = useAdminUi((s) => s.setMobileNavOpen);
   const currentSlug = findSectionByPath(pathname).slug;
+  const nav = useVisibleNav();
 
   useEffect(() => {
     if (!open) return;
@@ -195,7 +200,7 @@ export function MobileNav() {
               </IconButton>
             </div>
             <div className="admin-nav-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4">
-              {adminNav.map((s) => {
+              {nav.map((s) => {
                 const Icon = s.icon;
                 return (
                   <details key={s.slug} open={s.slug === currentSlug} className="group mb-1">

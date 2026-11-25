@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Activity, ArrowDown, ArrowUp, Banknote, BookOpen, CalendarDays, CheckCircle2, CircleDollarSign, CreditCard, Eye, EyeOff, FileText, Globe2, GripVertical, Layers3, Link2, Plus, Save, Settings2, ShieldCheck, Tags, Trash2, Users, Wallet, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { Field, inputClass, Select } from "@/components/ui/Field";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Field, inputClass, Select } from "@/components/ui/Field";
 import { StatCard } from "@/components/ui/StatCard";
 import { TableHeading, TableScroll } from "@/components/ui/Table";
 import { cardCycle, palette, type ColorKey } from "@/lib/colors";
+import { Activity, ArrowDown, ArrowUp, Banknote, CalendarDays, CheckCircle2, CircleDollarSign, CreditCard, Eye, EyeOff, FileText, Globe2, GripVertical, Layers3, Link2, Plus, Save, Settings2, ShieldCheck, Trash2, Users, Wallet, type LucideIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
 const labelClass = "mb-1 block text-sm font-medium";
@@ -273,99 +273,6 @@ export function LearnerExperiencePage() {
   );
 }
 
-type Category = { id: number; name: string; children: string[] };
-const initialCategories: Category[] = [
-  { id: 1, name: "Bhagavata Mahavidyalaya", children: ["Bhakti Shastri", "Bhakti Vaibhava"] },
-  { id: 2, name: "Self-study Courses", children: ["Introductory", "Advanced"] },
-  { id: 3, name: "Ancient Wisdom", children: ["Bhagavad Gita", "Bhagavatam"] },
-  { id: 4, name: "Kids & Parents", children: [] },
-];
-
-export function CategoriesSettingsPage() {
-  const [categories, setCategories] = useState(initialCategories);
-  const [categoryName, setCategoryName] = useState("");
-  const [subcategoryName, setSubcategoryName] = useState("");
-  const [parentId, setParentId] = useState("1");
-  const [error, setError] = useState("");
-  const addCategory = (event: React.FormEvent) => {
-    event.preventDefault();
-    const name = categoryName.trim();
-    if (!name) { setError("Category name is required."); return; }
-    if (categories.some((category) => category.name.toLowerCase() === name.toLowerCase())) { setError("A category with this name already exists."); return; }
-    setCategories((current) => [...current, { id: Date.now(), name, children: [] }]);
-    setCategoryName("");
-    setError("");
-  };
-  const addSubcategory = (event: React.FormEvent) => {
-    event.preventDefault();
-    const name = subcategoryName.trim();
-    if (!name) { setError("Subcategory name is required."); return; }
-    const parent = categories.find((category) => category.id === Number(parentId));
-    if (!parent || parent.children.some((child) => child.toLowerCase() === name.toLowerCase())) { setError("Choose a valid parent and a new subcategory name."); return; }
-    setCategories((current) => current.map((category) => category.id === parent.id ? { ...category, children: [...category.children, name] } : category));
-    setSubcategoryName("");
-    setError("");
-  };
-  const reorder = (index: number, direction: number) => setCategories((current) => {
-    const next = [...current];
-    const target = index + direction;
-    if (target < 0 || target >= next.length) return current;
-    [next[index], next[target]] = [next[target], next[index]];
-    return next;
-  });
-  return (
-    <>
-      <PageHeader title="Categories" description="Organize catalog categories, subcategories, and their order." status="ready" actions={<SaveButton onSave={() => notifySaved("Categories")} />} />
-      <DemoNotice>Changes update this local demo view only; they do not alter the live catalog.</DemoNotice>
-      <SettingsSummary items={[
-        { label: "Categories", value: String(categories.length), hint: "Catalog groupings", icon: Tags, color: "amber" },
-        { label: "Subcategories", value: String(categories.reduce((sum, category) => sum + category.children.length, 0)), hint: "Nested under categories", icon: Layers3, color: "violet" },
-        { label: "Catalog order", value: "Custom", hint: "Use arrows to rearrange", icon: ArrowUp, color: "teal" },
-      ]} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
-        <Card className="min-w-0 overflow-hidden">
-          <CardIconHeader icon={Tags} title="Category structure" description={`${categories.length} categories`} tone="gold" />
-          <ol className="min-w-0 divide-y divide-border">
-            {categories.map((category, index) => (
-              <li key={category.id} className={`m-3 min-w-0 rounded-2xl border p-4 shadow-sm ${palette[cardCycle[index % cardCycle.length]].tile}`}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex size-9 shrink-0 items-center justify-center rounded-xl ${palette[cardCycle[index % cardCycle.length]].solid}`} aria-hidden="true"><Tags className="size-4" /></span>
-                  <span className="min-w-0 flex-1 font-semibold text-foreground">{category.name}</span>
-                  <Button size="sm" variant="soft-info" aria-label={`Move ${category.name} up`} disabled={!index} onClick={() => reorder(index, -1)}><ArrowUp className="size-4" aria-hidden="true" /></Button>
-                  <Button size="sm" variant="soft-violet" aria-label={`Move ${category.name} down`} disabled={index === categories.length - 1} onClick={() => reorder(index, 1)}><ArrowDown className="size-4" aria-hidden="true" /></Button>
-                  <Button size="sm" variant="soft-danger" aria-label={`Remove ${category.name}`} onClick={() => { setCategories((current) => current.filter((item) => item.id !== category.id)); if (parentId === String(category.id)) setParentId(String(categories.find((item) => item.id !== category.id)?.id ?? "")); }}><Trash2 className="size-4" aria-hidden="true" /></Button>
-                </div>
-                <ul className="mt-3 flex flex-wrap gap-2 text-sm">
-                  {category.children.length ? category.children.map((child, childIndex) => <li key={child} className={`flex min-w-0 items-center gap-1 rounded-xl border border-current/10 px-2 py-1 ${palette[cardCycle[(index + childIndex + 1) % cardCycle.length]].tile}`}><span className="min-w-0 flex-1 break-words">{child}</span><Button size="sm" variant="soft-info" aria-label={`Move ${child} up`} disabled={!childIndex} onClick={() => setCategories((current) => current.map((item) => { if (item.id !== category.id) return item; const children = [...item.children]; [children[childIndex - 1], children[childIndex]] = [children[childIndex], children[childIndex - 1]]; return { ...item, children }; }))}><ArrowUp className="size-4" aria-hidden="true" /></Button><Button size="sm" variant="soft-violet" aria-label={`Move ${child} down`} disabled={childIndex === category.children.length - 1} onClick={() => setCategories((current) => current.map((item) => { if (item.id !== category.id) return item; const children = [...item.children]; [children[childIndex], children[childIndex + 1]] = [children[childIndex + 1], children[childIndex]]; return { ...item, children }; }))}><ArrowDown className="size-4" aria-hidden="true" /></Button><Button size="sm" variant="soft-danger" aria-label={`Remove subcategory ${child}`} onClick={() => setCategories((current) => current.map((item) => item.id === category.id ? { ...item, children: item.children.filter((name) => name !== child) } : item))}><Trash2 className="size-4" aria-hidden="true" /></Button></li>) : <li className="rounded-full bg-surface px-3 py-1 text-xs text-muted">No subcategories</li>}
-                </ul>
-              </li>
-            ))}
-            {!categories.length ? <li className="p-5 text-sm text-muted">No categories yet. Add one to start the catalog structure.</li> : null}
-          </ol>
-        </Card>
-        <div className="space-y-4">
-          <Card className="p-5">
-            <IconTileHeading icon={Plus} tone="blue">Add category</IconTileHeading>
-            <form className="space-y-3" onSubmit={addCategory}>
-              <label><span className={labelClass}>Category name</span><input className={inputClass} value={categoryName} onChange={(e) => setCategoryName(e.target.value)} maxLength={80} /></label>
-              <Button type="submit" variant="gold"><Plus className="size-4" aria-hidden="true" /> Add category</Button>
-            </form>
-          </Card>
-          <Card className="p-5">
-            <IconTileHeading icon={Tags} tone="violet">Add subcategory</IconTileHeading>
-            <form className="space-y-3" onSubmit={addSubcategory}>
-              <Field id="category-parent" label="Parent category"><Select id="category-parent" value={parentId} onValueChange={setParentId} disabled={!categories.length} options={categories.map((category) => ({ value: String(category.id), label: category.name }))} /></Field>
-              <label><span className={labelClass}>Subcategory name</span><input className={inputClass} value={subcategoryName} onChange={(e) => setSubcategoryName(e.target.value)} maxLength={80} /></label>
-              <Button type="submit" variant="soft-violet" disabled={!categories.length}><Plus className="size-4" aria-hidden="true" /> Add subcategory</Button>
-            </form>
-          </Card>
-          {error ? <p className="text-sm text-red-700 dark:text-red-300" role="alert">{error}</p> : null}
-        </div>
-      </div>
-    </>
-  );
-}
-
 const fieldEntities = ["Learner", "Instructor", "Course", "Batch", "Certificate", "Question", "Announcement", "Enquiry"];
 type CustomField = { id: number; name: string; type: string; required: boolean; entity: string; placement: string };
 const seedFields: CustomField[] = [
@@ -405,18 +312,18 @@ export function CustomFieldsSettingsPage() {
       <Card className="mb-4 overflow-hidden">
         <CardIconHeader icon={Layers3} title="Field scopes" description="Choose an entity and where its extra data appears." tone="violet" />
         <div className="p-4">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Custom field entity">
-          {fieldEntities.map((item, index) => <button key={item} type="button" role="tab" aria-selected={entity === item} onClick={() => setEntity(item)} className={`min-h-10 rounded-xl border px-3 text-sm transition-colors ${entity === item ? `${palette[cardCycle[index % cardCycle.length]].tile} border-current/30 font-semibold` : "border-border bg-surface hover:bg-accent-soft"}`}>{item}</button>)}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Field placement">
-          {["Signup", "Offline admission"].map((item, index) => <button key={item} type="button" aria-pressed={placement === item} onClick={() => setPlacement(item)} className={`min-h-10 rounded-xl border px-3 text-sm font-medium ${placement === item ? palette[index ? "teal" : "violet"].solid : "border-border bg-surface hover:bg-accent-soft"}`}>{item}</button>)}
-        </div>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Custom field entity">
+            {fieldEntities.map((item, index) => <button key={item} type="button" role="tab" aria-selected={entity === item} onClick={() => setEntity(item)} className={`min-h-10 rounded-xl border px-3 text-sm transition-colors ${entity === item ? `${palette[cardCycle[index % cardCycle.length]].tile} border-current/30 font-semibold` : "border-border bg-surface hover:bg-accent-soft"}`}>{item}</button>)}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Field placement">
+            {["Signup", "Offline admission"].map((item, index) => <button key={item} type="button" aria-pressed={placement === item} onClick={() => setPlacement(item)} className={`min-h-10 rounded-xl border px-3 text-sm font-medium ${placement === item ? palette[index ? "teal" : "violet"].solid : "border-border bg-surface hover:bg-accent-soft"}`}>{item}</button>)}
+          </div>
         </div>
       </Card>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
         <Card>
           <CardIconHeader icon={FileText} title={`${entity} fields`} description={`${placement} placement · ${scopedFields.length} fields`} tone="blue" />
-          {scopedFields.length ? <ol className="grid gap-2 p-4 sm:grid-cols-2">{scopedFields.map((field, index) => <li key={field.id} className={`flex min-w-0 flex-wrap items-center gap-2 rounded-xl border p-3 ${palette[cardCycle[index % cardCycle.length]].tile}`}><GripVertical className="size-4 shrink-0 text-muted" aria-hidden="true" /><span className="min-w-0 flex-1"><strong className="block break-words text-sm text-foreground">{field.name}</strong><span className="text-xs text-muted">{field.type} · {field.required ? "Required" : "Optional"}</span></span><Button size="sm" variant="soft-info" aria-label={`Move ${field.name} up`} disabled={!index} onClick={() => setFields((current) => { const ids = scopedFields.map((item) => item.id); [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]; return [...current].sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); })}><ArrowUp className="size-4" aria-hidden="true" /></Button><Button size="sm" variant="soft-danger" aria-label={`Remove ${field.name}`} onClick={() => setFields((current) => current.filter((item) => item.id !== field.id))}><Trash2 className="size-4" aria-hidden="true" /></Button></li>)}</ol> : <p className="p-5 text-sm text-muted">No fields for this entity and placement yet.</p>}
+          {scopedFields.length ? <ol className="grid gap-2 p-4 sm:grid-cols-2">{scopedFields.map((field, index) => <li key={field.id} className={`flex min-w-0 flex-wrap items-center gap-2 rounded-xl border p-3 ${palette[cardCycle[index % cardCycle.length]].tile}`}><GripVertical className="size-4 shrink-0 text-muted" aria-hidden="true" /><span className="min-w-0 flex-1"><strong className="block break-words text-sm text-foreground">{field.name}</strong><span className="text-xs text-muted">{field.type} · {field.required ? "Required" : "Optional"}</span></span><Button size="sm" variant="soft-info" aria-label={`Move ${field.name} up`} disabled={!index} onClick={() => setFields((current) => { const ids = scopedFields.map((item) => item.id);[ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]; return [...current].sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); })}><ArrowUp className="size-4" aria-hidden="true" /></Button><Button size="sm" variant="soft-danger" aria-label={`Remove ${field.name}`} onClick={() => setFields((current) => current.filter((item) => item.id !== field.id))}><Trash2 className="size-4" aria-hidden="true" /></Button></li>)}</ol> : <p className="p-5 text-sm text-muted">No fields for this entity and placement yet.</p>}
         </Card>
         <Card className="p-5">
           <IconTileHeading icon={Plus} tone="violet">Add field</IconTileHeading>
@@ -425,60 +332,6 @@ export function CustomFieldsSettingsPage() {
             <Field id="custom-field-type" label="Field type"><Select id="custom-field-type" value={type} onValueChange={setType} options={["Text", "Number", "Date", "Dropdown", "Phone", "Email", "Checkbox"].map((option) => ({ value: option, label: option }))} /></Field>
             <Toggle label="Required" checked={required} onChange={setRequired} />
             <Button type="submit" variant="gold"><Plus className="size-4" aria-hidden="true" /> Add field</Button>
-          </form>
-          {error ? <p className="mt-3 text-sm text-red-700 dark:text-red-300" role="alert">{error}</p> : null}
-        </Card>
-      </div>
-    </>
-  );
-}
-
-type Organization = { id: number; name: string; location: string; manager: string; learners: number; activity: string; status: "Active" | "Paused" };
-const organizations: Organization[] = [
-  { id: 1, name: "Head Office – Mumbai", location: "Mumbai", manager: "Ananda Das", learners: 1840, activity: "Course enrolment updated · 2 hours ago", status: "Active" },
-  { id: 2, name: "Pune Centre", location: "Pune", manager: "Madhava Rao", learners: 420, activity: "New learner registered · Yesterday", status: "Active" },
-  { id: 3, name: "Online", location: "Online", manager: "Radhika Devi", learners: 3100, activity: "Manager assigned · 3 days ago", status: "Active" },
-];
-
-export function SubOrganizationsSettingsPage() {
-  const [items, setItems] = useState(organizations);
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [manager, setManager] = useState("");
-  const [error, setError] = useState("");
-  const add = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!name.trim() || !manager.trim()) { setError("Organization name and manager are required."); return; }
-    if (items.some((item) => item.name.toLowerCase() === name.trim().toLowerCase())) { setError("That organization name already exists."); return; }
-    setItems((current) => [...current, { id: Date.now(), name: name.trim(), location: location.trim() || "—", manager: manager.trim(), learners: 0, activity: "Created in this demo just now", status: "Active" }]);
-    setName(""); setLocation(""); setManager(""); setError("");
-  };
-  return (
-    <>
-      <PageHeader title="Sub-Organizations" description="Manage branches, their managers, and recent activity." status="ready" actions={<SaveButton onSave={() => notifySaved("Sub-organizations")} />} />
-      <DemoNotice>Branch records and activity are synthetic demo data. No users or organization accounts are provisioned.</DemoNotice>
-      <SettingsSummary items={[
-        { label: "Organizations", value: String(items.length), hint: "Branches in this demo", icon: Users, color: "teal" },
-        { label: "Active branches", value: String(items.filter((item) => item.status === "Active").length), hint: "Can be paused or reactivated", icon: CheckCircle2, color: "emerald" },
-        { label: "Learners", value: items.reduce((sum, item) => sum + item.learners, 0).toLocaleString(), hint: "Synthetic branch totals", icon: BookOpen, color: "violet" },
-      ]} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
-        <Card>
-          <CardIconHeader icon={Users} title="Organizations" description={`${items.length} branches`} tone="emerald" />
-          <ul className="grid gap-3 p-4">
-            {items.map((item, index) => <li key={item.id} className={`grid min-w-0 gap-3 rounded-2xl border p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${palette[cardCycle[index % cardCycle.length]].tile}`}>
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className={`inline-flex size-9 shrink-0 items-center justify-center rounded-xl ${palette[cardCycle[index % cardCycle.length]].solid}`} aria-hidden="true"><Users className="size-4" /></span><h3 className="min-w-0 flex-1 break-words font-semibold text-foreground">{item.name}</h3><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.status === "Active" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-surface-muted text-muted"}`}>{item.status}</span></div><p className="mt-2 text-sm text-muted">{item.location} · Manager: {item.manager} · {item.learners.toLocaleString()} learners</p><p className="mt-1 text-xs text-muted"><Activity className="mr-1 inline size-3.5" aria-hidden="true" />Recent activity: {item.activity}</p></div>
-              <Button size="sm" variant={item.status === "Active" ? "soft-warning" : "soft-success"} onClick={() => setItems((current) => current.map((branch) => branch.id === item.id ? { ...branch, status: branch.status === "Active" ? "Paused" : "Active", activity: `Status changed in demo · just now` } : branch))}>{item.status === "Active" ? "Pause branch" : "Reactivate branch"}</Button>
-            </li>)}
-          </ul>
-        </Card>
-        <Card className="p-5">
-          <IconTileHeading icon={Plus} tone="blue">Add sub-organization</IconTileHeading>
-          <form className="space-y-3" onSubmit={add}>
-            <label><span className={labelClass}>Organization name</span><input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></label>
-            <label><span className={labelClass}>City or location</span><input className={inputClass} value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} /></label>
-            <label><span className={labelClass}>Manager</span><input className={inputClass} value={manager} onChange={(e) => setManager(e.target.value)} maxLength={80} /></label>
-            <Button type="submit" variant="gold"><Plus className="size-4" aria-hidden="true" /> Add branch</Button>
           </form>
           {error ? <p className="mt-3 text-sm text-red-700 dark:text-red-300" role="alert">{error}</p> : null}
         </Card>

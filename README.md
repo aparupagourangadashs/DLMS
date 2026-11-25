@@ -39,9 +39,9 @@ stated otherwise. No changes are made to the reference site's records.
 
 | Portal | Status |
 | --- | --- |
-| Admin panel (`/admin`) | All 9 sections and 52 screens are built as a **clickable frontend with demo data**, ready for customer review |
-| Student portal (`/student`) | 13 core review screens plus 3 original sample-course reading previews; **public demo only**, not authenticated learner accounts |
-| Public website (`/website`) | 144 design-preview routes: Home, six collections, 127 official course listings, publications, institutional pages, contact, access and preview notices |
+| Admin panel (`/admin`) | All 9 sections and 60 screens. Team, Learners, Support Inbox, My Profile, Sub-Organizations, Courses, Categories, Leads, Testimonials, **Batches, Sessions, Announcements, New Enrolment** and the **Website** group (Site Settings, Books, People, Magazines, Videos, Legal Pages) are **connected to the database**; the rest remain a clickable frontend with demo data, ready for customer review |
+| Student portal (`/student`) | 13 core review screens plus 3 original sample-course reading previews; sign-in is required. **Home, My Learning, Calendar, Announcements, Profile, Preferences and Help read and save your own records**; purchases, certificates, exams, communities and the course player still show **demo data** until their backend phase lands |
+| Public website (`/website`) | 144 routes rendered **from the database**: Home, six collections, 127 course pages, publications, institutional pages, contact and legal pages. Admin edits appear on the site immediately |
 
 Admin screens are labelled by how well the source specification supports them:
 
@@ -140,15 +140,18 @@ link the six collections, publications and institutional pages.
   language/format/teaching-team filters, reset, no-results and show-more states.
 - 127 course detail pages: actual titles/artwork, listed team and duration,
   explicit official links and enrollment boundaries; no invented syllabus.
-- Books: all nine public IBMV titles/covers and a native-validated **unsent**
-  bulk-enquiry draft. No book stock, purchase or delivery service is implied.
+- Books: all nine public IBMV titles/covers and a bulk-enquiry form that
+  creates a lead for the IBMV team (honeypot, minimum fill time and rate limits;
+  a confirmation email is printed to the server console until an email provider
+  is configured). No book stock, purchase or delivery service is implied.
 - E-Magazines, people directories and institutional pages: useful preview
   layouts without invented issue files, staff identities or accreditation.
 - Contact/account pages distinguish official external destinations from our
   student demo. Preview privacy/terms are not approved legal policies.
 
-There is no visitor authentication, payment, enrollment, messaging, database,
-analytics tracker or form submission backend. No fabricated endorsements,
+There is no visitor payment, enrollment, messaging or analytics tracker. The
+only visitor form is the bulk book enquiry; visitors can register and sign in
+through the local account pages. No fabricated endorsements,
 statistics, videos, donation destinations, prices or credentials are presented. The two
 previously authorized IBMV course images are reused; other reference sites
 informed visual principles only, without copying their assets or source.
@@ -203,8 +206,24 @@ Requires a supported Node.js LTS release (developed on Node 22).
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000, admin panel at /admin
+cp .env.example .env   # then set DATABASE_URL and AUTH_SECRET (see below)
+npm run db:migrate   # creates tables in the database named in DATABASE_URL
+npm run db:generate  # regenerate the Prisma client after a schema change
+npm run db:seed      # first Super Admin, catalog (6 categories, 127 courses, 9 books), site settings, demo accounts and Demo Batch 1
+npm run dev          # http://localhost:3000, admin panel at /admin
 ```
+
+### Local database
+
+1. Start MySQL/MariaDB on `localhost:3306` and create an empty database:
+   `CREATE DATABASE ibmv_lms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+2. Put the connection string in `.env` (ignored by git). The database name is required:
+   `DATABASE_URL="mysql://<user>:<password>@localhost:3306/ibmv_lms"`.
+3. `prisma migrate dev` needs rights to create a shadow database; a local account such as `root` is fine for development only.
+4. Check the connection at `GET /api/health` (`{"status":"ok","db":"up"}`).
+5. Sign in at `/login` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (Super Admin). With `SEED_DEMO_PASSWORD` set, the seed also creates demo staff (`demo.staff1..10@ibmv.local`), a demo learner (`learner@ibmv.local`) and a running **Demo Batch 1** (sessions placed around the day you seed, enrolments and two announcements) for local testing. Change or remove these before any shared deployment.
+
+The backend build plan and per-page progress are in [copilot/backend/MASTER_PLAN.md](copilot/backend/MASTER_PLAN.md).
 
 ## Commands
 
@@ -215,6 +234,16 @@ npm run dev        # http://localhost:3000, admin panel at /admin
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint (Next.js Core Web Vitals + TypeScript rules) |
 | `npx tsc --noEmit` | Type-check |
+| `npm test` | Unit tests (`test:unit`) and server tests (`test:server`, run one file at a time). Database integration tests run only when `TEST_DATABASE_URL` points at a separate, migrated, empty database |
+| `node scripts/smoke-b1.mjs`, `smoke-b2.mjs`, `smoke-website.mjs` | HTTP checks against a running `npm run start` (need the seeded accounts); they remove the temporary records they create |
+| `npx tsx scripts/smoke-b3.mjs` | The B3 HTTP checks (learner profile, preferences, support, Learners, Support Inbox); needs `tsx` for its database clean-up |
+| `npx tsx scripts/smoke-b4.mjs` | The B4 HTTP checks (batches, enrolments, sessions, holidays, attendance, announcements, and what a learner sees); needs the seeded demo batch and `tsx` for its database clean-up |
+| `npx tsx scripts/cleanup-smoke.mjs` | Remove throwaway `smoke.*` accounts left by the B1 script |
+| `npm run db:generate` | Generate the Prisma client into `src/generated/prisma` |
+| `npm run db:migrate` | Create/apply a development migration |
+| `npm run db:migrate:prod` | Apply existing migrations (never automatic in builds) |
+| `npm run db:seed` | Seed the first Super Admin and reference data |
+| `npm run db:studio` | Browse the database |
 | `node --experimental-strip-types --test src/lib/admin/editor-validation.test.mjs src/lib/admin/markdown.test.mjs` | Nine focused editor-validation and safe Markdown tests (Node 22.18+ or newer supported LTS) |
 | `node --experimental-strip-types --test src/lib/admin/navigation.test.mjs` | Alphabetical navigation, landing-page and quick-create regression tests |
 | `node --experimental-strip-types --test src/lib/student/demo.test.mjs` | Student navigation, fixture integrity, calendar periods and month-end regression tests |
@@ -304,12 +333,13 @@ Date-time inputs retain the application's IST convention.
 Dashboard chart controls keep visible Bar/Line/Area labels alongside Lucide
 icons, use blue/green/violet styling, and provide 44px touch targets.
 
-## Backend: deliberately deferred
+## Backend: in progress
 
-The frontend comes first so the customer can review the screens. Planned backend choices, all deferred until screens are approved:
+The backend is being built phase by phase; see [copilot/backend/MASTER_PLAN.md](copilot/backend/MASTER_PLAN.md) for the plan and status. Screens that have not been reached yet are still demo-backed.
 
-- **Database: MySQL/MariaDB with Prisma.** The data is strongly relational (users, enrollments, batches, sessions, orders, payments, certificates). Razorpay payments need transactions, and GST and sales reports need joins.
+- **Live now:** sign-in/registration/password reset, role gates and audit (B1); catalog and public content (B2): courses, categories, books, people, magazines, videos, testimonials, leads, legal pages, site settings, and the public website reading all of it; learners and support (B3): learner profile and preferences, registration numbers, the Learners screen and the Support Inbox; learning operations (B4): batches, enrolments (single, bulk, CSV), sessions with holidays and attendance, announcements, and the learner's Home, My Learning, Calendar and Announcements.
+- **Next:** B5 commerce. Tracked separately: B2b (Blogs, Banners, Events, Module Library, Asset Library with uploads), B3b (Segments, Custom Fields, Learner Experience) and B4b (course player and lesson progress, Session Recordings, the Dashboard's sessions and enrolments).
+
+- **Database: MySQL/MariaDB with Prisma 7** (`prisma/schema.prisma`, client in `src/generated/prisma`, server-only access via `src/server/db.ts`).
 - **Auth.js (NextAuth v5)** with role-based access, enforced on the server, not just hidden in the menu.
-- Route handlers and Server Components will replace `src/lib/admin/demo-data.ts` and the list configs' `rows`.
-
-No environment variables or external services are needed yet.
+- Route handlers share helpers in `src/server/http` (errors, validation, list query, rate limit); browser code calls them through `src/lib/api`.

@@ -1,402 +1,415 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import { CircleAlert, CircleCheck, FileSpreadsheet, Hash, Mail, UserPlus, Users, UsersRound } from "lucide-react";
-import { batches } from "@/lib/admin/demo-data";
-import { cn } from "@/lib/cn";
-import { palette, type ColorKey } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, inputClass } from "@/components/ui/Field";
-import { TableHeading, TableScroll } from "@/components/ui/Table";
 import { Select } from "@/components/ui/Select";
-import { DemoNotice, PageHeader } from "../PageHeader";
+import { TableHeading, TableScroll } from "@/components/ui/Table";
+import type { EnrolBatchOption, EnrolRowResult } from "@/lib/admin/enrolment-types";
+import { ApiError, apiClient } from "@/lib/api/client";
+import { cn } from "@/lib/cn";
+import { palette, type ColorKey } from "@/lib/colors";
+import { CircleAlert, CircleCheck, CircleMinus, FileSpreadsheet, Hash, Mail, UserPlus, Users, UsersRound } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { PageHeader } from "../PageHeader";
 
 type Mode = "single" | "bulk" | "registration" | "advanced";
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_FILE_BYTES = 500 * 1024;
 
 const modes: Array<{ value: Mode; label: string; description: string; Icon: typeof UserPlus; color: ColorKey }> = [
-  { value: "single", label: "Single Enrollment", description: "Enrol one learner into a batch by email.", Icon: UserPlus, color: "blue" },
-  { value: "bulk", label: "Bulk Enrollment", description: "Paste many emails to enrol into one batch.", Icon: Users, color: "violet" },
-  { value: "registration", label: "Learner Registration", description: "Create a learner account without enrolling.", Icon: UsersRound, color: "teal" },
-  { value: "advanced", label: "Advanced Bulk Enrollment", description: "Upload a CSV with per-learner batches.", Icon: FileSpreadsheet, color: "emerald" },
+    { value: "single", label: "Single Enrollment", description: "Enrol one learner into a batch by email.", Icon: UserPlus, color: "blue" },
+    { value: "bulk", label: "Bulk Enrollment", description: "Paste many emails to enrol into one batch.", Icon: Users, color: "violet" },
+    { value: "registration", label: "Learner Registration", description: "Create a learner account without enrolling.", Icon: UsersRound, color: "teal" },
+    { value: "advanced", label: "Advanced Bulk Enrollment", description: "Upload a CSV with per-learner batches.", Icon: FileSpreadsheet, color: "emerald" },
 ];
 
-export function NewEnrolment({ knownEmails }: { knownEmails: string[] }) {
-  const [mode, setMode] = useState<Mode>("single");
-  const known = useMemo(() => new Set(knownEmails), [knownEmails]);
-  const selectedMode = modes.find((m) => m.value === mode)!;
+type Summary = { total: number; ready: number; enrolled: number; skipped: number; errors: number; newAccounts: number };
+type BulkResponse = { results: EnrolRowResult[]; summary: Summary };
 
-  return (
-    <>
-      <PageHeader title="New Enrolment" description="Add learners to batches individually or in bulk." status="ready" />
-      <DemoNotice />
+export function NewEnrolment({ batches }: { batches: EnrolBatchOption[] }) {
+    const [mode, setMode] = useState<Mode>("single");
+    const selectedMode = modes.find((m) => m.value === mode)!;
 
-      <fieldset className="mb-6">
-        <legend className="sr-only">Enrolment type</legend>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {modes.map((m) => {
-            const c = palette[m.color];
-            const selected = mode === m.value;
-            return (
-              <label
-                key={m.value}
-                className={cn(
-                  "relative flex cursor-pointer gap-3 overflow-hidden rounded-2xl border bg-surface p-4 shadow-card transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent",
-                  selected ? "border-transparent ring-2 ring-current shadow-lg" : "border-border hover:-translate-y-0.5 hover:shadow-md",
-                  selected && c.text,
-                )}
-              >
-                <span className={cn("absolute inset-x-0 top-0 h-1", c.bar)} aria-hidden="true" />
-                <input type="radio" name="mode" value={m.value} checked={selected} onChange={() => setMode(m.value)} className="sr-only" />
-                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", selected ? c.solid : c.tile)} aria-hidden="true">
-                  <m.Icon className="size-5" />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-foreground">{m.label}</span>
-                  <span className="block text-xs text-muted">{m.description}</span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
+    return (
+        <>
+            <PageHeader title="New Enrolment" description="Add learners to batches individually or in bulk. New email addresses get an account and a link to choose a password." status="ready" />
 
-      <Card className="min-w-0 overflow-hidden">
-        <div className={cn("h-1", palette[selectedMode.color].bar)} />
-        <div className="admin-feature-banner rounded-none border-0 border-b border-border">
-          <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", palette[selectedMode.color].solid)} aria-hidden="true"><selectedMode.Icon className="size-6" /></span>
-          <div className="min-w-0"><h2 className="font-semibold">{selectedMode.label}</h2><p className="mt-1 text-sm text-muted">{selectedMode.description}</p></div>
-        </div>
-        <div className="p-5">
-        {mode === "single" ? <Single key="single" known={known} /> : null}
-        {mode === "bulk" ? <Bulk key="bulk" known={known} /> : null}
-        {mode === "registration" ? <Registration key="registration" known={known} /> : null}
-        {mode === "advanced" ? <Advanced key="advanced" known={known} /> : null}
-        </div>
-      </Card>
-    </>
-  );
+            <fieldset className="mb-6">
+                <legend className="sr-only">Enrolment type</legend>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {modes.map((m) => {
+                        const c = palette[m.color];
+                        const selected = mode === m.value;
+                        return (
+                            <label
+                                key={m.value}
+                                className={cn(
+                                    "relative flex cursor-pointer gap-3 overflow-hidden rounded-2xl border bg-surface p-4 shadow-card transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent",
+                                    selected ? "border-transparent ring-2 ring-current shadow-lg" : "border-border hover:-translate-y-0.5 hover:shadow-md",
+                                    selected && c.text,
+                                )}
+                            >
+                                <span className={cn("absolute inset-x-0 top-0 h-1", c.bar)} aria-hidden="true" />
+                                <input type="radio" name="mode" value={m.value} checked={selected} onChange={() => setMode(m.value)} className="sr-only" />
+                                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", selected ? c.solid : c.tile)} aria-hidden="true">
+                                    <m.Icon className="size-5" />
+                                </span>
+                                <span>
+                                    <span className="block text-sm font-semibold text-foreground">{m.label}</span>
+                                    <span className="block text-xs text-muted">{m.description}</span>
+                                </span>
+                            </label>
+                        );
+                    })}
+                </div>
+            </fieldset>
+
+            <Card className="min-w-0 overflow-hidden">
+                <div className={cn("h-1", palette[selectedMode.color].bar)} />
+                <div className="admin-feature-banner rounded-none border-0 border-b border-border">
+                    <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", palette[selectedMode.color].solid)} aria-hidden="true"><selectedMode.Icon className="size-6" /></span>
+                    <div className="min-w-0"><h2 className="font-semibold">{selectedMode.label}</h2><p className="mt-1 text-sm text-muted">{selectedMode.description}</p></div>
+                </div>
+                <div className="p-5">
+                    {batches.length === 0 && mode !== "registration" ? (
+                        <p role="status" className="rounded-xl border border-gold/40 bg-gold-soft p-4 text-sm">There are no active batches yet. Create a batch under Learning &gt; Batches, then come back to enrol learners.</p>
+                    ) : mode === "single" ? <Single key="single" batches={batches} />
+                        : mode === "bulk" ? <Bulk key="bulk" batches={batches} />
+                            : mode === "advanced" ? <Advanced key="advanced" batches={batches} />
+                                : null}
+                    {mode === "registration" ? <Registration key="registration" /> : null}
+                </div>
+            </Card>
+        </>
+    );
 }
 
-function BatchSelect({ id, value, onChange, error }: { id: string; value: string; onChange: (v: string) => void; error?: string }) {
-  return (
-    <Field id={id} label="Batch" required error={error}>
-      <Select id={id} value={value} onValueChange={onChange} placeholder="Select a batch" required icon={Users} options={[{ value: "", label: "Select a batch" }, ...batches.map((b) => ({ value: b.name, label: `${b.name} · ${b.course}` }))]} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} />
-    </Field>
-  );
+function BatchSelect({ id, value, onChange, batches, error }: { id: string; value: string; onChange: (v: string) => void; batches: EnrolBatchOption[]; error?: string }) {
+    return (
+        <Field id={id} label="Batch" required error={error}>
+            <Select id={id} value={value} onValueChange={onChange} placeholder="Select a batch" required icon={Users} options={[{ value: "", label: "Select a batch" }, ...batches.map((b) => ({ value: b.id, label: `${b.name} · ${b.course}` }))]} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} />
+        </Field>
+    );
 }
 
-function Single({ known }: { known: Set<string> }) {
-  const [email, setEmail] = useState("");
-  const [batch, setBatch] = useState("");
-  const [step, setStep] = useState<"start" | "new">("start");
-  const [name, setName] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+const failure = (error: unknown) => (error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
 
-  const finish = (who: string) => {
-    toast.success("Learner enrolled", { description: `${who} → ${batch}` });
-    setEmail("");
-    setBatch("");
-    setName("");
-    setStep("start");
-  };
+function Single({ batches }: { batches: EnrolBatchOption[] }) {
+    const [email, setEmail] = useState("");
+    const [batchId, setBatchId] = useState("");
+    const [step, setStep] = useState<"start" | "new">("start");
+    const [name, setName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [busy, setBusy] = useState(false);
 
-  return (
-    <form
-      noValidate
-      className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
+    async function submit(event: React.FormEvent) {
+        event.preventDefault();
         const errs: Record<string, string> = {};
         if (!emailRe.test(email.trim())) errs.email = "Enter a valid email address.";
-        if (!batch) errs.batch = "Choose a batch.";
-        if (step === "new" && !name.trim()) errs.name = "Name is required for a new learner.";
+        if (!batchId) errs.batch = "Choose a batch.";
         setErrors(errs);
         if (Object.keys(errs).length) return;
-        if (step === "start" && !known.has(email.trim().toLowerCase())) {
-          setStep("new");
-          return;
-        }
-        finish(step === "new" ? name.trim() : email.trim());
-      }}
-    >
-      <h2 className="text-lg font-semibold">Single enrollment</h2>
-      <Field id="se-email" label="Learner email" required error={errors.email} help="Try an existing address such as one from the Learners list.">
-        <input
-          id="se-email"
-          type="email"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
+        setBusy(true);
+        try {
+            const result = await apiClient.post<{ status: string; message: string }>("/api/admin/enrolments", { email, batchId, ...(step === "new" ? { name, phone } : {}) });
+            if (result.data.status === "skipped") toast.info(result.data.message);
+            else toast.success("Learner enrolled", { description: result.data.message });
+            setEmail("");
+            setBatchId("");
+            setName("");
+            setPhone("");
             setStep("start");
-          }}
-          className={inputClass}
-          aria-invalid={errors.email ? true : undefined}
-          aria-describedby={errors.email ? "se-email-error" : "se-email-help"}
-        />
-      </Field>
-      <BatchSelect id="se-batch" value={batch} onChange={setBatch} error={errors.batch} />
-      {step === "new" ? (
-        <div className="rounded-xl border border-info/30 bg-info-soft p-4">
-          <p className="mb-3 text-sm">
-            <strong>No account found</strong> for {email}. Add a name to register and enrol them.
-          </p>
-          <Field id="se-name" label="Full name" required error={errors.name}>
-            <input id="se-name" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} autoFocus aria-invalid={errors.name ? true : undefined} />
-          </Field>
-        </div>
-      ) : null}
-      <div className="flex justify-end">
-        <Button type="submit" variant="success">
-          {step === "new" ? "Register and enrol" : "Proceed"}
-        </Button>
-      </div>
-    </form>
-  );
+        } catch (error) {
+            if (error instanceof ApiError && error.fields.name && step === "start") {
+                setStep("new");
+                setErrors({});
+            } else if (error instanceof ApiError && Object.keys(error.fields).length > 0) setErrors({ ...error.fields, batch: error.fields.batch ?? "" });
+            else toast.error(failure(error));
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    return (
+        <form noValidate className="flex flex-col gap-4" onSubmit={submit}>
+            <h2 className="text-lg font-semibold">Single enrollment</h2>
+            <Field id="se-email" label="Learner email" required error={errors.email} help="If there is no account for this address you will be asked for a name and the account is created.">
+                <input id="se-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setStep("start"); }} className={inputClass} aria-invalid={errors.email ? true : undefined} aria-describedby={errors.email ? "se-email-error" : "se-email-help"} />
+            </Field>
+            <BatchSelect id="se-batch" value={batchId} onChange={setBatchId} batches={batches} error={errors.batch} />
+            {step === "new" ? (
+                <div className="rounded-xl border border-info/30 bg-info-soft p-4">
+                    <p className="mb-3 text-sm"><strong>No account found</strong> for {email}. Add a name to register and enrol them.</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <Field id="se-name" label="Full name" required error={errors.name}>
+                            <input id="se-name" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} autoFocus aria-invalid={errors.name ? true : undefined} />
+                        </Field>
+                        <Field id="se-phone" label="Mobile (optional)" error={errors.phone}>
+                            <input id="se-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} placeholder="+91 98xxxxxxxx" aria-invalid={errors.phone ? true : undefined} />
+                        </Field>
+                    </div>
+                </div>
+            ) : null}
+            <div className="flex justify-end">
+                <Button type="submit" variant="success" disabled={busy}>{busy ? "Enrolling…" : step === "new" ? "Register and enrol" : "Enrol learner"}</Button>
+            </div>
+        </form>
+    );
 }
 
 function parseEmails(text: string) {
-  const parts = text.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const seen = new Set<string>();
-  const valid: string[] = [];
-  const invalid: string[] = [];
-  let duplicates = 0;
-  for (const p of parts) {
-    if (seen.has(p)) duplicates++;
-    else if (emailRe.test(p)) valid.push(p);
-    else invalid.push(p);
-    seen.add(p);
-  }
-  return { valid, invalid, duplicates };
+    const parts = text.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+    const seen = new Set<string>();
+    const valid: string[] = [];
+    const invalid: string[] = [];
+    let duplicates = 0;
+    for (const p of parts) {
+        if (seen.has(p)) duplicates++;
+        else if (emailRe.test(p)) valid.push(p);
+        else invalid.push(p);
+        seen.add(p);
+    }
+    return { valid, invalid, duplicates };
 }
 
-function Bulk({ known }: { known: Set<string> }) {
-  const [text, setText] = useState("");
-  const [batch, setBatch] = useState("");
-  const [error, setError] = useState("");
-  const result = useMemo(() => parseEmails(text), [text]);
-  const newCount = result.valid.filter((e) => !known.has(e)).length;
+function ResultsTable({ results }: { results: EnrolRowResult[] }) {
+    return (
+        <TableScroll label="Enrolment results" className="admin-table-card rounded-xl border border-border">
+            <table className="admin-data-table">
+                <caption className="sr-only">Enrolment results</caption>
+                <thead>
+                    <tr>
+                        <th scope="col"><TableHeading icon={Hash}>Line</TableHeading></th>
+                        <th scope="col"><TableHeading icon={Mail}>Email</TableHeading></th>
+                        <th scope="col"><TableHeading icon={UserPlus}>Name</TableHeading></th>
+                        <th scope="col"><TableHeading icon={Users}>Batch</TableHeading></th>
+                        <th scope="col"><TableHeading icon={CircleCheck}>Result</TableHeading></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {results.map((r) => (
+                        <tr key={`${r.line}-${r.email}`} className="border-b border-border last:border-0">
+                            <td className="px-3 py-2 text-muted tabular-nums">{r.line}</td>
+                            <td className="px-3 py-2 break-all">{r.email || "—"}</td>
+                            <td className="px-3 py-2">{r.name || "—"}</td>
+                            <td className="px-3 py-2">{r.batch || "—"}</td>
+                            <td className="px-3 py-2">
+                                {r.status === "error" ? (
+                                    <span className="inline-flex items-center gap-1 text-danger"><CircleAlert className="size-4 shrink-0" aria-hidden="true" />{r.message}</span>
+                                ) : r.status === "skipped" ? (
+                                    <span className="inline-flex items-center gap-1 text-muted"><CircleMinus className="size-4 shrink-0" aria-hidden="true" />{r.message}</span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 text-success"><CircleCheck className="size-4 shrink-0" aria-hidden="true" />{r.message}</span>
+                                )}
+                                {r.newAccount && r.status !== "error" ? <Badge tone="info" className="ml-2">New account</Badge> : null}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </TableScroll>
+    );
+}
 
-  return (
-    <form
-      noValidate
-      className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!batch) return setError("Choose a batch.");
-        if (!result.valid.length) return setError("Add at least one valid email.");
-        toast.success(`${result.valid.length} learners enrolled`, { description: `${newCount} new accounts created · ${batch}` });
-        setText("");
-        setBatch("");
-        setError("");
-      }}
-    >
-      <h2 className="text-lg font-semibold">Bulk enrollment</h2>
-      <Field id="be-emails" label="Learner emails" required help="One per line, or separated by commas.">
-        <textarea id="be-emails" rows={7} value={text} onChange={(e) => setText(e.target.value)} className={cn(inputClass, "h-auto py-2 font-mono text-xs")} aria-describedby="be-emails-help" />
-      </Field>
-      <BatchSelect id="be-batch" value={batch} onChange={setBatch} />
-      {text.trim() ? (
-        <div className="flex flex-wrap gap-2 text-sm" role="status">
-          <Badge tone="success">{result.valid.length} valid</Badge>
-          <Badge tone="info">{newCount} new accounts</Badge>
-          {result.invalid.length ? <Badge tone="danger">{result.invalid.length} invalid</Badge> : null}
-          {result.duplicates ? <Badge tone="warning">{result.duplicates} duplicates skipped</Badge> : null}
+function SummaryBadges({ summary, committed }: { summary: Summary; committed: boolean }) {
+    return (
+        <div className="flex flex-wrap gap-2" role="status">
+            <Badge tone="success">{committed ? summary.enrolled : summary.ready} {committed ? "enrolled" : "ready"}</Badge>
+            {summary.newAccounts ? <Badge tone="info">{summary.newAccounts} new {summary.newAccounts === 1 ? "account" : "accounts"}</Badge> : null}
+            {summary.skipped ? <Badge tone="neutral">{summary.skipped} already enrolled</Badge> : null}
+            {summary.errors ? <Badge tone="danger">{summary.errors} need fixing</Badge> : null}
         </div>
-      ) : null}
-      {result.invalid.length ? <p className="text-xs text-danger">Invalid: {result.invalid.slice(0, 5).join(", ")}{result.invalid.length > 5 ? "…" : ""}</p> : null}
-      {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
-      <div className="flex justify-end">
-        <Button type="submit" variant="success">
-          Enrol {result.valid.length || ""} learners
-        </Button>
-      </div>
-    </form>
-  );
+    );
 }
 
-function Registration({ known }: { known: Set<string> }) {
-  const [values, setValues] = useState({ name: "", email: "", phone: "", city: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const set = (k: keyof typeof values) => (e: React.ChangeEvent<HTMLInputElement>) => setValues((v) => ({ ...v, [k]: e.target.value }));
+function downloadResults(results: EnrolRowResult[]) {
+    const quote = (value: string | number) => `"${String(/^[=+\-@\t\r]/.test(String(value)) ? `'${value}` : value).replace(/"/g, '""')}"`;
+    const lines = [["Line", "Email", "Name", "Batch", "Result", "Message"], ...results.map((r) => [r.line, r.email, r.name, r.batch, r.status, r.message])].map((l) => l.map(quote).join(","));
+    const url = URL.createObjectURL(new Blob([`\uFEFF${lines.join("\r\n")}`], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "enrolment-results.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+}
 
-  return (
-    <form
-      noValidate
-      className="grid gap-4 sm:grid-cols-2"
-      onSubmit={(e) => {
-        e.preventDefault();
+function Bulk({ batches }: { batches: EnrolBatchOption[] }) {
+    const [text, setText] = useState("");
+    const [batchId, setBatchId] = useState("");
+    const [error, setError] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [response, setResponse] = useState<{ data: BulkResponse; committed: boolean } | null>(null);
+    const counts = parseEmails(text);
+
+    async function run(commit: boolean) {
+        if (!batchId) return setError("Choose a batch.");
+        if (!counts.valid.length) return setError("Add at least one valid email.");
+        setError("");
+        setBusy(true);
+        try {
+            const result = await apiClient.post<BulkResponse>("/api/admin/enrolments/bulk", { mode: "emails", emails: text, batchId, commit });
+            setResponse({ data: result.data, committed: commit });
+            if (commit) toast.success(`${result.data.summary.enrolled} learners enrolled`, { description: result.data.summary.newAccounts ? `${result.data.summary.newAccounts} new accounts created` : undefined });
+        } catch (caught) {
+            setError(caught instanceof ApiError ? (caught.fields.emails ?? caught.fields.batchId ?? caught.message) : failure(caught));
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    const checked = response && !response.committed ? response.data : null;
+    return (
+        <form noValidate className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void run(false); }}>
+            <h2 className="text-lg font-semibold">Bulk enrollment</h2>
+            <Field id="be-emails" label="Learner emails" required help="One per line, or separated by commas. Unknown addresses get an account named from the address; learners can correct their name later.">
+                <textarea id="be-emails" rows={7} value={text} onChange={(e) => { setText(e.target.value); setResponse(null); }} className={cn(inputClass, "h-auto py-2 font-mono text-xs")} aria-describedby="be-emails-help" />
+            </Field>
+            <BatchSelect id="be-batch" value={batchId} onChange={(v) => { setBatchId(v); setResponse(null); }} batches={batches} />
+            {text.trim() ? (
+                <div className="flex flex-wrap gap-2 text-sm" role="status">
+                    <Badge tone="success">{counts.valid.length} valid</Badge>
+                    {counts.invalid.length ? <Badge tone="danger">{counts.invalid.length} invalid</Badge> : null}
+                    {counts.duplicates ? <Badge tone="warning">{counts.duplicates} duplicates</Badge> : null}
+                </div>
+            ) : null}
+            {counts.invalid.length ? <p className="text-xs text-danger">Invalid: {counts.invalid.slice(0, 5).join(", ")}{counts.invalid.length > 5 ? "…" : ""}</p> : null}
+            {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+            {response ? (
+                <>
+                    <SummaryBadges summary={response.data.summary} committed={response.committed} />
+                    <ResultsTable results={response.data.results} />
+                </>
+            ) : null}
+            <div className="flex flex-wrap justify-end gap-2">
+                {response?.committed ? <Button onClick={() => downloadResults(response.data.results)}>Download results</Button> : null}
+                {checked && checked.summary.ready > 0 ? <Button variant="success" disabled={busy} onClick={() => void run(true)}>{busy ? "Enrolling…" : `Enrol ${checked.summary.ready} ${checked.summary.ready === 1 ? "learner" : "learners"}`}</Button> : null}
+                <Button type="submit" variant={checked ? "secondary" : "success"} disabled={busy}>{busy ? "Checking…" : checked ? "Check again" : "Check list"}</Button>
+            </div>
+        </form>
+    );
+}
+
+function Registration() {
+    const [values, setValues] = useState({ name: "", email: "", phone: "", city: "" });
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [busy, setBusy] = useState(false);
+    const set = (k: keyof typeof values) => (e: React.ChangeEvent<HTMLInputElement>) => setValues((v) => ({ ...v, [k]: e.target.value }));
+
+    async function submit(event: React.FormEvent) {
+        event.preventDefault();
         const errs: Record<string, string> = {};
         if (!values.name.trim()) errs.name = "Name is required.";
         if (!emailRe.test(values.email.trim())) errs.email = "Enter a valid email address.";
-        else if (known.has(values.email.trim().toLowerCase())) errs.email = "A learner with this email already exists.";
         if (!/^\+?[\d\s-]{8,}$/.test(values.phone.trim())) errs.phone = "Enter a valid mobile number.";
         setErrors(errs);
         if (Object.keys(errs).length) return;
-        toast.success("Learner registered", { description: `${values.name} can now be enrolled into a batch.` });
-        setValues({ name: "", email: "", phone: "", city: "" });
-      }}
-    >
-      <h2 className="text-lg font-semibold sm:col-span-2">Learner registration</h2>
-      {(
-        [
-          ["name", "Full name", "text", true],
-          ["email", "Email", "email", true],
-          ["phone", "Mobile (with country code)", "tel", true],
-          ["city", "City", "text", false],
-        ] as const
-      ).map(([k, label, type, required]) => (
-        <Field key={k} id={`lr-${k}`} label={label} required={required} error={errors[k]}>
-          <input id={`lr-${k}`} type={type} value={values[k]} onChange={set(k)} className={inputClass} aria-invalid={errors[k] ? true : undefined} aria-describedby={errors[k] ? `lr-${k}-error` : undefined} />
-        </Field>
-      ))}
-      <div className="flex justify-end sm:col-span-2">
-        <Button type="submit" variant="success">
-          Register learner
-        </Button>
-      </div>
-    </form>
-  );
+        setBusy(true);
+        try {
+            await apiClient.post("/api/admin/resources/users/learners", values);
+            toast.success("Learner registered", { description: `${values.name} can now be enrolled into a batch. They were emailed a link to choose a password.` });
+            setValues({ name: "", email: "", phone: "", city: "" });
+        } catch (error) {
+            if (error instanceof ApiError && Object.keys(error.fields).length > 0) setErrors(error.fields);
+            else toast.error(failure(error));
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    return (
+        <form noValidate className="grid gap-4 sm:grid-cols-2" onSubmit={submit}>
+            <h2 className="text-lg font-semibold sm:col-span-2">Learner registration</h2>
+            {(
+                [
+                    ["name", "Full name", "text", true],
+                    ["email", "Email", "email", true],
+                    ["phone", "Mobile (with country code)", "tel", true],
+                    ["city", "City", "text", false],
+                ] as const
+            ).map(([k, label, type, required]) => (
+                <Field key={k} id={`lr-${k}`} label={label} required={required} error={errors[k]}>
+                    <input id={`lr-${k}`} type={type} value={values[k]} onChange={set(k)} className={inputClass} aria-invalid={errors[k] ? true : undefined} aria-describedby={errors[k] ? `lr-${k}-error` : undefined} />
+                </Field>
+            ))}
+            <div className="flex justify-end sm:col-span-2">
+                <Button type="submit" variant="success" disabled={busy}>{busy ? "Registering…" : "Register learner"}</Button>
+            </div>
+        </form>
+    );
 }
 
-type CsvRow = { line: number; email: string; name: string; batch: string; issues: string[] };
+function Advanced({ batches }: { batches: EnrolBatchOption[] }) {
+    const [csv, setCsv] = useState("");
+    const [fileName, setFileName] = useState("");
+    const [error, setError] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [response, setResponse] = useState<{ data: BulkResponse; committed: boolean } | null>(null);
+    const sample = `email,name,batch\nnew.learner@example.com,New Learner,${batches[0]?.name ?? "Batch name"}\nbad-email,Someone,${batches[0]?.name ?? "Batch name"}`;
 
-function parseCsv(text: string, known: Set<string>): CsvRow[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (!lines.length) return [];
-  const header = lines[0].toLowerCase().split(",").map((h) => h.trim());
-  const idx = (k: string) => header.indexOf(k);
-  const batchNames = new Set(batches.map((b) => b.name));
-  const seen = new Set<string>();
-  return lines.slice(1).map((l, i) => {
-    const cells = l.split(",").map((c) => c.trim());
-    const email = (cells[idx("email")] ?? "").toLowerCase();
-    const name = cells[idx("name")] ?? "";
-    const batch = cells[idx("batch")] ?? "";
-    const issues: string[] = [];
-    if (!emailRe.test(email)) issues.push("Invalid email");
-    if (seen.has(email)) issues.push("Duplicate in file");
-    if (!batchNames.has(batch)) issues.push("Unknown batch");
-    if (!name && !known.has(email)) issues.push("Name needed for new learner");
-    seen.add(email);
-    return { line: i + 2, email, name, batch, issues };
-  });
-}
+    async function run(text: string, commit: boolean) {
+        setError("");
+        setBusy(true);
+        try {
+            const result = await apiClient.post<BulkResponse>("/api/admin/enrolments/bulk", { mode: "csv", csv: text, commit });
+            setResponse({ data: result.data, committed: commit });
+            if (commit) toast.success(`${result.data.summary.enrolled} learners enrolled`, { description: result.data.summary.errors ? `${result.data.summary.errors} rows need fixing` : undefined });
+        } catch (caught) {
+            setResponse(null);
+            setError(caught instanceof ApiError ? (caught.fields.csv ?? caught.message) : failure(caught));
+        } finally {
+            setBusy(false);
+        }
+    }
 
-function Advanced({ known }: { known: Set<string> }) {
-  const [rows, setRows] = useState<CsvRow[] | null>(null);
-  const [fileName, setFileName] = useState("");
-  const [error, setError] = useState("");
-  const ok = rows?.filter((r) => !r.issues.length) ?? [];
-  const sample = `email,name,batch\nnew.learner@example.com,New Learner,${batches[0].name}\nbad-email,Someone,${batches[1].name}`;
-
-  return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">Advanced bulk enrollment</h2>
-      <p className="text-sm text-muted">
-        Upload a CSV with the columns <code className="rounded bg-surface-muted px-1">email</code>, <code className="rounded bg-surface-muted px-1">name</code> and{" "}
-        <code className="rounded bg-surface-muted px-1">batch</code>. Every row is checked before anything is enrolled.
-      </p>
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-fg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2">
-          <FileSpreadsheet className="size-4" aria-hidden="true" />
-          Choose CSV file
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            className="sr-only"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              if (file.size > 2 * 1024 * 1024) {
-                setError("File is larger than 2 MB.");
-                return;
-              }
-              setError("");
-              setFileName(file.name);
-              setRows(parseCsv(await file.text(), known));
-            }}
-          />
-        </label>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setFileName("sample.csv");
-            setRows(parseCsv(sample, known));
-          }}
-        >
-          Use sample file
-        </Button>
-        {fileName ? <span className="text-sm text-muted">{fileName}</span> : null}
-      </div>
-      {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
-      {rows ? (
-        rows.length === 0 ? (
-          <p className="text-sm text-danger" role="alert">
-            The file has no data rows.
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-2" role="status">
-              <Badge tone="success">{ok.length} ready</Badge>
-              {rows.length - ok.length ? <Badge tone="danger">{rows.length - ok.length} need fixing</Badge> : null}
+    const checked = response && !response.committed ? response.data : null;
+    return (
+        <div className="flex flex-col gap-4">
+            <h2 className="text-lg font-semibold">Advanced bulk enrollment</h2>
+            <p className="text-sm text-muted">
+                Upload a CSV with the columns <code className="rounded bg-surface-muted px-1">email</code>, <code className="rounded bg-surface-muted px-1">batch</code> and optionally <code className="rounded bg-surface-muted px-1">name</code> (needed for new learners).
+                Every row is checked first; nothing is enrolled until you confirm. Up to 500 rows per file.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-fg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2">
+                    <FileSpreadsheet className="size-4" aria-hidden="true" />
+                    Choose CSV file
+                    <input
+                        type="file"
+                        accept=".csv,text/csv"
+                        className="sr-only"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (!file) return;
+                            if (file.size > MAX_FILE_BYTES) {
+                                setError("The file is larger than 500 KB.");
+                                return;
+                            }
+                            const text = await file.text();
+                            setFileName(file.name);
+                            setCsv(text);
+                            await run(text, false);
+                        }}
+                    />
+                </label>
+                <Button variant="ghost" disabled={busy} onClick={() => { setFileName("sample.csv"); setCsv(sample); void run(sample, false); }}>Use sample file</Button>
+                {fileName ? <span className="text-sm text-muted">{fileName}</span> : null}
             </div>
-            <TableScroll label="Enrolment validation results" className="admin-table-card rounded-xl border border-border">
-              <table className="admin-data-table">
-                <caption className="sr-only">Validation results</caption>
-                <thead>
-                  <tr>
-                    <th scope="col"><TableHeading icon={Hash}>Line</TableHeading></th>
-                    <th scope="col"><TableHeading icon={Mail}>Email</TableHeading></th>
-                    <th scope="col"><TableHeading icon={UserPlus}>Name</TableHeading></th>
-                    <th scope="col"><TableHeading icon={Users}>Batch</TableHeading></th>
-                    <th scope="col"><TableHeading icon={CircleCheck}>Result</TableHeading></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.line} className="border-b border-border last:border-0">
-                      <td className="px-3 py-2 text-muted tabular-nums">{r.line}</td>
-                      <td className="px-3 py-2">{r.email || "—"}</td>
-                      <td className="px-3 py-2">{r.name || "—"}</td>
-                      <td className="px-3 py-2">{r.batch || "—"}</td>
-                      <td className="px-3 py-2">
-                        {r.issues.length ? (
-                          <span className="inline-flex items-center gap-1 text-danger">
-                            <CircleAlert className="size-4" aria-hidden="true" />
-                            {r.issues.join("; ")}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-success">
-                            <CircleCheck className="size-4" aria-hidden="true" />
-                            Ready
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableScroll>
-            <div className="flex justify-end">
-              <Button
-                variant="success"
-                disabled={!ok.length}
-                onClick={() => {
-                  toast.success(`${ok.length} learners enrolled`, { description: `${rows.length - ok.length} rows skipped. Fix them and upload again.` });
-                  setRows(null);
-                  setFileName("");
-                }}
-              >
-                Enrol {ok.length} valid rows
-              </Button>
+            {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+            {response ? (
+                <>
+                    <SummaryBadges summary={response.data.summary} committed={response.committed} />
+                    <ResultsTable results={response.data.results} />
+                </>
+            ) : null}
+            <div className="flex flex-wrap justify-end gap-2">
+                {response?.committed ? <Button onClick={() => downloadResults(response.data.results)}>Download results</Button> : null}
+                {checked && checked.summary.ready > 0 ? <Button variant="success" disabled={busy} onClick={() => void run(csv, true)}>{busy ? "Enrolling…" : `Enrol ${checked.summary.ready} ${checked.summary.ready === 1 ? "learner" : "learners"}`}</Button> : null}
             </div>
-          </>
-        )
-      ) : null}
-    </div>
-  );
+        </div>
+    );
 }

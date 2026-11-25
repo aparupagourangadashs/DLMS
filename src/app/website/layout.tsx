@@ -1,7 +1,12 @@
+import { WebsiteShell } from "@/components/website/WebsiteShell";
+import { listCollections } from "@/server/services/public/catalog";
+import { getSiteSettings } from "@/server/services/public/site";
 import type { Metadata } from "next";
 import { Noto_Serif_Devanagari } from "next/font/google";
-import { WebsiteShell } from "@/components/website/WebsiteShell";
 import "./website.css";
+
+// Content is edited in the admin and must show immediately; caching with tag revalidation comes in B9.
+export const dynamic = "force-dynamic";
 
 const devanagari = Noto_Serif_Devanagari({
   variable: "--font-web-devanagari",
@@ -16,6 +21,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function WebsiteLayout({ children }: { children: React.ReactNode }) {
-  return <div className={devanagari.variable}><WebsiteShell>{children}</WebsiteShell></div>;
+export default async function WebsiteLayout({ children }: { children: React.ReactNode }) {
+  const [collections, settings] = await Promise.all([listCollections(), getSiteSettings()]);
+  return <div className={devanagari.variable}><WebsiteShell collections={collections} settings={settings}>{children}</WebsiteShell></div>;
 }

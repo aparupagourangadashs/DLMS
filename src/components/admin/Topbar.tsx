@@ -6,9 +6,16 @@ import { Popover } from "@/components/ui/Popover";
 import { HELP_HOME, findPage, pageHref, parseAdminPath, quickCreate } from "@/lib/admin/navigation";
 import { cn } from "@/lib/cn";
 import { useAdminUi } from "@/store/admin-ui";
-import { Bell, ChevronRight, CircleHelp, Menu, Plus, Search, UserRound } from "lucide-react";
+import { Bell, ChevronRight, CircleHelp, LogOut, Menu, Plus, Search, UserRound } from "lucide-react";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+
+export type TopbarUser = { name: string; email: string; roleLabel: string };
+
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
+}
 
 const notifications = [
   { title: "12 submissions waiting for review", time: "10 min ago", href: "/admin/learning/submissions" },
@@ -52,7 +59,7 @@ function Breadcrumbs() {
   );
 }
 
-export function Topbar() {
+export function Topbar({ user }: { user: TopbarUser }) {
   const router = useRouter();
   const setMobileNavOpen = useAdminUi((s) => s.setMobileNavOpen);
   const setCommandOpen = useAdminUi((s) => s.setCommandOpen);
@@ -164,11 +171,11 @@ export function Topbar() {
               className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-1 hover:bg-surface-muted sm:pr-3"
             >
               <span className="flex size-8 items-center justify-center rounded-full bg-gold-soft text-sm font-semibold text-accent" aria-hidden="true">
-                DA
+                {initials(user.name)}
               </span>
               <span className="hidden text-left leading-tight sm:block">
-                <span className="block text-sm font-medium">Demo Admin</span>
-                <span className="block text-[11px] text-muted">Administrator</span>
+                <span className="block text-sm font-medium">{user.name}</span>
+                <span className="block text-[11px] text-muted">{user.roleLabel}</span>
               </span>
             </button>
           )}
@@ -176,10 +183,10 @@ export function Topbar() {
           {(close) => (
             <div className="w-64">
               <div className="px-3 py-2">
-                <p className="text-sm font-semibold">Demo Admin</p>
-                <p className="text-xs text-muted">admin@example.com</p>
-                <Badge tone="warning" className="mt-2">
-                  Sign-in arrives with the backend
+                <p className="text-sm font-semibold">{user.name}</p>
+                <p className="text-xs text-muted">{user.email}</p>
+                <Badge tone="info" className="mt-2">
+                  {user.roleLabel}
                 </Badge>
               </div>
               <div className="border-t border-border pt-1">
@@ -194,6 +201,10 @@ export function Topbar() {
                   <UserRound className="size-4 text-muted" aria-hidden="true" />
                   My Profile
                 </Link>
+                <button type="button" className={menuItemClass} onClick={() => void signOut({ redirectTo: "/login" })}>
+                  <LogOut className="size-4 text-muted" aria-hidden="true" />
+                  Sign out
+                </button>
               </div>
             </div>
           )}

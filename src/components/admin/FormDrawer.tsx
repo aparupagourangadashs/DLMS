@@ -1,19 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Award, CalendarDays, Check, ClipboardList, Eye, FolderOpen, Info, Save, Settings2, Sparkles, X } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { cardCycle, palette } from "@/lib/colors";
-import type { CellValue, EditorKind, FormField } from "@/lib/admin/types";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { EditorFields } from "./EditorFields";
 import { isVisible, readItems, validateEditor, type EditorValues } from "@/lib/admin/editor-validation";
+import type { CellValue, EditorKind, FormField } from "@/lib/admin/types";
+import { cn } from "@/lib/cn";
+import { cardCycle, palette } from "@/lib/colors";
+import { ArrowLeft, ArrowRight, Award, CalendarDays, Check, ClipboardList, Eye, FolderOpen, Info, Save, Settings2, Sparkles, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { EditorFields } from "./EditorFields";
 
 type Props = {
   open: boolean; title: string; description?: string; fields: FormField[];
   initial?: Record<string, CellValue>; submitLabel: string; onClose: () => void;
-  onSubmit: (values: Record<string, CellValue>) => void; steps?: string[]; editor?: EditorKind;
+  onSubmit: (values: Record<string, CellValue>) => void | Promise<void | Record<string, string>>; steps?: string[]; editor?: EditorKind;
 };
 
 export function FormDrawer(props: Props) {
@@ -38,6 +38,7 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
   });
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
   const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
   const heading = useRef<HTMLParagraphElement>(null);
   const EditorIcon = editor === "event" ? CalendarDays : editor === "certificate" ? Award : editor === "asset" ? FolderOpen : ClipboardList;
@@ -90,7 +91,17 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
       output.validity = values.expiry === "After days" ? `${values.expiryDays} days` : values.expiry === "Fixed date" ? `Until ${values.expiryDate}` : "Lifetime";
       output.rule = values.automation === "Manual" ? "Manual issuance (not connected)" : `${values.automation}: ${values.automation === "Course completion" ? values.course : values.exam}; threshold ${values.threshold}% (configuration only)`;
     }
-    onSubmit(output);
+    setSubmitting(true);
+    // A returned object is a map of server-side field errors to show inline.
+    Promise.resolve(onSubmit(output)).then((result) => {
+      if (!result || typeof result !== "object") return;
+      setErrors(result);
+      const first = fields.find((f) => result[f.key]);
+      if (first) {
+        setStep(first.step ?? 0);
+        requestAnimationFrame(() => document.getElementById(`f-${first.key}`)?.focus());
+      }
+    }).finally(() => setSubmitting(false));
   }}>
     {editor ? <div className="flex items-start gap-2 rounded-xl border border-border bg-surface-muted p-3 text-xs leading-relaxed text-muted"><Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden="true" /><p>Local demo only. Changes last until this page reloads. No files are uploaded, payments collected, certificates issued or notifications sent.</p></div> : null}
     {steps ? <section aria-label="Editor progress" className="space-y-3">
@@ -113,7 +124,7 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
         <div className="min-w-0"><p ref={heading} tabIndex={-1} className="text-sm font-semibold" aria-live="polite">{steps ? `Step ${step + 1} of ${steps.length}: ${steps[step]}` : "Details & configuration"}</p><p className="mt-1 text-xs text-muted">Complete required fields marked * to continue.</p></div>
       </div>
       <div className="flex min-w-0 flex-col gap-5 p-3 sm:p-4">
-    <EditorFields fields={currentFields} values={values} set={set} errors={{ ...errors, ...Object.fromEntries(Object.entries(fileErrors).filter(([, error]) => error)) }} fileError={(key, error) => setFileErrors((prev) => ({ ...prev, [key]: error }))} />
+        <EditorFields fields={currentFields} values={values} set={set} errors={{ ...errors, ...Object.fromEntries(Object.entries(fileErrors).filter(([, error]) => error)) }} fileError={(key, error) => setFileErrors((prev) => ({ ...prev, [key]: error }))} />
       </div>
     </section>
     {editor === "feedback" && last ? <section className="rounded-2xl border border-border bg-surface-muted p-4" aria-label="Feedback preview">
@@ -134,7 +145,7 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
     <div className="sticky bottom-0 -mx-5 mt-2 flex flex-wrap justify-end gap-2 border-t border-border bg-surface px-5 pt-3 pb-1">
       <Button variant="soft-danger" onClick={onClose}><X className="size-4" aria-hidden="true" />Cancel</Button>
       {step > 0 ? <Button variant="soft-info" onClick={() => move(step - 1)}><ArrowLeft className="size-4" aria-hidden="true" />Back</Button> : null}
-      <Button type="submit" variant={last ? "success" : "gold"}>{last ? <Save className="size-4" aria-hidden="true" /> : <ArrowRight className="size-4" aria-hidden="true" />}{last ? editor ? "Save locally" : submitLabel : "Next"}</Button>
+      <Button type="submit" variant={last ? "success" : "gold"} disabled={submitting}>{last ? <Save className="size-4" aria-hidden="true" /> : <ArrowRight className="size-4" aria-hidden="true" />}{last ? editor ? "Save locally" : submitLabel : "Next"}</Button>
     </div>
   </form>;
 }

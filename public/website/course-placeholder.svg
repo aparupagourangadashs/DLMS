@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 563" role="img" aria-label="Course artwork not available">
+  <rect width="1000" height="563" fill="#1b1f4b"/>
+  <g fill="none" stroke="#e2c27a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+    <path d="M500 190 C470 160 420 160 360 175 L360 370 C420 355 470 355 500 385 C530 355 580 355 640 370 L640 175 C580 160 530 160 500 190Z"/>
+    <path d="M500 190 V385"/>
+  </g>
+  <text x="500" y="450" text-anchor="middle" font-family="Georgia, serif" font-size="32" fill="#e2c27a">IBMV</text>
+</svg>

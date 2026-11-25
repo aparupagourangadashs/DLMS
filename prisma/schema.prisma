@@ -1,0 +1,915 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ---------------------------------------------------------------------------
+// B1: Identity, access, audit
+// ---------------------------------------------------------------------------
+
+enum UserKind {
+  STAFF
+  LEARNER
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  INSTRUCTOR
+  CONTENT_EDITOR
+  FINANCE
+  SUPPORT
+  LEARNER
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  ARCHIVED
+}
+
+enum BranchStatus {
+  ACTIVE
+  PAUSED
+}
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  phone           String?
+  passwordHash    String?
+  kind            UserKind
+  role            Role
+  status          UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  failedLogins    Int        @default(0)
+  lockedUntil     DateTime?
+  // Bumped on password reset/role change so existing sessions stop working.
+  tokenVersion    Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  staffProfile        StaffProfile?
+  learnerProfile      LearnerProfile?
+  notificationPref    NotificationPreference?
+  branches            UserBranch[]
+  managedBranches     Branch[]                 @relation("BranchManager")
+  passwordResets      PasswordResetToken[]
+  emailVerifications  EmailVerificationToken[]
+  auditEvents         AuditEvent[]
+  supportRequests     SupportRequest[]         @relation("SupportRequester")
+  assignedSupport     SupportRequest[]         @relation("SupportAssignee")
+  supportReplies      SupportReply[]
+  segmentMemberships  SegmentMember[]
+  enrolments          Enrolment[]              @relation("LearnerEnrolments")
+  instructedBatches   Batch[]                  @relation("BatchInstructor")
+  managedBatches      Batch[]                  @relation("BatchPrimaryManager")
+  extraManagedBatches BatchManager[]
+  instructedSessions  Session[]
+  attendance          Attendance[]
+  announcementReads   AnnouncementRead[]
+
+  @@index([kind, status])
+  @@index([role])
+}
+
+model Branch {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  city      String?
+  status    BranchStatus @default(ACTIVE)
+  managerId String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  manager         User?            @relation("BranchManager", fields: [managerId], references: [id], onDelete: SetNull)
+  users           UserBranch[]
+  staffProfiles   StaffProfile[]
+  learnerProfiles LearnerProfile[]
+  batches         Batch[]
+  holidays        Holiday[]
+
+  @@index([managerId])
+}
+
+model UserBranch {
+  userId   String
+  branchId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
+  @@index([branchId])
+}
+
+model StaffProfile {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  displayName        String
+  username           String?   @unique
+  branchId           String?
+  timezone           String    @default("Asia/Kolkata")
+  dateOfBirth        DateTime? @db.Date
+  gender             String?
+  alternateMobile    String?
+  permanentAddress   String?   @db.Text
+  residentialAddress String?   @db.Text
+  state              String?
+  city               String?
+  pincode            String?
+  notificationPrefs  Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([branchId])
+}
+
+enum LearnerStatus {
+  REGISTERED
+  ON_LEAVE
+  ARCHIVED
+}
+
+model LearnerProfile {
+  id                 String        @id @default(cuid())
+  userId             String        @unique
+  name               String
+  // Generated as IBMV/YY/##### when the account is created.
+  registrationNo     String?       @unique
+  username           String?       @unique
+  dateOfBirth        DateTime?     @db.Date
+  gender             String?
+  parentName         String?
+  parentEmail        String?
+  parentPhone        String?
+  standard           String?
+  alternateMobile    String?
+  residentialAddress String?       @db.Text
+  permanentAddress   String?       @db.Text
+  city               String?
+  state              String?
+  pincode            String?
+  studentSource      String?
+  timezone           String        @default("Asia/Kolkata")
+  timezoneAuto       Boolean       @default(false)
+  // Enrolled/Completed are derived from enrolments in B4; only manual states are stored.
+  status             LearnerStatus @default(REGISTERED)
+  branchId           String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([branchId])
+  @@index([city])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  // SHA-256 of the lower-cased email; the raw address is not stored.
+  identifier String
+  ipHash     String?
+  success    Boolean
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt])
+  @@index([ipHash, createdAt])
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// B2: Catalog and public content
+// ---------------------------------------------------------------------------
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PersonGroup {
+  ADVISORY
+  TEAM
+}
+
+enum LeadSource {
+  CONTACT_FORM
+  BULK_BOOK
+  CAMPAIGN
+  EVENT
+  MANUAL
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  CONVERTED
+  CLOSED
+}
+
+enum LegalType {
+  TERMS
+  PRIVACY
+}
+
+// Top-level categories are the public course collections; children are admin sub-categories.
+model Category {
+  id          String        @id @default(cuid())
+  slug        String        @unique @db.VarChar(120)
+  title       String
+  shortLabel  String?
+  description String        @db.Text
+  color       String        @default("teal")
+  parentId    String?
+  sortOrder   Int           @default(0)
+  status      PublishStatus @default(PUBLISHED)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryTree")
+  courses  Course[]
+
+  @@index([parentId, sortOrder])
+}
+
+model Course {
+  id                 String        @id @default(cuid())
+  slug               String        @unique @db.VarChar(200)
+  title              String        @db.VarChar(300)
+  summary            String        @db.Text
+  description        String?       @db.Text
+  categoryId         String
+  language           String        @default("Not listed")
+  format             String        @default("Self-paced")
+  instructorName     String        @default("Not listed")
+  duration           String        @default("Not listed")
+  // Null means "see the official page"; amounts are in minor units (paise).
+  priceMinor         Int?
+  currency           String        @default("INR")
+  isFree             Boolean       @default(false)
+  certificateOffered Boolean       @default(false)
+  imageUrl           String        @default("") @db.VarChar(500)
+  imageWidth         Int           @default(1000)
+  imageHeight        Int           @default(563)
+  officialUrl        String        @db.VarChar(500)
+  enrollmentUrl      String?       @db.VarChar(500)
+  startDate          DateTime?     @db.Date
+  endDate            DateTime?     @db.Date
+  scheduleNote       String?       @db.Text
+  eligibility        String?       @db.Text
+  materials          String?       @db.Text
+  audience           String?       @db.Text
+  assessmentPlan     String?       @db.Text
+  requirements       String?       @db.Text
+  status             PublishStatus @default(DRAFT)
+  comingSoon         Boolean       @default(false)
+  sortOrder          Int           @default(0)
+  publishedAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  category   Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  faqs       CourseFaq[]
+  batches    Batch[]
+  enrolments Enrolment[]
+  modules    CourseModule[]
+
+  @@index([categoryId, status, sortOrder])
+  @@index([status, sortOrder])
+}
+
+model CourseFaq {
+  id        String @id @default(cuid())
+  courseId  String
+  question  String @db.VarChar(500)
+  answer    String @db.Text
+  sortOrder Int    @default(0)
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, sortOrder])
+}
+
+model Book {
+  id          String        @id @default(cuid())
+  title       String        @db.VarChar(300)
+  language    String
+  publisher   String?
+  imageUrl    String        @default("") @db.VarChar(500)
+  imageWidth  Int           @default(600)
+  imageHeight Int           @default(840)
+  status      PublishStatus @default(PUBLISHED)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  links BookLink[]
+
+  @@index([language, status, sortOrder])
+}
+
+model BookLink {
+  id       String @id @default(cuid())
+  bookId   String
+  format   String @default("Print")
+  retailer String
+  url      String @db.VarChar(500)
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+}
+
+model Testimonial {
+  id          String        @id @default(cuid())
+  name        String
+  imageUrl    String?       @db.VarChar(500)
+  quote       String        @db.Text
+  sourceUrl   String?       @db.VarChar(500)
+  format      String        @default("Text")
+  courseTitle String?
+  city        String?
+  rating      Int?
+  status      PublishStatus @default(DRAFT)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, sortOrder])
+}
+
+model Video {
+  id           String        @id @default(cuid())
+  youtubeId    String        @db.VarChar(20)
+  speaker      String
+  title        String        @db.VarChar(300)
+  thumbnailUrl String        @default("") @db.VarChar(500)
+  status       PublishStatus @default(PUBLISHED)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, sortOrder])
+}
+
+model Person {
+  id        String        @id @default(cuid())
+  name      String
+  roleTitle String
+  bio       String?       @db.Text
+  imageUrl  String?       @db.VarChar(500)
+  group     PersonGroup
+  status    PublishStatus @default(DRAFT)
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([group, status, sortOrder])
+}
+
+model Magazine {
+  id         String        @id @default(cuid())
+  title      String        @db.VarChar(300)
+  issueLabel String?
+  issueDate  DateTime?     @db.Date
+  language   String        @default("English")
+  coverUrl   String?       @db.VarChar(500)
+  fileUrl    String?       @db.VarChar(500)
+  status     PublishStatus @default(DRAFT)
+  sortOrder  Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([status, issueDate])
+}
+
+model SiteSetting {
+  key         String   @id @db.VarChar(100)
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model LegalDocument {
+  id          String        @id @default(cuid())
+  type        LegalType
+  version     Int
+  title       String
+  body        String        @db.Text
+  status      PublishStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([type, version])
+}
+
+model Lead {
+  id           String     @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  city         String?
+  source       LeadSource
+  interest     String?
+  message      String?    @db.Text
+  stage        LeadStage  @default(NEW)
+  consent      Boolean    @default(false)
+  assignedToId String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  bulkBook BulkBookEnquiry?
+
+  @@index([stage, createdAt])
+  @@index([source, createdAt])
+  @@index([email])
+}
+
+model BulkBookEnquiry {
+  id          String  @id @default(cuid())
+  leadId      String  @unique
+  bookTitle   String  @db.VarChar(300)
+  quantity    Int
+  address     String  @db.Text
+  city        String
+  pincode     String
+  countryCode String?
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// B3: Learners, preferences, support, configuration
+// ---------------------------------------------------------------------------
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum CustomFieldEntity {
+  LEARNER
+  INSTRUCTOR
+  COURSE
+  BATCH
+  CERTIFICATE
+  QUESTION
+  ANNOUNCEMENT
+  ENQUIRY
+}
+
+enum CustomFieldPlacement {
+  SIGNUP
+  OFFLINE_ADMISSION
+}
+
+enum SegmentType {
+  STATIC
+  DYNAMIC
+}
+
+// Atomic counters, for example registration numbers per year (key `reg:26`).
+model Counter {
+  key   String @id @db.VarChar(60)
+  value Int    @default(0)
+}
+
+// Consent source of truth: promotional messages are only sent when `promotional` and the channel are on.
+model NotificationPreference {
+  userId               String   @id
+  sessionReminder1Hour Boolean  @default(true)
+  sessionReminder1Day  Boolean  @default(false)
+  sessionReminderStart Boolean  @default(false)
+  promotional          Boolean  @default(false)
+  whatsapp             Boolean  @default(false)
+  email                Boolean  @default(true)
+  sms                  Boolean  @default(false)
+  push                 Boolean  @default(false)
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SupportRequest {
+  id           String        @id @default(cuid())
+  userId       String?
+  name         String
+  email        String
+  message      String        @db.Text
+  status       SupportStatus @default(OPEN)
+  assignedToId String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  user       User?          @relation("SupportRequester", fields: [userId], references: [id], onDelete: SetNull)
+  assignedTo User?          @relation("SupportAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  replies    SupportReply[]
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@index([assignedToId])
+}
+
+model SupportReply {
+  id        String   @id @default(cuid())
+  requestId String
+  authorId  String?
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  request SupportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+}
+
+model CustomField {
+  id        String               @id @default(cuid())
+  entity    CustomFieldEntity
+  placement CustomFieldPlacement
+  label     String               @db.VarChar(100)
+  type      String               @default("Text")
+  options   Json?
+  required  Boolean              @default(false)
+  sortOrder Int                  @default(0)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  values CustomFieldValue[]
+
+  @@unique([entity, placement, label])
+  @@index([entity, placement, sortOrder])
+}
+
+model CustomFieldValue {
+  id        String   @id @default(cuid())
+  fieldId   String
+  entityId  String
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  field CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([fieldId, entityId])
+  @@index([entityId])
+}
+
+model Segment {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  type        SegmentType
+  // Allow-listed filters for dynamic segments; never raw SQL.
+  rules       Json?
+  createdById String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  members SegmentMember[]
+}
+
+model SegmentMember {
+  segmentId String
+  userId    String
+
+  segment Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([segmentId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// B4: Learning operations (batches, enrolments, sessions, announcements)
+// ---------------------------------------------------------------------------
+
+enum BatchStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum EnrolmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum EnrolmentSource {
+  ADMIN
+  SELF
+  ORDER
+  MEMBERSHIP
+  BULK
+}
+
+enum SessionStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum AnnouncementUrgency {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AnnouncementAudience {
+  ALL
+  BATCH
+}
+
+model Batch {
+  id           String      @id @default(cuid())
+  name         String      @unique @db.VarChar(200)
+  courseId     String
+  startDate    DateTime    @db.Date
+  endDate      DateTime    @db.Date
+  instructorId String?
+  managerId    String?
+  branchId     String?
+  status       BatchStatus @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  course        Course              @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  instructor    User?               @relation("BatchInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+  manager       User?               @relation("BatchPrimaryManager", fields: [managerId], references: [id], onDelete: SetNull)
+  branch        Branch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  extraManagers BatchManager[]
+  enrolments    Enrolment[]
+  sessions      Session[]
+  announcements AnnouncementBatch[]
+
+  @@index([courseId, status])
+  @@index([status, startDate])
+  @@index([instructorId])
+  @@index([branchId])
+}
+
+// Additional managers; the primary manager is `Batch.managerId`.
+model BatchManager {
+  batchId String
+  userId  String
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([batchId, userId])
+  @@index([userId])
+}
+
+// Authorizes a learner to see a course. At most one ACTIVE enrolment per learner and course (enforced in the service).
+model Enrolment {
+  id              String          @id @default(cuid())
+  userId          String
+  courseId        String
+  batchId         String?
+  source          EnrolmentSource @default(ADMIN)
+  status          EnrolmentStatus @default(ACTIVE)
+  enrolledAt      DateTime        @default(now())
+  accessStartsAt  DateTime?       @db.Date
+  accessEndsAt    DateTime?       @db.Date
+  progressPercent Int             @default(0)
+  createdById     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user           User             @relation("LearnerEnrolments", fields: [userId], references: [id], onDelete: Cascade)
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  batch          Batch?           @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  lessonProgress LessonProgress[]
+
+  @@index([userId, status])
+  @@index([courseId, status])
+  @@index([batchId, status])
+}
+
+model Session {
+  id           String        @id @default(cuid())
+  batchId      String
+  title        String        @db.VarChar(300)
+  startsAt     DateTime
+  endsAt       DateTime
+  timezone     String        @default("Asia/Kolkata")
+  joinUrl      String?       @db.VarChar(500)
+  status       SessionStatus @default(SCHEDULED)
+  topics       String?       @db.Text
+  instructorId String?
+  cancelReason String?       @db.VarChar(300)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  batch      Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  instructor User?        @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  attendance Attendance[]
+
+  @@index([batchId, startsAt])
+  @@index([startsAt, status])
+}
+
+model Attendance {
+  sessionId  String
+  userId     String
+  status     AttendanceStatus
+  signedInAt DateTime?
+  markedById String?
+  updatedAt  DateTime         @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, userId])
+  @@index([userId])
+}
+
+// A day with no classes. A null branch means every branch.
+model Holiday {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  branchId    String?
+  reason      String   @db.VarChar(200)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([branchId])
+}
+
+model Announcement {
+  id          String               @id @default(cuid())
+  title       String               @db.VarChar(200)
+  body        String               @db.Text
+  urgency     AnnouncementUrgency  @default(MEDIUM)
+  tags        Json?
+  audience    AnnouncementAudience @default(ALL)
+  // Learners see it once the status is PUBLISHED and publishAt has passed.
+  publishAt   DateTime
+  status      PublishStatus        @default(PUBLISHED)
+  createdById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  batches AnnouncementBatch[]
+  reads   AnnouncementRead[]
+
+  @@index([status, publishAt])
+}
+
+model AnnouncementBatch {
+  announcementId String
+  batchId        String
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  batch        Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, batchId])
+  @@index([batchId])
+}
+
+model AnnouncementRead {
+  announcementId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// B4b: course content and learner progress
+// ---------------------------------------------------------------------------
+
+// PDFs, audio and other uploads arrive with the Asset Library.
+enum ContentType {
+  TEXT
+  VIDEO
+  LINK
+}
+
+// A reusable group of lessons. Learners only see PUBLISHED modules that a course includes.
+model Module {
+  id          String        @id @default(cuid())
+  name        String        @unique @db.VarChar(200)
+  description String?       @db.Text
+  status      PublishStatus @default(PUBLISHED)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  contents ModuleContent[]
+  courses  CourseModule[]
+
+  @@index([status])
+}
+
+model ModuleContent {
+  id        String      @id @default(cuid())
+  moduleId  String
+  type      ContentType @default(TEXT)
+  title     String      @db.VarChar(300)
+  minutes   Int?
+  // Markdown for TEXT lessons.
+  body      String?     @db.Text
+  // https link: a YouTube address for VIDEO, any site for LINK.
+  url       String?     @db.VarChar(500)
+  sortOrder Int         @default(0)
+
+  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([moduleId, sortOrder])
+}
+
+model CourseModule {
+  courseId  String
+  moduleId  String
+  sortOrder Int    @default(0)
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+
+  @@id([courseId, moduleId])
+  @@index([moduleId])
+}
+
+// A lesson the learner has marked complete, per enrolment.
+model LessonProgress {
+  enrolmentId String
+  contentId   String
+  completedAt DateTime @default(now())
+
+  enrolment Enrolment     @relation(fields: [enrolmentId], references: [id], onDelete: Cascade)
+  content   ModuleContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@id([enrolmentId, contentId])
+  @@index([contentId])
+}
