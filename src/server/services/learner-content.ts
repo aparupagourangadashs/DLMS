@@ -1,11 +1,13 @@
 import type { ContentType, EnrolmentStatus, Prisma } from "@/generated/prisma/client";
+import { formatBytes } from "@/lib/admin/assets";
 import { istToday } from "@/lib/ist";
 import type { CourseOutline, CourseProgress, LessonDetail, LessonKind } from "@/lib/student/learning-types";
 import { youtubeEmbedUrl, youtubeId } from "@/lib/video";
 import { prisma } from "@/server/db";
 import { NotFound } from "@/server/http/errors";
+import { fileKind, findStoredAsset } from "./assets";
 
-const kindOf: Record<ContentType, LessonKind> = { TEXT: "Text", VIDEO: "Video", LINK: "Link" };
+const kindOf: Record<ContentType, LessonKind> = { TEXT: "Text", VIDEO: "Video", LINK: "Link", FILE: "File" };
 
 /** Enrolments that open a course's content: active or completed, and inside any access dates. */
 export function accessWhere(userId: string, today: string): Prisma.EnrolmentWhereInput {
@@ -86,7 +88,7 @@ async function accessibleLesson(userId: string, lessonId: string, now: Date) {
     const today = istToday(now);
     const lesson = await prisma.moduleContent.findFirst({
         where: { id: lessonId, module: { status: "PUBLISHED", courses: { some: { course: { enrolments: { some: accessWhere(userId, today) } } } } } },
-        include: { module: { select: { name: true } } },
+        include: { module: { select: { name: true } }, asset: { select: { name: true, fileName: true, type: true, sizeBytes: true, status: true } } },
     });
     if (!lesson) throw new NotFound();
     const enrolment = await prisma.enrolment.findFirst({
@@ -101,6 +103,7 @@ export async function getLesson(userId: string, lessonId: string, now = new Date
     const { lesson, enrolment } = await accessibleLesson(userId, lessonId, now);
     const done = await prisma.lessonProgress.findUnique({ where: { enrolmentId_contentId: { enrolmentId: enrolment.id, contentId: lesson.id } }, select: { completedAt: true } });
     const id = lesson.type === "VIDEO" ? youtubeId(lesson.url ?? "") : null;
+    const asset = lesson.type === "FILE" && lesson.asset?.status === "READY" && lesson.asset.sizeBytes !== null ? lesson.asset : null;
     return {
         id: lesson.id,
         title: lesson.title,
@@ -109,8 +112,17 @@ export async function getLesson(userId: string, lessonId: string, now = new Date
         moduleName: lesson.module.name,
         body: lesson.type === "TEXT" ? lesson.body ?? "" : "",
         url: lesson.type === "VIDEO" ? (id ? youtubeEmbedUrl(id) : "") : lesson.type === "LINK" ? lesson.url ?? "" : "",
+        file: asset ? { name: asset.fileName ?? asset.name, kind: fileKind(asset.type), size: formatBytes(asset.sizeBytes!), url: `/api/student/lessons/${lesson.id}/file` } : null,
         completed: done !== null,
     };
+}
+
+/** The stored file of a file lesson, for a learner who may open that lesson. */
+export async function openLessonFile(userId: string, lessonId: string, now = new Date()) {
+    const { lesson } = await accessibleLesson(userId, lessonId, now);
+    const asset = lesson.type === "FILE" && lesson.assetId ? await findStoredAsset(lesson.assetId) : null;
+    if (!asset) throw new NotFound();
+    return asset;
 }
 
 /** Marks a lesson complete (again is harmless) and reports the course progress. Opening a lesson never completes it. */

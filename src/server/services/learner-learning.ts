@@ -1,11 +1,12 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { addDays, istDayRange, istToday } from "@/lib/ist";
-import type { HomeSummary, StudentAnnouncement, StudentCourse, StudentSession, StudentSessionsData } from "@/lib/student/learning-types";
+import type { HomeSummary, StudentAnnouncement, StudentCourse, StudentRecording, StudentSession, StudentSessionsData } from "@/lib/student/learning-types";
 import { prisma } from "@/server/db";
 import { NotFound, ValidationError } from "@/server/http/errors";
 import { percentOf } from "./learner-content";
+import { listBanners } from "./public/banners";
 
-export type { HomeSummary, StudentAnnouncement, StudentCourse, StudentSession, StudentSessionsData };
+export type { HomeSummary, StudentAnnouncement, StudentCourse, StudentRecording, StudentSession, StudentSessionsData };
 
 // ---- Courses ----------------------------------------------------------------
 
@@ -73,6 +74,7 @@ export async function listMySessions(userId: string, range: { from: string; to: 
                 include: {
                     batch: { select: { name: true, course: { select: { title: true } }, instructor: { select: { email: true, staffProfile: { select: { displayName: true } } } } } },
                     instructor: { select: { email: true, staffProfile: { select: { displayName: true } } } },
+                    recordings: { where: { status: "AVAILABLE" }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, url: true } },
                 },
                 orderBy: { startsAt: "asc" },
             }),
@@ -98,6 +100,7 @@ export async function listMySessions(userId: string, range: { from: string; to: 
             instructor: teacher ? teacher.staffProfile?.displayName ?? teacher.email : "",
             topics: s.topics ?? "",
             joinUrl: joinable ? s.joinUrl : null,
+            recordings: s.status === "CANCELLED" ? [] : s.recordings.map((r) => ({ id: r.id, title: r.title || s.title, url: r.url })),
         };
     });
     return { sessions: result, holidays: holidays.map((h) => ({ date: day(h.date)!, reason: h.reason })) };
@@ -150,7 +153,7 @@ export async function markAnnouncementRead(userId: string, announcementId: strin
 export async function getHomeSummary(userId: string, now = new Date()): Promise<HomeSummary> {
     const today = istToday(now);
     const weekEnd = addDays(today, 6);
-    const [courses, week, announcements] = await Promise.all([listMyCourses(userId, today), listMySessions(userId, { from: today, to: weekEnd }, now), listMyAnnouncements(userId, now)]);
+    const [courses, week, announcements, banners] = await Promise.all([listMyCourses(userId, today), listMySessions(userId, { from: today, to: weekEnd }, now), listMyAnnouncements(userId, now), listBanners("STUDENT_HOME", now)]);
     const live = week.sessions.filter((s) => s.status !== "Cancelled");
     const todayRange = istDayRange(today);
     return {
@@ -163,5 +166,6 @@ export async function getHomeSummary(userId: string, now = new Date()): Promise<
         sessionsThisWeek: live.length,
         unreadAnnouncements: announcements.filter((a) => !a.read).length,
         latestAnnouncements: announcements.slice(0, 2),
+        banners,
     };
 }

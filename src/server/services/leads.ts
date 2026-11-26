@@ -3,6 +3,7 @@ import { normalizeEmail } from "@/server/auth/tokens";
 import { prisma } from "@/server/db";
 import { ValidationError } from "@/server/http/errors";
 import { sendEmail } from "@/server/notify/email";
+import { notifyStaff } from "@/server/services/notifications";
 import { getSiteSettings } from "@/server/services/public/site";
 import type { BulkBookEnquiryInput } from "@/server/validators/leads";
 
@@ -35,6 +36,7 @@ export async function createBulkBookEnquiry(input: BulkBookEnquiryInput, ip?: st
         },
     });
     await writeAudit({ action: "lead.create", entity: "Lead", entityId: lead.id, after: { source: "BULK_BOOK", book: book.title, quantity: input.quantity }, ip });
+    await notifyStaff("leads:write", { kind: "lead.new", title: `New bulk book enquiry from ${lead.name}`, body: `${input.quantity} copies of ${book.title}`, href: `/admin/marketing/leads?q=${encodeURIComponent(email)}` });
 
     const { contact } = await getSiteSettings();
     await sendEmail({
