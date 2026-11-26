@@ -6,22 +6,17 @@ import { Popover } from "@/components/ui/Popover";
 import { HELP_HOME, findPage, pageHref, parseAdminPath, quickCreate } from "@/lib/admin/navigation";
 import { cn } from "@/lib/cn";
 import { useAdminUi } from "@/store/admin-ui";
-import { Bell, ChevronRight, CircleHelp, LogOut, Menu, Plus, Search, UserRound } from "lucide-react";
+import { ChevronRight, CircleHelp, LogOut, Menu, Plus, Search, UserRound } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { NotificationBell } from "./NotificationBell";
 
 export type TopbarUser = { name: string; email: string; roleLabel: string };
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
 }
-
-const notifications = [
-  { title: "12 submissions waiting for review", time: "10 min ago", href: "/admin/learning/submissions" },
-  { title: "Session “Gita – Class 14” starts at 7:00 PM", time: "1 hour ago", href: "/admin/learning/sessions" },
-  { title: "5 carts abandoned today", time: "3 hours ago", href: "/admin/sales/abandoned-cart" },
-];
 
 const menuItemClass = "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent-soft";
 
@@ -125,39 +120,7 @@ export function Topbar({ user }: { user: TopbarUser }) {
           )}
         </Popover>
 
-        <Popover
-          label="Notifications"
-          panelClassName="w-80"
-          trigger={({ open, toggle, ref }) => (
-            <button
-              ref={ref}
-              type="button"
-              onClick={toggle}
-              aria-expanded={open}
-              aria-label={`Notifications (${notifications.length} unread)`}
-              className="relative inline-flex size-10 items-center justify-center rounded-full border border-border bg-surface hover:bg-surface-muted"
-            >
-              <Bell className="size-4" aria-hidden="true" />
-              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger" aria-hidden="true" />
-            </button>
-          )}
-        >
-          {(close) => (
-            <div>
-              <p className="px-3 pt-2 pb-1 text-sm font-semibold">Notifications</p>
-              <ul>
-                {notifications.map((n) => (
-                  <li key={n.title}>
-                    <Link href={n.href} onClick={close} className={cn(menuItemClass, "flex-col items-start gap-0.5")}>
-                      <span>{n.title}</span>
-                      <span className="text-xs text-muted">{n.time}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Popover>
+        <NotificationBell />
 
         <Popover
           label="Account"

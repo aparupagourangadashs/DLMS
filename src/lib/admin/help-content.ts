@@ -24,7 +24,18 @@ export const generalGuides: Array<HelpTask & { id: string }> = [
       "Selecting a section opens its pages in the second column. The page you are on is highlighted.",
       "On a phone or tablet, select the **menu** button (top left) to open the same navigation.",
       "The breadcrumb at the top shows the section and page you are on.",
-      "Press **Ctrl + K** (or select **Search…**) to jump to any page by typing its name.",
+      "Press **Ctrl + K** (or select **Search…**) to jump to any page by typing its name. Type at least two letters of a name, email, registration number or title to find records too: learners, team members, courses, batches, events, announcements, blog articles, leads, support requests and more. You see only what your role may open.",
+      "Select a record in the results to open its list with the search box already filled in. A support request opens its conversation.",
+    ],
+  },
+  {
+    id: "notifications",
+    title: "The notification bell",
+    steps: [
+      "The **bell** in the top bar holds messages for you, for example a new support request from a learner, a request assigned to you, or a new enquiry from the website. Which messages you get depends on your role.",
+      "A red number on the bell counts the messages you have not read. It updates when you open the bell, when you come back to the window, and about once a minute.",
+      "Select a message to open the page it is about; it is then marked read. Select **Mark all as read** to clear the number.",
+      "Messages older than 90 days are removed automatically.",
     ],
   },
   {
@@ -72,7 +83,7 @@ export const generalGuides: Array<HelpTask & { id: string }> = [
     id: "demo",
     title: "Live screens and sample data",
     steps: [
-      "Screens whose help article says **connected to the database** (for example Team, Learners, Support Inbox, Courses, Categories, Leads and the Website group) save real changes. Each change is recorded in the audit log, and what you can do depends on your role.",
+      "Screens whose help article says **connected to the database** (for example Team, Learners, Support Inbox, Courses, Categories, Leads and the Website group) save real changes. Each change is recorded in the audit log, and what you can do depends on your role. Super Admins can read the log under **Settings > Audit Log**.",
       "All other screens still show sample names, numbers and records for review. They are not real learners or payments.",
       "On sample screens you can create, edit, archive and delete records to try the screens. Most changes reset when you leave or reload the page; screens explicitly marked local browser storage keep their demo drafts on this device only.",
       "Sample screens never send anything to learners, payment gateways or notification providers.",
@@ -82,7 +93,7 @@ export const generalGuides: Array<HelpTask & { id: string }> = [
     id: "keyboard",
     title: "Keyboard shortcuts and accessibility",
     steps: [
-      "**Ctrl + K**: search pages. **?**: help for the current page. **Esc**: close a form, panel or menu.",
+      "**Ctrl + K**: search pages and records. **?**: help for the current page. **Esc**: close a form, panel or menu.",
       "**Tab** and **Shift + Tab** move between controls; the focused control is outlined.",
       "Use the **left and right arrows** to move between tabs, and the **up and down arrows** in search results.",
       "The moon/sun button switches between light and dark themes. Your choice is remembered on this device.",
@@ -108,44 +119,48 @@ const analyticsTasks: HelpTask[] = [
 
 export const helpContent: Record<string, HelpEntry> = {
   "home/dashboard": {
-    summary: "Your daily starting point: this week's learning performance, enrollment and sales trends, and every live session on a chosen day.",
+    summary: "Your daily starting point: this week's attendance, enrollment trends, and every live session on a chosen day.",
     whoUses: "Administrators, batch managers and instructors, usually at the start of the day.",
     tasks: [
       {
         title: "Read the weekly performance cards",
         steps: [
-          "The four cards show average time spent, total views, average rating and average attendance, each with a seven-day sparkline.",
-          "The green or red percentage compares each figure with the previous week. All figures are synthetic demo data.",
-          "The separate Daily active users chart shows ten days of activity and their daily average.",
+          "**Avg. attendance** is the share of enrolled learners marked present, over classes of the last seven days whose attendance has been taken. The percentage compares it with the seven days before, and the sparkline shows each day.",
+          "**Avg. time spent**, **Total views** and **Avg. rating** show **No data yet** until learner activity and feedback are collected.",
+          "The **Daily active users** card is waiting for the same learner activity data.",
         ],
       },
       {
-        title: "Compare signups, enrollments and sales",
+        title: "Compare signups and enrollments",
         steps: [
-          "In the chart card, open the menu at the top right.",
-          "Choose **Signup vs Enrollments** to compare new accounts with enrollments, or **Sales** for weekly revenue.",
+          "In the chart card, keep **Signup vs Enrollments** selected. Each pair of bars is one week, starting on Monday (IST).",
+          "A signup is a new learner account. An enrollment is a course or batch place that was not cancelled.",
           "Switch between **Bar**, **Line** and **Area**. Point at a data mark to see its value, or use the accessible data table.",
-          "The total above the chart covers the last four weekly periods.",
+          "The total above the chart covers the last four weeks. **Sales** stays empty until online payments are connected.",
         ],
       },
       {
         title: "Check the sessions for a day",
         steps: [
-          "The **Today's sessions** card lists every session with its time, duration, batch, instructor, attendance, status and topics.",
+          "The **Today's sessions** card lists every session of the chosen day with its time, duration, batch, instructor, attendance, status and topics.",
           "Use the arrows or the date picker to look at another day.",
-          "The summary row shows scheduled and cancelled sessions, sign-ins, sessions not signed in yet, and attendance.",
+          "The summary row shows scheduled and cancelled sessions, sign-ins (learners marked present), learners not signed in, and attendance. Only sessions whose attendance has been taken are counted.",
         ],
       },
       {
-        title: "Sign in to a session",
-        steps: ["Find a session with the status **Scheduled**.", "Select **Sign in** on its row. The row changes to **Signed in** and the sign-in count goes up."],
+        title: "Take attendance or cancel a session",
+        steps: [
+          "Select **Open** on a session row.",
+          "Once the class has started, mark each learner **Present** or **Absent**, then select **Save attendance**.",
+          "To cancel a class, select **Cancel session** and say why; learners see the reason. Edit or reschedule a class from the Sessions calendar.",
+        ],
       },
       {
         title: "Mark a day as a holiday",
         steps: [
-          "Choose the date.",
-          "Select **Mark as Holiday**. The confirmation shows how many sessions will be cancelled.",
-          "Select **Mark as holiday** to confirm. Every scheduled session that day changes to **Cancelled**.",
+          "Choose the date and select **Mark as Holiday**.",
+          "Give the reason. Staff tied to a branch choose their branch; others can choose **All branches**.",
+          "Select **Mark holiday**. Every scheduled session that day changes to **Cancelled**, and learners see the holiday on their calendar.",
         ],
       },
       {
@@ -154,20 +169,36 @@ export const helpContent: Record<string, HelpEntry> = {
       },
     ],
     tips: [
-      "Marking a holiday cancels sessions for every batch on that date. Check the list before you confirm.",
+      "Marking a holiday cancels the scheduled sessions of the branch you choose, or of every branch, on that date. Check the list before you confirm.",
       "Select **View Calendar** to see the whole week or month.",
+      "You only see the parts your role may use. Staff tied to a branch see their own branches' figures.",
       "**What's New** lists recent additions to the admin panel.",
     ],
     related: ["learning/sessions", "learning/submissions", "analytics/sales-enrollment"],
   },
 
   "products/events": {
-    summary: "Create and manage one-off events such as festivals, workshops, quizzes and retreats, and control who can see them.",
+    summary: "Create and manage one-off events such as festivals, workshops, quizzes and retreats: their days, place, price, manager and who can see them.",
     whoUses: "Event organisers and administrators.",
+    tasks: [
+      {
+        title: "Create an event",
+        steps: [
+          "Select **Create Event**. On step 1 enter the name, a description (Markdown works), an optional poster and one or more **Event days**. Times are India Standard Time (IST).",
+          "On step 2 choose the platform. **In person** and **Hybrid** need a venue. Every platform except In person needs an https:// meeting link, so Hybrid needs both. Choose the event manager from the active staff, the category and who may attend.",
+          "On step 3 choose **Free** or **Paid**. A paid event needs a ticket price. Select **Create event**.",
+        ],
+      },
+      {
+        title: "Run a multi-day event",
+        steps: ["Select **Add event days** once for each day, in order.", "Each day needs its own start and end. Days cannot overlap, and a day cannot end before it starts."],
+      },
+    ],
     tips: [
       "**Public** events can be listed on the website, **Private** events are only for invited learners, and **Unlisted** events open only from a direct link.",
-      "Use **Duplicate** to create this year's recurring event (for example Gita Jayanti) from last year's entry, then edit the date.",
-      "Event times are in India Standard Time (IST).",
+      "Use **Duplicate** to create this year's recurring event (for example Gita Jayanti) from last year's entry, then edit the days. A copy starts as a draft and keeps the poster.",
+      "An **Active** event cannot be deleted. Make it **Inactive** first.",
+      "The ticket price is only saved with the event. Selling tickets arrives with payments, and public event pages and feedback forms come later.",
     ],
     related: ["learning/announcements", "marketing/campaigns", "analytics/sales-enrollment"],
   },
@@ -327,7 +358,7 @@ export const helpContent: Record<string, HelpEntry> = {
         title: "Build a module",
         steps: [
           "Select **Add Module** and enter a name and, if you like, a description.",
-          "Under **Lesson**, select **Add lesson**. Choose the type: **Text** (written here, with simple formatting), **Video** (a YouTube address) or **Link** (a page on another website).",
+          "Under **Lesson**, select **Add lesson**. Choose the type: **Text** (written here, with simple formatting), **Video** (a YouTube address), **Link** (a page on another website) or **File** (a PDF, audio, video, image or document from the Asset Library).",
           "Use **Move up** to put the lessons in order, then save. Set the status to **Published** when the module is ready for learners.",
         ],
       },
@@ -348,7 +379,8 @@ export const helpContent: Record<string, HelpEntry> = {
       "The line under each module name shows how many courses use it. A module in use cannot be deleted; take it out of the courses first, or archive it.",
       "Learners see only **Published** modules. Draft and archived ones are hidden but keep their lessons.",
       "Learners mark each lesson complete themselves. Opening or watching a lesson does not complete it, and a course completes when every lesson is done.",
-      "PDFs, audio and quizzes arrive with the Asset Library and assessments. Until then, link to a page or a YouTube video.",
+      "A **File** lesson needs the file in the Asset Library first. Learners open it only through the lesson, and only while they are enrolled in a course that includes the module.",
+      "Quizzes arrive with assessments.",
     ],
     related: ["products/courses", "learning/asset-library", "learning/batches"],
   },
@@ -362,12 +394,37 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["learning/assessments", "learning/submissions"],
   },
   "learning/asset-library": {
-    summary: "Every file used in courses (videos, audio, PDFs, slides, YouTube links and more), with storage and usage at a glance.",
+    summary: "Every file used in courses (videos, audio, PDFs, slides, documents, images) and every YouTube or web link, with storage and usage at a glance.",
     whoUses: "Content editors and instructors.",
+    tasks: [
+      {
+        title: "Add a file",
+        steps: [
+          "Select **Add Asset** and choose the **Asset type**. The file picker then accepts only that type's formats, up to 25 MB.",
+          "Choose the file. It uploads at once, with a progress bar. Remove it and choose another if it is the wrong one.",
+          "Enter the **Asset name** (and a description if you like), then select **Create asset**. An upload you never save is deleted after a day.",
+        ],
+      },
+      {
+        title: "Add a link",
+        steps: ["Choose **YouTube** or **Link/Embed** as the type.", "Enter the full https:// address. YouTube assets need a YouTube video address. A link is stored, never fetched or run."],
+      },
+      {
+        title: "Use an asset in a lesson",
+        steps: ["Open Learning > Module Library and add a lesson of type **File**.", "Choose the asset. Its usage changes to **Used**, and learners can open it from the course player."],
+      },
+      {
+        title: "Replace a file",
+        steps: ["Edit the asset, remove the file and choose a new one of the same type, then save.", "Every lesson that uses the asset shows the new file. A file cannot change its type; add a new asset for that."],
+      },
+    ],
     tips: [
-      "**Unused** assets are not linked to any module. Review them regularly to save storage.",
+      "**Unused** assets are not in any lesson. An asset that a lesson uses cannot be deleted; remove it from the lesson first.",
       "Supported types: Video, Audio, PDF, YouTube, Image, Doc, Sheet, Slide, Text/HTML, Zip, SCORM Zip, Link/Embed and Epub.",
-      "File upload will connect to media storage in the backend phase. Until then, enter a file name or link.",
+      "The file's content must match its type; for example a program renamed to .png is refused.",
+      "Two assets with identical content share one stored file. **Storage saved** shows what that saves.",
+      "**Images are public**, because they appear on the website. Every other file is open only to staff and, through a lesson, to enrolled learners.",
+      "Downloads count each time a file is opened or downloaded in full; seeking in a video or audio file does not count again.",
     ],
     related: ["learning/module-library", "learning/session-recordings"],
   },
@@ -403,12 +460,26 @@ export const helpContent: Record<string, HelpEntry> = {
     related: ["learning/assessments", "settings/grading-system", "analytics/batch-progress"],
   },
   "learning/session-recordings": {
-    summary: "Recordings of live classes, organised by batch, so learners can catch up on missed sessions.",
+    summary: "Links to recorded classes, grouped by batch, so learners can catch up on sessions they missed.",
     whoUses: "Batch managers and instructors.",
+    tasks: [
+      {
+        title: "Add a recording",
+        steps: [
+          "Select **Add Recording**.",
+          "Choose the **Class**. Only classes that have already started, in batches that are not archived, are listed (newest first).",
+          "Paste the full **https://** link to the recording, for example a YouTube or Vimeo link.",
+          "Keep **Status** as **Available** to show it to learners now, or choose **Processing** while the video is still being prepared.",
+          "Select **Save**.",
+        ],
+      },
+    ],
     tips: [
-      "**Processing** means the video provider is still preparing the recording.",
+      "Learners see a **Watch recording** link on the class in their calendar and today's classes, only while the recording is **Available**. **Processing** and **Failed** recordings stay hidden from them.",
+      "A class can have up to ten recordings. Give each a title if there is more than one, for example Part 1 and Part 2.",
       "Use the batch tabs to switch between active, completed and archived batches.",
-      "Tick the checkboxes to select recordings. Bulk actions will be added with the backend.",
+      "Instructors can add and edit recordings; deleting is for administrators.",
+      "Uploading video files arrives with the Asset Library; for now recordings are links.",
     ],
     related: ["learning/sessions", "learning/batches", "learning/asset-library"],
   },
@@ -578,23 +649,58 @@ export const helpContent: Record<string, HelpEntry> = {
   },
   "marketing/workflows": { summary: "Automated messages triggered by learner actions, such as enrolling or abandoning a cart." },
   "marketing/blogs": {
-    summary: "Articles published on the public website.",
+    summary: "Articles published on the public website, with a cover picture, an author and a view count.",
     whoUses: "Content editors and marketing staff.",
-    tips: [
-      "**Published** is live on the website, **Draft** is work in progress, and **Hidden** is taken offline but kept.",
-      "A rich-text editor with images will replace the plain content box.",
+    tasks: [
+      {
+        title: "Write and publish an article",
+        steps: [
+          "Select **Create New Blog**. Enter the **Title** and write the **Article** in Markdown; the preview below the box shows how it will read.",
+          "Add a short **Summary** if you like. It appears on the blog list and in search results; without one, the start of the article is used.",
+          "Choose a **Cover image** (a 16:9 picture such as 1280 \u00d7 720 px works best) and, if it is not you, the **Author**.",
+          "Set **Visibility** to **Published** and select **Create blog**. The article appears at once on the website's Blog page.",
+        ],
+      },
+      {
+        title: "Take an article offline",
+        steps: ["Edit it and set **Visibility** to **Hidden**. It disappears from the website but is kept, with its first publication date.", "Set it to **Published** again to bring it back."],
+      },
     ],
-    related: ["marketing/marketing-banners", "marketing/testimonials"],
+    tips: [
+      "**Published** is live on the website, **Draft** is work in progress, and **Hidden** is taken offline but kept. A published article cannot be deleted; hide it first.",
+      "The web address is made from the title, for example /website/blogs/why-study-the-gita. Change it only if you must: links people already have will stop working.",
+      "Headings, bold, italic and lists are supported. HTML, links and pictures inside the text are shown as plain text.",
+      "**Views** counts visits to the article page: once per visitor per hour, and not for drafts or hidden articles.",
+      "The website menu shows a **Blog** link only while at least one article is published.",
+      "The cover is saved in the Asset Library. Deleting an article does not delete its cover; remove it there if you no longer need it.",
+    ],
+    related: ["marketing/marketing-banners", "marketing/testimonials", "learning/asset-library"],
   },
   "marketing/marketing-banners": {
     summary: "Promotional banners shown on the website home page and the student portal home.",
-    whoUses: "Marketing staff.",
-    tips: [
-      "Keep a few active banners at a time. Too many reduce attention.",
-      "Add a link so visitors go straight to the course or event being promoted.",
-      "Banner image upload arrives with media storage in the backend phase.",
+    whoUses: "Marketing staff and content editors.",
+    tasks: [
+      {
+        title: "Add a banner",
+        steps: [
+          "Select **Add Banner**. Enter the **Banner name**: it is also read aloud as the image's description, so say what the banner shows.",
+          "Choose the **Placement**, then choose the image. It uploads at once. A wide image of about 1920 × 574 px works best (PNG, JPG or WebP, up to 5 MB).",
+          "Add a **Link** if you want visitors to go somewhere: a full https:// address, or a page on this site such as /student/my-learning.",
+          "Optionally set **Show from** and **Show until**, set the **Status** to **Published** and select **Create banner**.",
+        ],
+      },
+      {
+        title: "Schedule a banner",
+        steps: ["Publish it and set **Show from** and **Show until**. Both days are included, in India Standard Time.", "Before the first day the **On the site** column shows **Scheduled**; after the last day it shows **Ended**."],
+      },
     ],
-    related: ["products/events", "marketing/promo-codes"],
+    tips: [
+      "The website home shows its first live banner; the student portal rotates through all of its live banners. **Display order** puts lower numbers first.",
+      "Only **Published** banners that are inside their dates show. Drafts and archived banners stay hidden.",
+      "Keep a few active banners at a time. Too many reduce attention.",
+      "The banner image is saved in the Asset Library. Deleting a banner does not delete its image; remove it there if you no longer need it.",
+    ],
+    related: ["products/events", "marketing/promo-codes", "learning/asset-library"],
   },
   "marketing/leads": {
     summary: "Enquiries from the website contact form, bulk book orders, campaigns and events, tracked until they convert.",
@@ -730,6 +836,29 @@ export const helpContent: Record<string, HelpEntry> = {
     tasks: [{ title: "Add or pause a branch", steps: ["Enter the branch name, city and manager in the branch form and add it.", "Use **Pause** to stop a branch taking new enrolments, or **Reactivate** to bring it back. Existing learners and history are kept.", "Select **Save changes**."] }],
     tips: ["The manager must be a staff member. Branch-scoped staff only see people and records from their own branch."],
     related: ["users/team"],
+  },
+  "settings/audit-log": {
+    summary: "A record of who did what and when: changes made in the admin panel, exports, password changes and learners' own account actions.",
+    whoUses: "Super administrators.",
+    tasks: [
+      {
+        title: "Find out who changed something",
+        steps: [
+          "Choose a **Period**, or **All time**. Times are shown in India time.",
+          "Narrow the list with **Who**, **What happened** or **Record type**, or type a name, email, record id or address in **Search**.",
+          "Select **View** on a row to see the whole entry: who did it, the address it came from, and what the record held before and after the change.",
+        ],
+      },
+      {
+        title: "Follow one record",
+        steps: ["Select **View** on any entry for the record and copy its id.", "Paste the id into **Search** and choose **All time** to see every entry for that record, newest first."],
+      },
+    ],
+    tips: [
+      "Passwords and other secrets are never written to the log, and long text is shortened.",
+      "Only Super Admins can open the audit log. Entries cannot be changed or deleted from here.",
+    ],
+    related: ["users/team", "settings/my-profile"],
   },
   "settings/system-notifications": {
     summary: "Choose which automatic messages the platform sends (welcome, reminders, payment, certificates and more) and on which channels.",

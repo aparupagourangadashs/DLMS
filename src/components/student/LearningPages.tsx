@@ -5,10 +5,11 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { Field, inputClass } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
+import type { PublicBanner } from "@/lib/banners";
 import { cn } from "@/lib/cn";
 import { palette } from "@/lib/colors";
 import { formatDate } from "@/lib/format";
-import { courseBanners, courses, formatDay, progress, type Course } from "@/lib/student/demo";
+import { courses, formatDay, progress, type Course } from "@/lib/student/demo";
 import type { HomeSummary, StudentCourse } from "@/lib/student/learning-types";
 import { istDate, istDateTime } from "@/lib/student/when";
 import { ArrowLeft, ArrowRight, Bell, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, GraduationCap, PartyPopper, Search } from "lucide-react";
@@ -70,12 +71,30 @@ export function EnrolledCourseCard({ course, index }: { course: StudentCourse; i
 
 export type HomeProfile = { name: string; percent: number; completed: number; total: number; missing: string[] };
 
+/** A banner's image, blurred behind itself so any shape fills the frame, linked when the banner has a destination. */
+function BannerArtwork({ banner }: { banner: PublicBanner }) {
+  const picture = (
+    <span className="relative mt-4 block aspect-[1920/574] overflow-hidden rounded-xl bg-black/20">
+      <Image src={banner.imageUrl} fill unoptimized sizes="(min-width: 1280px) 60vw, 100vw" alt="" aria-hidden="true" className="scale-110 object-cover blur-xl" />
+      <Image src={banner.imageUrl} fill unoptimized sizes="(min-width: 1280px) 60vw, 100vw" alt={banner.name} className="object-contain" />
+    </span>
+  );
+  const focus = "block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold";
+  if (!banner.href) return picture;
+  return banner.external
+    ? <a href={banner.href} target="_blank" rel="noopener noreferrer" aria-label={`${banner.name} — opens in a new tab`} className={focus}>{picture}</a>
+    : <Link href={banner.href} aria-label={banner.name} className={focus}>{picture}</Link>;
+}
+
+const bannerButton = "inline-flex min-h-11 items-center gap-2 rounded-xl bg-gold px-4 text-sm font-semibold text-foreground hover:bg-gold-soft";
+
 export function StudentHome({ profile, summary }: { profile: HomeProfile; summary: HomeSummary }) {
   const [featured, setFeatured] = useState(0);
   const live = useStudentSessions(summary.today, summary.today, { sessions: summary.todaysSessions, holidays: summary.todaysHolidays });
-  const banner = courseBanners[featured];
-  const splitBanner = banner.width / banner.height < courseBanners[0].width / courseBanners[0].height;
-  const slideCount = courseBanners.length;
+  const banners = summary.banners;
+  const slideCount = banners.length;
+  const position = Math.min(featured, Math.max(0, slideCount - 1));
+  const banner = banners[position];
   const todaySessions = live.data?.sessions ?? summary.todaysSessions;
   const todayHolidays = live.data?.holidays ?? summary.todaysHolidays;
   return (
@@ -83,34 +102,26 @@ export function StudentHome({ profile, summary }: { profile: HomeProfile; summar
       <StudentHeading title="Welcome to your learning space" description="A little study, a thoughtful question, a step forward." icon={GraduationCap} />
       <div className="mb-6 grid items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(17rem,1fr)]">
         <div className="min-w-0 space-y-5">
-          <section aria-label="Latest course launches" aria-roledescription="carousel" className="student-featured rounded-2xl p-5 sm:p-8">
-            <p className="relative text-xs font-semibold tracking-wider text-amber-200 uppercase">Featured courses &amp; latest launches · IBMV</p>
+          {banner ? <section aria-label="Latest from IBMV" aria-roledescription="carousel" className="student-featured rounded-2xl p-5 sm:p-8">
+            <p className="relative text-xs font-semibold tracking-wider text-amber-200 uppercase">Latest from IBMV</p>
             <div className="relative" aria-live="polite" aria-atomic="true">
-              <a href={banner.href} target="_blank" rel="noopener noreferrer" aria-label={`${banner.title} — opens on IBMV in a new tab`} className="relative mt-4 block aspect-[1920/574] overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">
-                {splitBanner ? <>
-                  <Image src={banner.image} fill sizes="(min-width: 1280px) 60vw, 100vw" alt="" aria-hidden="true" className="scale-110 object-cover blur-xl" />
-                  <span className="student-banner-details absolute inset-y-0 left-0 flex w-[47%] flex-col justify-center gap-1 p-2 sm:gap-2 sm:p-5">
-                    <span className="hidden text-[10px] font-semibold tracking-wider text-gold uppercase sm:block">IBMV course</span>
-                    <span className="font-serif text-sm leading-tight font-semibold text-white sm:text-2xl">Bhakti Shastri</span>
-                    <span className="text-xs font-medium text-gold sm:text-sm">English</span>
-                    <span className="hidden text-xs leading-relaxed text-white/90 sm:block">{banner.description}</span>
-                  </span>
-                  <span className="absolute inset-y-0 right-0 w-[53.15%]"><Image src={banner.image} fill sizes="(min-width: 1280px) 32vw, 54vw" loading="eager" alt={banner.alt} className="object-contain object-right" /></span>
-                </> : <Image src={banner.image} fill sizes="(min-width: 1280px) 60vw, 100vw" loading="eager" alt={banner.alt} className="object-cover object-top" />}
-              </a>
+              <BannerArtwork banner={banner} />
+              {banner.description ? <p className="mt-3 text-sm text-white/90">{banner.description}</p> : null}
             </div>
             <div className="relative mt-6 flex flex-wrap items-center justify-between gap-3">
-              <a href={banner.href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gold px-4 text-sm font-semibold text-foreground hover:bg-gold-soft">{banner.action}<ArrowRight className="size-4" aria-hidden="true" /></a>
-              <div className="flex items-center gap-2">
-                <Button aria-label="Previous featured course" onClick={() => setFeatured((featured + slideCount - 1) % slideCount)}><ChevronLeft className="size-4" aria-hidden="true" /></Button>
-                <span className="text-xs text-white/90">{featured + 1} / {slideCount}</span>
-                <Button aria-label="Next featured course" onClick={() => setFeatured((featured + 1) % slideCount)}><ChevronRight className="size-4" aria-hidden="true" /></Button>
-              </div>
+              {banner.href ? (banner.external
+                ? <a href={banner.href} target="_blank" rel="noopener noreferrer" className={bannerButton}>Learn more<span className="sr-only"> about {banner.name} (opens in a new tab)</span><ArrowRight className="size-4" aria-hidden="true" /></a>
+                : <Link href={banner.href} className={bannerButton}>Learn more<span className="sr-only"> about {banner.name}</span><ArrowRight className="size-4" aria-hidden="true" /></Link>) : <span />}
+              {slideCount > 1 ? <div className="flex items-center gap-2">
+                <Button aria-label="Previous banner" onClick={() => setFeatured((position + slideCount - 1) % slideCount)}><ChevronLeft className="size-4" aria-hidden="true" /></Button>
+                <span className="text-xs text-white/90">{position + 1} / {slideCount}</span>
+                <Button aria-label="Next banner" onClick={() => setFeatured((position + 1) % slideCount)}><ChevronRight className="size-4" aria-hidden="true" /></Button>
+              </div> : null}
             </div>
-            <div className="relative mt-4 flex flex-wrap gap-1" role="group" aria-label="Choose a course launch">
-              {Array.from({ length: slideCount }, (_, index) => <button key={index} type="button" aria-label={`Show course launch ${index + 1}`} aria-pressed={featured === index} onClick={() => setFeatured(index)} className="flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-gold"><span className={cn("h-2 rounded-full transition-all", featured === index ? "w-6 bg-gold" : "w-2 bg-white/50")} aria-hidden="true" /></button>)}
-            </div>
-          </section>
+            {slideCount > 1 ? <div className="relative mt-4 flex flex-wrap gap-1" role="group" aria-label="Choose a banner">
+              {banners.map((item, index) => <button key={item.id} type="button" aria-label={`Show banner ${index + 1}: ${item.name}`} aria-pressed={position === index} onClick={() => setFeatured(index)} className="flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-gold"><span className={cn("h-2 rounded-full transition-all", position === index ? "w-6 bg-gold" : "w-2 bg-white/50")} aria-hidden="true" /></button>)}
+            </div> : null}
+          </section> : null}
           <StudentPanel title="Today's Classes">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted">{formatDay(summary.today)} · Asia/Kolkata (IST)</p><Link href="/student/calendar" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-accent"><CalendarDays className="size-4" aria-hidden="true" />Calendar</Link></div>
             {todayHolidays.map((holiday) => <p key={holiday.reason} className="mb-4 flex items-center gap-2 rounded-xl border border-gold/40 bg-gold-soft px-3 py-2 text-sm"><PartyPopper className="size-4 shrink-0 text-gold-strong" aria-hidden="true" />Holiday today: {holiday.reason}</p>)}

@@ -59,21 +59,6 @@ export function progress(course: Course) {
   return Math.round((course.completed / course.lessons.length) * 100);
 }
 
-export const courseBanners = [
-  {
-    title: "Bhakti Vedanta · Module 3", image: "/student-course-launch.jpg", width: 1920, height: 574,
-    alt: "Bhakti Vedanta Module 3. 2 November 2026 to 12 May 2027, 7–9 PM IST, Monday–Thursday.",
-    description: "2 Nov 2026 – 12 May 2027 · 7–9 PM IST · Monday–Thursday",
-    href: "https://www.ibmedu.org/course-details/BhaktiVedantaModule-3-115238", action: "View course on IBMV",
-  },
-  {
-    title: "Bhakti Shastri (English)", image: "/student-bhakti-shastri.jpg", width: 1280, height: 720,
-    alt: "Bhakti Shastri (English) course artwork depicting Krishna teaching Arjuna.",
-    description: "Explore Bhakti Shastri study opportunities through the official IBMV website.",
-    href: "https://www.ibmedu.org/", action: "Browse IBMV courses",
-  },
-];
-
 export function studentToday(now: Date) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }

@@ -23,6 +23,7 @@ const pageResource: Record<string, Resource | null> = {
   "analytics/marketing-analytics": "reports", "analytics/trainer": "reports", "analytics/notification-logs": "reports",
   "analytics/community-analytics": "reports", "analytics/more": "reports", "analytics/advanced-analytics": "reports",
   "settings/my-profile": null, "settings/sub-organizations": "branches", "settings/system-notifications": "settings",
+  "settings/audit-log": "audit",
   "settings/categories": "categories", "settings/custom-fields": "customFields", "settings/grading-system": "grading",
   "settings/miscellaneous-fees": "fees", "settings/international-selling": "fees", "settings/learner-experience": "settings",
   "settings/utility-wallet": "wallet",

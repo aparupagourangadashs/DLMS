@@ -11,7 +11,8 @@ export type Column =
   | { key: string; label: string; type: "currency" | "number" | "percent"; sortable?: boolean; hidden?: boolean }
   | { key: string; label: string; type: "progress"; sortable?: boolean; hidden?: boolean }
   | { key: string; label: string; type: "tags"; hidden?: boolean }
-  | { key: string; label: string; type: "thumbnail"; hidden?: boolean };
+  | { key: string; label: string; type: "thumbnail"; hidden?: boolean }
+  | { key: string; label: string; type: "link"; hidden?: boolean };
 
 export type FormField = {
   key: string;
@@ -30,9 +31,11 @@ export type FormField = {
   itemFields?: FormField[];
   minItems?: number;
   format?: "markdown";
+  /** A file field that uploads when a file is chosen: "asset" follows the form's Asset type, or name a fixed type such as "Image". */
+  upload?: string;
 };
 
-export type EditorKind = "event" | "batch" | "feedback" | "asset" | "certificate";
+export type EditorKind = "event" | "batch" | "feedback" | "certificate";
 
 export type SummaryCard = { label: string; value: string; hint?: string; tone?: Tone };
 

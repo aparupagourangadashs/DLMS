@@ -6,7 +6,7 @@ import { isVisible, readItems, validateEditor, type EditorValues } from "@/lib/a
 import type { CellValue, EditorKind, FormField } from "@/lib/admin/types";
 import { cn } from "@/lib/cn";
 import { cardCycle, palette } from "@/lib/colors";
-import { ArrowLeft, ArrowRight, Award, CalendarDays, Check, ClipboardList, Eye, FolderOpen, Info, Save, Settings2, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, CalendarDays, Check, ClipboardList, Eye, Info, Save, Settings2, Sparkles, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { EditorFields } from "./EditorFields";
 
@@ -14,6 +14,8 @@ type Props = {
   open: boolean; title: string; description?: string; fields: FormField[];
   initial?: Record<string, CellValue>; submitLabel: string; onClose: () => void;
   onSubmit: (values: Record<string, CellValue>) => void | Promise<void | Record<string, string>>; steps?: string[]; editor?: EditorKind;
+  /** The form saves to the database, so the local-demo notice is not shown. */
+  live?: boolean;
 };
 
 export function FormDrawer(props: Props) {
@@ -22,17 +24,12 @@ export function FormDrawer(props: Props) {
   </Modal>;
 }
 
-function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, editor }: Props) {
+function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, editor, live }: Props) {
   const [values, setValues] = useState<EditorValues>(() => {
     const result: EditorValues = {};
     for (const f of fields) {
       const raw = initial?.[f.key];
       result[f.key] = raw === undefined || raw === null ? f.defaultValue ?? "" : Array.isArray(raw) ? raw.join(f.type === "multiselect" ? "\n" : ", ") : String(raw);
-    }
-    if (editor === "event" && !result.days && initial?.date) {
-      const start = String(initial.date);
-      const end = new Date(Date.parse(start) + 3600000);
-      result.days = JSON.stringify([{ start, end: Number.isFinite(end.getTime()) ? new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "" }]);
     }
     return result;
   });
@@ -41,13 +38,14 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
   const [submitting, setSubmitting] = useState(false);
   const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
   const heading = useRef<HTMLParagraphElement>(null);
-  const EditorIcon = editor === "event" ? CalendarDays : editor === "certificate" ? Award : editor === "asset" ? FolderOpen : ClipboardList;
+  const EditorIcon = editor === "event" ? CalendarDays : editor === "certificate" ? Award : ClipboardList;
   const sectionColor = palette[cardCycle[step % cardCycle.length]];
   const stepIcons = [EditorIcon, Settings2, Sparkles];
   const set = (key: string, value: string) => {
     setValues((prev) => {
       const next = { ...prev, [key]: value };
-      if (editor === "asset" && key === "type" && prev.type !== value) next.localFile = "";
+      // An uploaded file only fits the type it was chosen for.
+      if (key === "type" && prev.type !== value) for (const f of fields) if (f.type === "file" && f.upload === "asset") next[f.key] = "";
       if (editor === "feedback" && key === "template" && prev.template !== value && value !== "Blank") {
         next.questions = JSON.stringify(value === "Session essentials"
           ? [{ prompt: "How useful was this session?", type: "Rating", required: "Yes", options: "" }, { prompt: "What could we improve?", type: "Text", required: "No", options: "" }]
@@ -78,15 +76,7 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
       const value = isVisible(f, values) ? (values[f.key] ?? "").trim() : "";
       output[f.key] = f.type === "number" ? value === "" ? null : Number(value) : value;
     }
-    if (editor === "event") { output.date = readItems(values.days)[0]?.start ?? ""; output.venue = values.venue || values.platform; }
     if (editor === "batch") { output.duration = `${values.startDate} – ${values.endDate}`; output.module = values.modules.split("\n").join(", "); }
-    if (editor === "asset") {
-      let file: { name?: string; size?: number } = {};
-      try { file = JSON.parse(values.localFile || "{}"); } catch { /* No retained local file. */ }
-      output.fileName = file.name ?? values.link;
-      output.sizeLabel = file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB (local)` : "Link only";
-      output.size = (file.size ?? 0) / 1024 / 1024;
-    }
     if (editor === "certificate") {
       output.validity = values.expiry === "After days" ? `${values.expiryDays} days` : values.expiry === "Fixed date" ? `Until ${values.expiryDate}` : "Lifetime";
       output.rule = values.automation === "Manual" ? "Manual issuance (not connected)" : `${values.automation}: ${values.automation === "Course completion" ? values.course : values.exam}; threshold ${values.threshold}% (configuration only)`;
@@ -103,7 +93,7 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
       }
     }).finally(() => setSubmitting(false));
   }}>
-    {editor ? <div className="flex items-start gap-2 rounded-xl border border-border bg-surface-muted p-3 text-xs leading-relaxed text-muted"><Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden="true" /><p>Local demo only. Changes last until this page reloads. No files are uploaded, payments collected, certificates issued or notifications sent.</p></div> : null}
+    {editor && !live ? <div className="flex items-start gap-2 rounded-xl border border-border bg-surface-muted p-3 text-xs leading-relaxed text-muted"><Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden="true" /><p>Local demo only. Changes last until this page reloads. No files are uploaded, payments collected, certificates issued or notifications sent.</p></div> : null}
     {steps ? <section aria-label="Editor progress" className="space-y-3">
       <ol className="grid gap-2 sm:grid-cols-3">
         {steps.map((label, index) => {
@@ -145,7 +135,7 @@ function FormBody({ fields, initial, submitLabel, onClose, onSubmit, steps, edit
     <div className="sticky bottom-0 -mx-5 mt-2 flex flex-wrap justify-end gap-2 border-t border-border bg-surface px-5 pt-3 pb-1">
       <Button variant="soft-danger" onClick={onClose}><X className="size-4" aria-hidden="true" />Cancel</Button>
       {step > 0 ? <Button variant="soft-info" onClick={() => move(step - 1)}><ArrowLeft className="size-4" aria-hidden="true" />Back</Button> : null}
-      <Button type="submit" variant={last ? "success" : "gold"} disabled={submitting}>{last ? <Save className="size-4" aria-hidden="true" /> : <ArrowRight className="size-4" aria-hidden="true" />}{last ? editor ? "Save locally" : submitLabel : "Next"}</Button>
+      <Button type="submit" variant={last ? "success" : "gold"} disabled={submitting}>{last ? <Save className="size-4" aria-hidden="true" /> : <ArrowRight className="size-4" aria-hidden="true" />}{last ? editor && !live ? "Save locally" : submitLabel : "Next"}</Button>
     </div>
   </form>;
 }

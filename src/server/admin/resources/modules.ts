@@ -8,22 +8,25 @@ import { prisma } from "@/server/db";
 import { Conflict, NotFound, ValidationError } from "@/server/http/errors";
 import type { ListQuery } from "@/server/http/list-query";
 import { parseWith } from "@/server/http/validate";
+import { fileAssetChoices } from "@/server/services/assets";
 import { z } from "zod";
 import { isoDay, optionalInt, parseRepeat, statusFromLabel, statusLabels } from "./helpers";
 
-const typeByLabel = { Text: "TEXT", Video: "VIDEO", Link: "LINK" } as const satisfies Record<string, ContentType>;
-const labelByType: Record<ContentType, string> = { TEXT: "Text", VIDEO: "Video", LINK: "Link" };
+const typeByLabel = { Text: "TEXT", Video: "VIDEO", Link: "LINK", File: "FILE" } as const satisfies Record<string, ContentType>;
+const labelByType: Record<ContentType, string> = { TEXT: "Text", VIDEO: "Video", LINK: "Link", FILE: "File" };
 
 const lessonSchema = z
     .object({
         id: z.string().default(""),
         title: z.string().trim().min(1, "Enter the lesson title.").max(300),
-        type: z.enum(["Text", "Video", "Link"], { error: "Choose Text, Video or Link." }),
+        type: z.enum(["Text", "Video", "Link", "File"], { error: "Choose Text, Video, Link or File." }),
         minutes: optionalInt(1, 600).default(null),
         content: z.string().max(20_000, "Keep the lesson text under 20,000 characters.").default(""),
         url: z.string().trim().max(500).default(""),
+        asset: z.string().trim().default(""),
     })
     .superRefine((lesson, ctx) => {
+        if (lesson.type === "File" && !lesson.asset) ctx.addIssue({ code: "custom", path: ["asset"], message: "Choose a file from the Asset Library." });
         if (lesson.type === "Text" && !lesson.content.trim()) ctx.addIssue({ code: "custom", path: ["content"], message: "Write the lesson text." });
         if (lesson.type === "Video" && !youtubeId(lesson.url)) ctx.addIssue({ code: "custom", path: ["url"], message: "Use a YouTube address such as https://www.youtube.com/watch?v=… (choose Link for other sites)." });
         if (lesson.type === "Link" && !/^https:\/\/[^\s]+$/.test(lesson.url)) ctx.addIssue({ code: "custom", path: ["url"], message: "Enter a full https:// address." });
@@ -40,9 +43,9 @@ const schema = z.object({
 const include = { _count: { select: { courses: true } } } satisfies Prisma.ModuleInclude;
 type ModuleRow = Prisma.ModuleGetPayload<{ include: typeof include }>;
 
-type Summary = { total: number; videos: number; links: number };
+type Summary = { total: number; videos: number; links: number; files: number };
 
-export function toModuleRow(record: ModuleRow, summary: Summary, lessons?: ModuleContent[]): Row {
+export function toModuleRow(record: ModuleRow, summary: Summary, lessons?: ModuleContent[], assetLabels = new Map<string, string>()): Row {
     return {
         id: record.id,
         name: record.name,
@@ -52,13 +55,13 @@ export function toModuleRow(record: ModuleRow, summary: Summary, lessons?: Modul
         usedIn: usedInLabel(record._count.courses),
         updatedOn: isoDay(record.updatedAt),
         ...(lessons
-            ? { lessons: JSON.stringify(lessons.map((l) => ({ id: l.id, title: l.title, type: labelByType[l.type], minutes: l.minutes === null ? "" : String(l.minutes), content: l.body ?? "", url: l.url ?? "" }))) }
+            ? { lessons: JSON.stringify(lessons.map((l) => ({ id: l.id, title: l.title, type: labelByType[l.type], minutes: l.minutes === null ? "" : String(l.minutes), content: l.body ?? "", url: l.url ?? "", asset: l.assetId ? assetLabels.get(l.assetId) ?? "" : "" }))) }
             : {}),
     };
 }
 
 async function summaries(moduleIds: string[]): Promise<Map<string, Summary>> {
-    const result = new Map<string, Summary>(moduleIds.map((id) => [id, { total: 0, videos: 0, links: 0 }]));
+    const result = new Map<string, Summary>(moduleIds.map((id) => [id, { total: 0, videos: 0, links: 0, files: 0 }]));
     if (moduleIds.length === 0) return result;
     const grouped = await prisma.moduleContent.groupBy({ by: ["moduleId", "type"], where: { moduleId: { in: moduleIds } }, _count: { _all: true } });
     for (const g of grouped) {
@@ -67,6 +70,7 @@ async function summaries(moduleIds: string[]): Promise<Map<string, Summary>> {
         entry.total += g._count._all;
         if (g.type === "VIDEO") entry.videos += g._count._all;
         if (g.type === "LINK") entry.links += g._count._all;
+        if (g.type === "FILE") entry.files += g._count._all;
     }
     return result;
 }
@@ -99,7 +103,9 @@ async function load(id: string) {
 
 async function full(id: string): Promise<Row> {
     const [record, lessons] = await Promise.all([load(id), prisma.moduleContent.findMany({ where: { moduleId: id }, orderBy: { sortOrder: "asc" } })]);
-    return toModuleRow(record, { total: lessons.length, videos: lessons.filter((l) => l.type === "VIDEO").length, links: lessons.filter((l) => l.type === "LINK").length }, lessons);
+    const choices = await fileAssetChoices(lessons.flatMap((l) => (l.assetId ? [l.assetId] : [])));
+    const count = (type: ContentType) => lessons.filter((l) => l.type === type).length;
+    return toModuleRow(record, { total: lessons.length, videos: count("VIDEO"), links: count("LINK"), files: count("FILE") }, lessons, new Map(choices.map((c) => [c.id, c.label])));
 }
 
 async function assertNameFree(name: string, excludeId?: string) {
@@ -107,26 +113,44 @@ async function assertNameFree(name: string, excludeId?: string) {
     if (taken) throw new Conflict("Another module already has this name.", { name: "Already in use." });
 }
 
-function resolve(input: z.output<typeof schema>) {
+/** The module's form, checked: its status, its lessons, and the asset each File lesson names. */
+async function resolve(input: z.output<typeof schema>, moduleId?: string) {
     const status = statusFromLabel(input.status);
     if (!status) throw new ValidationError({ status: "Choose Published, Draft or Archived." });
-    return { status, lessons: parseRepeat(input.lessons, lessonSchema, 100, "lessons") };
+    const lessons = parseRepeat(input.lessons, lessonSchema, 100, "lessons");
+    const assetIds = new Map<string, string>();
+    if (lessons.some((l) => l.type === "File")) {
+        const current = moduleId ? await prisma.moduleContent.findMany({ where: { moduleId, assetId: { not: null } }, select: { assetId: true } }) : [];
+        for (const choice of await fileAssetChoices(current.flatMap((c) => (c.assetId ? [c.assetId] : [])))) assetIds.set(choice.label, choice.id);
+        lessons.forEach((lesson, index) => {
+            if (lesson.type === "File" && !assetIds.has(lesson.asset)) throw new ValidationError({ lessons: `Item ${index + 1}: This file is not in the Asset Library. Choose one from the list.` });
+        });
+    }
+    return { status, lessons, assetIds };
 }
 
-const lessonData = (lesson: LessonInput, sortOrder: number) => {
+const lessonData = (lesson: LessonInput, sortOrder: number, assetIds: Map<string, string>) => {
     const type = typeByLabel[lesson.type];
-    return { type, title: lesson.title, minutes: lesson.minutes, body: type === "TEXT" ? lesson.content : null, url: type === "TEXT" ? null : lesson.url, sortOrder };
+    return {
+        type,
+        title: lesson.title,
+        minutes: lesson.minutes,
+        body: type === "TEXT" ? lesson.content : null,
+        url: type === "TEXT" || type === "FILE" ? null : lesson.url,
+        assetId: type === "FILE" ? assetIds.get(lesson.asset) ?? null : null,
+        sortOrder,
+    };
 };
 
 /** Lessons keep their id when they are edited, so learners' progress survives; lessons left out of the list are removed. */
-async function saveLessons(tx: Prisma.TransactionClient, moduleId: string, lessons: LessonInput[]) {
+async function saveLessons(tx: Prisma.TransactionClient, moduleId: string, lessons: LessonInput[], assetIds: Map<string, string>) {
     const existing = new Set((await tx.moduleContent.findMany({ where: { moduleId }, select: { id: true } })).map((l) => l.id));
     const kept = new Set<string>();
     for (const [index, lesson] of lessons.entries()) {
         if (lesson.id && existing.has(lesson.id) && !kept.has(lesson.id)) {
-            await tx.moduleContent.update({ where: { id: lesson.id }, data: lessonData(lesson, index) });
+            await tx.moduleContent.update({ where: { id: lesson.id }, data: lessonData(lesson, index, assetIds) });
             kept.add(lesson.id);
-        } else await tx.moduleContent.create({ data: { moduleId, ...lessonData(lesson, index) } });
+        } else await tx.moduleContent.create({ data: { moduleId, ...lessonData(lesson, index, assetIds) } });
     }
     const dropped = [...existing].filter((id) => !kept.has(id));
     if (dropped.length) await tx.moduleContent.deleteMany({ where: { id: { in: dropped } } });
@@ -134,11 +158,11 @@ async function saveLessons(tx: Prisma.TransactionClient, moduleId: string, lesso
 
 async function create(input: unknown, ctx: ResourceContext): Promise<Row> {
     const data = parseWith(schema, input);
-    const { status, lessons } = resolve(data);
+    const { status, lessons, assetIds } = await resolve(data);
     await assertNameFree(data.name);
     const id = await prisma.$transaction(async (tx) => {
         const created = await tx.module.create({ data: { name: data.name, description: data.description || null, status } });
-        await saveLessons(tx, created.id, lessons);
+        await saveLessons(tx, created.id, lessons, assetIds);
         return created.id;
     });
     await writeAudit({ actorId: ctx.user.id, action: "module.create", entity: "Module", entityId: id, after: { name: data.name, status, lessons: lessons.length }, ip: ctx.ip });
@@ -148,11 +172,11 @@ async function create(input: unknown, ctx: ResourceContext): Promise<Row> {
 async function update(id: string, input: unknown, ctx: ResourceContext): Promise<Row> {
     const existing = await load(id);
     const data = parseWith(schema, input);
-    const { status, lessons } = resolve(data);
+    const { status, lessons, assetIds } = await resolve(data, id);
     await assertNameFree(data.name, id);
     await prisma.$transaction(async (tx) => {
         await tx.module.update({ where: { id }, data: { name: data.name, description: data.description || null, status } });
-        await saveLessons(tx, id, lessons);
+        await saveLessons(tx, id, lessons, assetIds);
     });
     const action = existing.status !== status ? (status === "PUBLISHED" ? "module.publish" : status === "ARCHIVED" ? "module.archive" : "module.unpublish") : "module.update";
     await writeAudit({ actorId: ctx.user.id, action, entity: "Module", entityId: id, before: { name: existing.name, status: existing.status }, after: { name: data.name, status, lessons: lessons.length }, ip: ctx.ip });
@@ -176,7 +200,7 @@ async function duplicate(id: string, ctx: ResourceContext): Promise<Row> {
             name,
             description: source.description,
             status: "DRAFT",
-            contents: { create: lessons.map((l) => ({ type: l.type, title: l.title, minutes: l.minutes, body: l.body, url: l.url, sortOrder: l.sortOrder })) },
+            contents: { create: lessons.map((l) => ({ type: l.type, title: l.title, minutes: l.minutes, body: l.body, url: l.url, assetId: l.assetId, sortOrder: l.sortOrder })) },
         },
     });
     await writeAudit({ actorId: ctx.user.id, action: "module.create", entity: "Module", entityId: copy.id, after: { duplicatedFrom: id }, ip: ctx.ip });
@@ -197,6 +221,7 @@ export const moduleResource: ResourceDef = {
     sortableKeys: ["name", "updatedOn"],
     list,
     get: (id) => full(id),
+    options: async () => ({ "lessons.asset": (await fileAssetChoices()).map((choice) => choice.label) }),
     create,
     update,
     remove,

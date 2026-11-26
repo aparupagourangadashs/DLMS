@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn";
 import { formatDate, formatTime } from "@/lib/format";
 import { toIst } from "@/lib/ist";
 import type { StudentSession } from "@/lib/student/learning-types";
-import { Clock3, ExternalLink } from "lucide-react";
+import { CirclePlay, Clock3, ExternalLink } from "lucide-react";
 
 /** IST date, start time and length of a session, from its stored instants. */
 export function sessionWhen(session: Pick<StudentSession, "startsAt" | "endsAt">) {
@@ -16,6 +16,7 @@ export function sessionWhen(session: Pick<StudentSession, "startsAt" | "endsAt">
 export function StudentSessionItem({ session, showDate }: { session: StudentSession; showDate?: boolean }) {
     const when = sessionWhen(session);
     const cancelled = session.status === "Cancelled";
+    const recordingLabel = (title: string, index: number) => (title !== session.title ? `Watch ${title}` : session.recordings.length > 1 ? `Watch recording ${index + 1}` : "Watch recording");
     return (
         <li className={cn("rounded-xl border p-4", cancelled ? "border-red-500/25 bg-red-500/5" : "border-teal-500/20 bg-teal-500/5")}>
             {showDate ? <p className="text-xs font-semibold text-accent">{formatDate(when.date)}</p> : null}
@@ -44,6 +45,25 @@ export function StudentSessionItem({ session, showDate }: { session: StudentSess
                     <ExternalLink className="size-4" aria-hidden="true" />
                     <span className="sr-only">(opens in a new tab)</span>
                 </a>
+            ) : null}
+            {session.recordings.length > 0 ? (
+                <ul aria-label="Recordings" className="mt-3 flex flex-wrap gap-2">
+                    {session.recordings.map((recording, index) => (
+                        <li key={recording.id}>
+                            <a
+                                href={recording.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-accent/40 px-4 text-sm font-semibold text-accent hover:bg-accent/5"
+                            >
+                                <CirclePlay className="size-4" aria-hidden="true" />
+                                {recordingLabel(recording.title, index)}
+                                <ExternalLink className="size-4" aria-hidden="true" />
+                                <span className="sr-only">(opens in a new tab)</span>
+                            </a>
+                        </li>
+                    ))}
+                </ul>
             ) : null}
         </li>
     );

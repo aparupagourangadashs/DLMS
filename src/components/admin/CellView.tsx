@@ -1,9 +1,9 @@
-import { BookOpen, CalendarDays, ChartNoAxesCombined, CircleCheck, CircleDashed, CircleDot, Clock3, FileText, Hash, IndianRupee, Layers3, Mail, Tags, UserRound, Users } from "lucide-react";
+import { Badge, toneFor } from "@/components/ui/Badge";
 import type { CellValue, Column, Row } from "@/lib/admin/types";
-import { formatDate, formatDateTime, formatINR, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { cardCycle, palette } from "@/lib/colors";
-import { Badge, toneFor } from "@/components/ui/Badge";
+import { formatDate, formatDateTime, formatINR, formatNumber } from "@/lib/format";
+import { BookOpen, CalendarDays, ChartNoAxesCombined, CircleCheck, CircleDashed, CircleDot, Clock3, ExternalLink, FileText, Hash, IndianRupee, Layers3, Mail, Tags, UserRound, Users } from "lucide-react";
 
 export const columnIcons = {
   date: CalendarDays, currency: IndianRupee, progress: ChartNoAxesCombined,
@@ -107,7 +107,23 @@ export function CellView({ column, row }: { column: Column; row: Row }) {
       );
     }
     case "thumbnail":
-      return <div className={cn("h-10 w-16 rounded-md bg-linear-to-br", thumbClass[String(value)] ?? thumbClass.accent)} aria-hidden="true" />;
+      // A path means a real image (a banner); otherwise the value picks a colour tile.
+      return String(value).startsWith("/") ? (
+        // eslint-disable-next-line @next/next/no-img-element -- A small preview of an uploaded asset; the image optimizer is not needed.
+        <img src={String(value)} alt="" loading="lazy" className="h-10 w-16 rounded-md border border-border object-cover" />
+      ) : (
+        <div className={cn("h-10 w-16 rounded-md bg-linear-to-br", thumbClass[String(value)] ?? thumbClass.accent)} aria-hidden="true" />
+      );
+    case "link": {
+      const href = String(value);
+      // Only https addresses become links; anything else is shown as plain text.
+      if (!href.startsWith("https://")) return <span className="block min-w-28 max-w-72">{href}</span>;
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-accent hover:underline">
+          Open<ExternalLink className="size-3.5" aria-hidden="true" /><span className="sr-only">{column.label} (opens in a new tab)</span>
+        </a>
+      );
+    }
     case "currency":
     case "number":
     case "percent":

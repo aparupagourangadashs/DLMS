@@ -42,6 +42,40 @@ export function useResourceList<Row>(url: string, params?: QueryParams, options:
   return { rows: state.rows, meta: state.meta, status, error: settled ? state.error : undefined, refetch } as const;
 }
 
+type QueryState<T> = { key: string; data?: T; meta?: ListMeta; error?: ApiError };
+
+/** Loads any GET endpoint. `status` tells loading, error and ready apart, and the last data stays while a new query loads. */
+export function useApiQuery<T>(url: string, params?: QueryParams, options: { enabled?: boolean } = {}) {
+  const enabled = options.enabled ?? true;
+  const query = buildQuery(params);
+  const [nonce, setNonce] = useState(0);
+  const key = `${url}${query}#${nonce}`;
+  const [state, setState] = useState<QueryState<T>>({ key: "" });
+  const [last, setLast] = useState<{ data?: T; meta?: ListMeta }>({});
+
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    apiClient
+      .get<T>(`${url}${query}`, undefined, { signal: controller.signal })
+      .then((result) => {
+        setState({ key, data: result.data, meta: result.meta });
+        setLast({ data: result.data, meta: result.meta });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setState({ key, error: toApiError(error) });
+      });
+    return () => controller.abort();
+  }, [enabled, url, query, key]);
+
+  const settled = state.key === key;
+  const status = !enabled ? "idle" : !settled ? "loading" : state.error ? "error" : "ready";
+  const refetch = useCallback(() => setNonce((n) => n + 1), []);
+
+  return { data: settled && !state.error ? state.data : last.data, meta: settled && !state.error ? state.meta : last.meta, status, error: settled ? state.error : undefined, refetch } as const;
+}
+
 export type MutationOptions<Out> = {
   successMessage?: string;
   onSuccess?: (result: Out) => void;

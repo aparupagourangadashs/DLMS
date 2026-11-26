@@ -1,5 +1,6 @@
 import { formatDate } from "@/lib/format";
 import { announcementTags } from "./announcements";
+import { assetTypeLabels, fileAssetTypes, linkAssetTypes } from "./assets";
 import {
   DEMO_TODAY,
   addDays,
@@ -11,7 +12,8 @@ import {
   instructors,
   people,
 } from "./demo-data";
-import { assetForm, batchForm, certificateForm, eventForm, feedbackForm } from "./editor-definitions";
+import { batchForm, certificateForm, eventForm, feedbackForm } from "./editor-definitions";
+import { recordingStatuses } from "./recordings";
 import type { FormField, ListConfig, Row } from "./types";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -21,37 +23,6 @@ function rows<T extends Omit<Row, "id">>(count: number, make: (i: number) => T):
 }
 
 const configs: Record<string, () => ListConfig> = {
-  "products/events": () => {
-    const { pick, int } = helpers(11);
-    const names = ["Kartik Deepotsav Workshop", "Gita Jayanti Quiz", "Youth Bhakti Retreat", "Sanskrit Shloka Contest", "Parents' Satsang", "Janmashtami Online Festival", "Book Distribution Training", "Kirtan Evening"];
-    return {
-      title: "Events",
-      description: "Create and manage events, their visibility and status.",
-      entityName: "event",
-      primaryAction: "Create Event",
-      showIndex: true,
-      searchKeys: ["name"],
-      searchPlaceholder: "Search events",
-      filters: [{ key: "visibility", label: "Visibility", options: ["Public", "Private", "Unlisted"] }],
-      tabs: { key: "status", items: [{ label: "All" }, { label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }] },
-      columns: [
-        { key: "name", label: "Event name", type: "primary", subKey: "venue", sortable: true },
-        { key: "date", label: "Event date", type: "datetime", sortable: true },
-        { key: "visibility", label: "Visibility", type: "badge", tones: { Public: "info", Private: "neutral", Unlisted: "gold" } },
-        { key: "status", label: "Status", type: "badge" },
-      ],
-      rows: rows(names.length, (i) => ({
-        name: names[i],
-        venue: pick(["Online (Zoom)", "Online (YouTube Live)", "IBMV Campus, Mumbai", "Hybrid"]),
-        date: at(addDays(DEMO_TODAY, int(-20, 45)), pick(["10:00", "17:30", "19:00"])),
-        visibility: pick(["Public", "Public", "Private", "Unlisted"]),
-        status: i % 4 === 3 ? "Inactive" : "Active",
-      })),
-      form: eventForm,
-      rowActions: ["edit", "duplicate", "delete"],
-    };
-  },
-
   "learning/batches": () => {
     const { pick, int } = helpers(21);
     return {
@@ -209,58 +180,6 @@ const configs: Record<string, () => ListConfig> = {
     };
   },
 
-  "learning/asset-library": (): ListConfig => {
-    const { int, pick } = helpers(71);
-    const types = ["Video", "Audio", "PDF", "YouTube", "Image", "Doc", "Sheet", "Slide", "Text/HTML", "Zip", "SCORM Zip", "Link/Embed", "Epub"];
-    const data = rows(24, (i) => {
-      const type = pick(["Video", "Video", "PDF", "PDF", "Audio", "YouTube", "Image", "Slide", "Doc"]);
-      const size = type === "Video" ? int(180, 1400) : type === "YouTube" ? 0 : int(1, 40);
-      return {
-        name: `${pick(["Lecture", "Notes", "Recitation", "Worksheet", "Slides", "Reading"])} ${i + 1} – ${pick(courses)}`,
-        fileName: type === "YouTube" ? "youtube.com/watch" : `asset_${1000 + i}.${{ Video: "mp4", PDF: "pdf", Audio: "mp3", Image: "jpg", Slide: "pptx", Doc: "docx" }[type] ?? "bin"}`,
-        uploadedBy: pick(instructors),
-        uploadedOn: addDays(DEMO_TODAY, -int(1, 200)),
-        size,
-        sizeLabel: size === 0 ? "—" : `${size} MB`,
-        type,
-        usage: i % 6 === 5 ? "Unused" : "Used",
-        downloads: int(0, 900),
-      };
-    });
-    return {
-      title: "Asset Library",
-      description: "All learning assets in one place, with usage and storage at a glance.",
-      entityName: "asset",
-      primaryAction: "Add Asset",
-      showIndex: true,
-      searchKeys: ["name", "fileName"],
-      searchPlaceholder: "Search assets",
-      summary: [
-        { label: "Total assets", value: String(data.length) },
-        { label: "Storage used", value: "7.8 GB", hint: "of 50 GB" },
-        { label: "Unused assets", value: String(data.filter((r) => r.usage === "Unused").length), tone: "warning" },
-        { label: "Storage saved", value: "1.2 GB", hint: "via de-duplication", tone: "success" },
-        { label: "Largest asset", value: "1.4 GB", hint: "Lecture video" },
-      ],
-      filters: [
-        { key: "usage", label: "Usage", options: ["Used", "Unused"] },
-        { key: "type", label: "Asset type", options: types },
-      ],
-      columns: [
-        { key: "name", label: "Asset name", type: "primary", subKey: "fileName" },
-        { key: "uploadedBy", label: "Uploaded by" },
-        { key: "uploadedOn", label: "Uploaded on", type: "date", sortable: true },
-        { key: "sizeLabel", label: "Size" },
-        { key: "type", label: "Asset type", type: "badge", tones: { Video: "accent", PDF: "danger", Audio: "info", YouTube: "danger", Image: "gold" } },
-        { key: "usage", label: "Usage", type: "badge", tones: { Used: "success", Unused: "warning" } },
-        { key: "downloads", label: "Downloads", type: "number", sortable: true },
-      ],
-      rows: data,
-      form: assetForm,
-      rowActions: ["edit", "delete"],
-    };
-  },
-
   "learning/assessments": () => {
     const { int, pick } = helpers(81);
     const names = ["Gita Chapter 1–3 Assignment", "Sanskrit Writing Practice", "Bhakti Shastri Mid-term", "Kids Story Drawing", "Canto 1 Essay", "Weekly Verse Recitation", "Final Project – Parenting"];
@@ -351,40 +270,6 @@ const configs: Record<string, () => ListConfig> = {
         };
       }),
       rowActions: ["review"],
-    };
-  },
-
-  "learning/session-recordings": () => {
-    const { int, pick } = helpers(101);
-    return {
-      title: "Session Recordings",
-      description: "Recordings of live classes, grouped by batch.",
-      entityName: "recording",
-      selectable: true,
-      showIndex: true,
-      searchKeys: ["name"],
-      searchPlaceholder: "Search recordings",
-      dateFilterKey: "date",
-      tabs: { key: "batchStatus", items: [{ label: "Active Batches", value: "Active" }, { label: "Completed Batches", value: "Completed" }, { label: "Archived Batches", value: "Archived" }] },
-      filters: [{ key: "batch", label: "Batch", options: batches.map((b) => b.name) }],
-      columns: [
-        { key: "name", label: "Class name", type: "primary", subKey: "date" },
-        { key: "batch", label: "Batches" },
-        { key: "instructor", label: "Instructor" },
-        { key: "status", label: "Status", type: "badge", tones: { Available: "success", Processing: "warning", Failed: "danger" } },
-      ],
-      rows: rows(22, (i) => {
-        const b = pick(batches);
-        return {
-          name: `${b.course.split(" – ")[0]} – Class ${int(1, 30)}`,
-          date: addDays(DEMO_TODAY, -int(0, 60)),
-          batch: b.name,
-          instructor: b.instructor,
-          status: i % 9 === 8 ? "Processing" : "Available",
-          batchStatus: i % 6 === 5 ? "Completed" : i % 11 === 10 ? "Archived" : "Active",
-        };
-      }),
-      rowActions: ["view", "delete"],
     };
   },
 
@@ -592,72 +477,6 @@ const configs: Record<string, () => ListConfig> = {
       rowActions: ["edit", "duplicate", "delete"],
     };
   },
-
-  "marketing/blogs": () => {
-    const { int, pick } = helpers(161);
-    const names = ["Why study the Bhagavad Gita today", "5 tips for learning Sanskrit", "Raising children with values", "What is Bhakti Yoga?", "Kartik month explained", "Student story: from beginner to Bhakti Shastri", "How our live classes work"];
-    return {
-      title: "Blogs",
-      description: "Articles published on the public website.",
-      entityName: "blog",
-      primaryAction: "Create New Blog",
-      showIndex: true,
-      searchKeys: ["name"],
-      searchPlaceholder: "Search blogs",
-      dateFilterKey: "createdOn",
-      tabs: { key: "_all", items: [{ label: "All" }] },
-      filters: [{ key: "status", label: "Visibility", options: ["Published", "Draft", "Hidden"] }],
-      columns: [
-        { key: "name", label: "Blog name", type: "primary", subKey: "author" },
-        { key: "status", label: "Status", type: "badge" },
-        { key: "views", label: "Views", type: "number", sortable: true },
-        { key: "createdOn", label: "Created on", type: "date", sortable: true },
-      ],
-      rows: rows(names.length, (i) => {
-        const status = pick(["Published", "Published", "Draft", "Hidden"]);
-        return { name: names[i], author: pick(instructors), status, views: status === "Published" ? int(80, 9000) : 0, createdOn: addDays(DEMO_TODAY, -int(1, 180)) };
-      }),
-      form: {
-        fields: [
-          { key: "name", label: "Title", type: "text", required: true },
-          { key: "author", label: "Author", type: "select", options: [...instructors], required: true },
-          { key: "status", label: "Visibility", type: "select", options: ["Draft", "Published", "Hidden"], required: true },
-          { key: "body", label: "Content", type: "textarea", help: "A rich-text editor will replace this field." },
-        ],
-        defaults: { views: 0, createdOn: DEMO_TODAY },
-      },
-      rowActions: ["edit", "duplicate", "delete"],
-    };
-  },
-
-  "marketing/marketing-banners": () => ({
-    title: "Marketing Banners",
-    description: "Banners shown on the website and student portal home.",
-    entityName: "banner",
-    primaryAction: "Add Banner",
-    showIndex: true,
-    tabs: { key: "_all", items: [{ label: "All" }] },
-    columns: [
-      { key: "thumbnail", label: "Thumbnail", type: "thumbnail" },
-      { key: "name", label: "Banner name", type: "primary", subKey: "placement" },
-      { key: "status", label: "Status", type: "badge" },
-    ],
-    rows: rows(5, (i) => ({
-      thumbnail: ["accent", "gold", "lotus", "accent", "gold"][i],
-      name: ["Bhakti Shastri admissions open", "Gita Jayanti 2026", "Kids Gita Club – Join now", "Download our app", "Donate for scholarships"][i],
-      placement: i % 2 ? "Student portal home" : "Website home",
-      status: i === 4 ? "Inactive" : "Active",
-    })),
-    form: {
-      fields: [
-        { key: "name", label: "Banner name", type: "text", required: true },
-        { key: "placement", label: "Placement", type: "select", options: ["Website home", "Student portal home"], required: true },
-        { key: "link", label: "Link (optional)", type: "url", placeholder: "https://" },
-      ],
-      defaults: { thumbnail: "accent", status: "Active" },
-    },
-    rowActions: ["edit", "delete"],
-  }),
 
   "marketing/leads": () => ({
     title: "Leads",
@@ -944,10 +763,11 @@ const catalogConfigs: Record<string, () => ListConfig> = {
           type: "repeat",
           itemFields: [
             { key: "title", label: "Lesson title", type: "text", required: true },
-            { key: "type", label: "Type", type: "select", options: ["Text", "Video", "Link"], defaultValue: "Text", required: true, help: "Text is written here. Video is a YouTube address. Link opens another website." },
+            { key: "type", label: "Type", type: "select", options: ["Text", "Video", "Link", "File"], defaultValue: "Text", required: true, help: "Text is written here. Video is a YouTube address. Link opens another website. File is an item from the Asset Library (PDF, audio, video, image or document)." },
             { key: "minutes", label: "Minutes (optional)", type: "number", min: 1, max: 600 },
             { key: "content", label: "Lesson text (Markdown)", type: "textarea", format: "markdown", required: true, showWhen: { key: "type", values: ["Text"] } },
             { key: "url", label: "Address", type: "url", required: true, placeholder: "https://", showWhen: { key: "type", values: ["Video", "Link"] } },
+            { key: "asset", label: "File", type: "select", options: [], required: true, showWhen: { key: "type", values: ["File"] }, help: "Add the file under Learning > Asset Library first. Learners open it only through this lesson." },
           ],
         },
       ],
@@ -1062,6 +882,71 @@ const catalogConfigs: Record<string, () => ListConfig> = {
       ],
     },
     rowActions: ["edit", "duplicate", "archive"],
+  }),
+
+  "learning/asset-library": (): ListConfig => ({
+    title: "Asset Library",
+    description: "Files and links for lessons, kept in one place with their usage and storage. Images are public; every other file is only open to staff and to learners through the lessons that use it.",
+    entityName: "asset",
+    primaryAction: "Add Asset",
+    showIndex: true,
+    searchKeys: ["name", "fileName"],
+    searchPlaceholder: "Search assets",
+    filters: [
+      { key: "usage", label: "Usage", options: ["Used", "Unused"] },
+      { key: "type", label: "Asset type", options: [...assetTypeLabels] },
+    ],
+    columns: [
+      { key: "name", label: "Asset name", type: "primary", subKey: "fileName" },
+      { key: "uploadedBy", label: "Uploaded by" },
+      { key: "uploadedOn", label: "Uploaded on", type: "date", sortable: true },
+      { key: "sizeLabel", label: "Size" },
+      { key: "type", label: "Asset type", type: "badge", tones: { Video: "accent", PDF: "danger", Audio: "info", YouTube: "danger", Image: "gold" } },
+      { key: "usage", label: "Usage", type: "badge", tones: { Used: "success", Unused: "warning" } },
+      { key: "downloads", label: "Downloads", type: "number", sortable: true },
+    ],
+    rows: [],
+    form: {
+      fields: [
+        { key: "type", label: "Asset type", type: "select", options: [...assetTypeLabels], required: true },
+        { key: "name", label: "Asset name", type: "text", required: true },
+        { key: "description", label: "Description", type: "textarea" },
+        { key: "localFile", label: "File", type: "file", max: 25, required: true, upload: "asset", showWhen: { key: "type", values: [...fileAssetTypes] }, help: "The type of a saved file cannot change; to replace the file, choose a new one of the same type." },
+        { key: "link", label: "Address", type: "url", required: true, showWhen: { key: "type", values: [...linkAssetTypes] }, help: "A full https:// address. YouTube assets need a YouTube video address. Links are stored, never fetched or run." },
+      ],
+    },
+    rowActions: ["edit", "delete"],
+  }),
+
+  "learning/session-recordings": () => ({
+    title: "Session Recordings",
+    description: "Links to recorded classes, grouped by the status of their batch. Learners see a recording on its class once it is Available.",
+    entityName: "recording",
+    primaryAction: "Add Recording",
+    showIndex: true,
+    searchKeys: ["name", "batch"],
+    searchPlaceholder: "Search by class or batch",
+    dateFilterKey: "date",
+    tabs: { key: "batchStatus", items: [{ label: "Active Batches", value: "Active" }, { label: "Completed Batches", value: "Completed" }, { label: "Archived Batches", value: "Archived" }] },
+    filters: [{ key: "batch", label: "Batch", options: [] }],
+    columns: [
+      { key: "name", label: "Class name", type: "primary", subKey: "date", sortable: true },
+      { key: "batch", label: "Batch" },
+      { key: "instructor", label: "Instructor" },
+      { key: "url", label: "Recording", type: "link" },
+      { key: "status", label: "Status", type: "badge", tones: { Available: "success", Processing: "warning", Failed: "danger" } },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Available" },
+      fields: [
+        { key: "session", label: "Class", type: "select", options: [], required: true, help: "Classes that have already started, newest first. Cancelled classes and archived batches are not listed." },
+        { key: "title", label: "Recording title (optional)", type: "text", help: "Shown to learners. Leave empty to use the class title." },
+        { key: "url", label: "Recording link", type: "url", required: true, placeholder: "https://…", help: "The full https:// address of the recording, for example a YouTube or Vimeo link. Uploading files arrives with the asset library." },
+        { key: "status", label: "Status", type: "select", options: [...recordingStatuses], required: true, defaultValue: "Available", help: "Only Available recordings are shown to learners." },
+      ],
+    },
+    rowActions: ["edit", "delete"],
   }),
   "products/courses": () => ({
     title: "Courses",
@@ -1266,6 +1151,98 @@ const catalogConfigs: Record<string, () => ListConfig> = {
         { key: "title", label: "Title", type: "text", required: true },
         { key: "body", label: "Text (Markdown)", type: "textarea", format: "markdown", required: true, help: "Only institution-approved wording should be published." },
         { key: "status", label: "Status", type: "select", options: ["Draft", "Published"], required: true, defaultValue: "Draft", help: "Publishing needs an administrator and archives the previous published version." },
+      ],
+    },
+    rowActions: ["edit", "duplicate", "archive", "delete"],
+  }),
+
+  "products/events": (): ListConfig => ({
+    title: "Events",
+    description: "Festivals, workshops, quizzes and retreats, with their days, visibility and status. Selling tickets arrives with payments.",
+    entityName: "event",
+    primaryAction: "Create Event",
+    showIndex: true,
+    searchKeys: ["name"],
+    searchPlaceholder: "Search events",
+    filters: [{ key: "visibility", label: "Visibility", options: ["Public", "Private", "Unlisted"] }],
+    tabs: { key: "status", items: [{ label: "All" }, { label: "Active", value: "Active" }, { label: "Draft", value: "Draft" }, { label: "Inactive", value: "Inactive" }] },
+    columns: [
+      { key: "name", label: "Event name", type: "primary", subKey: "where", sortable: true },
+      { key: "date", label: "Event date", type: "datetime", sortable: true },
+      { key: "visibility", label: "Visibility", type: "badge", tones: { Public: "info", Private: "neutral", Unlisted: "gold" } },
+      { key: "status", label: "Status", type: "badge", tones: { Active: "success", Draft: "neutral", Inactive: "warning" } },
+    ],
+    rows: [],
+    form: eventForm,
+    rowActions: ["edit", "duplicate", "delete"],
+  }),
+
+  "marketing/blogs": (): ListConfig => ({
+    title: "Blogs",
+    description: "Articles published on the public website. Only published articles are visible; hide one to take it offline without losing it.",
+    entityName: "blog",
+    primaryAction: "Create New Blog",
+    showIndex: true,
+    searchKeys: ["name", "summary"],
+    searchPlaceholder: "Search blogs",
+    dateFilterKey: "createdOn",
+    tabs: { key: "_all", items: [{ label: "All" }] },
+    filters: [{ key: "status", label: "Visibility", options: ["Published", "Draft", "Hidden"] }],
+    columns: [
+      { key: "thumbnail", label: "Cover", type: "thumbnail" },
+      { key: "name", label: "Blog name", type: "primary", subKey: "byline", sortable: true },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+      { key: "views", label: "Views", type: "number", sortable: true },
+      { key: "publishedOn", label: "Published on", type: "date", sortable: true },
+      { key: "createdOn", label: "Created on", type: "date", sortable: true },
+    ],
+    rows: [],
+    form: {
+      defaults: { status: "Draft" },
+      fields: [
+        { key: "name", label: "Title", type: "text", required: true },
+        { key: "summary", label: "Summary (optional)", type: "textarea", help: "One or two sentences for the blog list and search results. If you leave it empty, the start of the article is used." },
+        { key: "body", label: "Article (Markdown)", type: "textarea", format: "markdown", required: true, help: "Markdown: **bold**, *italic*, # heading, and - or 1. lists. Plain text is preserved; HTML and links are never executed." },
+        { key: "cover", label: "Cover image (optional)", type: "file", max: 5, upload: "Image", help: "A 16:9 picture such as 1280 \u00d7 720 px works best. PNG, JPG or WebP, up to 5 MB." },
+        { key: "author", label: "Author", type: "select", options: [], help: "Shown as the byline. If you leave it empty, you are the author." },
+        { key: "status", label: "Visibility", type: "select", options: ["Draft", "Published", "Hidden"], required: true, defaultValue: "Draft", help: "Only published articles are on the website. Hidden articles are taken offline but kept." },
+        { key: "slug", label: "Web address (optional)", type: "text", placeholder: "why-study-the-bhagavad-gita", help: "The end of the article's address. Leave it empty to create it from the title. Changing it later breaks links people already have." },
+      ],
+    },
+    rowActions: ["edit", "duplicate", "delete"],
+  }),
+
+  "marketing/marketing-banners": (): ListConfig => ({
+    title: "Marketing Banners",
+    description: "Promotional images with an optional link. A banner shows on the website home or the student portal home while it is published and inside its dates.",
+    entityName: "banner",
+    primaryAction: "Add Banner",
+    showIndex: true,
+    searchKeys: ["name", "description"],
+    searchPlaceholder: "Search banners",
+    tabs: { key: "status", items: statusTabs },
+    filters: [{ key: "placement", label: "Placement", options: ["Website home", "Student portal home"] }],
+    columns: [
+      { key: "thumbnail", label: "Image", type: "thumbnail" },
+      { key: "name", label: "Banner name", type: "primary", subKey: "placement", sortable: true },
+      { key: "window", label: "Dates" },
+      { key: "showing", label: "On the site", type: "badge", tones: { "Showing now": "success", Scheduled: "info", Ended: "warning", "Not published": "neutral" } },
+      { key: "sortOrder", label: "Order", type: "number" },
+      { key: "status", label: "Status", type: "badge", tones: statusTones },
+    ],
+    rows: [],
+    form: {
+      defaults: { placement: "Website home", status: "Draft" },
+      fields: [
+        { key: "name", label: "Banner name", type: "text", required: true, help: "Also read aloud as the image's description, so say what the banner shows." },
+        { key: "description", label: "Short text (optional)", type: "textarea", help: "Shown beside the image on the website home." },
+        { key: "placement", label: "Placement", type: "select", options: ["Website home", "Student portal home"], required: true, help: "The website home shows its first live banner; the student portal rotates through all of its live banners." },
+        { key: "image", label: "Banner image", type: "file", max: 5, required: true, upload: "Image", help: "A wide image works best, about 1920 \u00d7 574 px. PNG, JPG or WebP, up to 5 MB." },
+        { key: "link", label: "Link (optional)", type: "text", placeholder: "https://\u2026 or /student/my-learning", help: "A full https:// address, or a page on this site that starts with /." },
+        { key: "startDate", label: "Show from (optional)", type: "date" },
+        { key: "endDate", label: "Show until (optional)", type: "date", help: "The last day it shows." },
+        orderField,
+        { ...statusSelect, help: "Only published banners can show. Drafts and archived banners stay hidden." },
       ],
     },
     rowActions: ["edit", "duplicate", "archive", "delete"],

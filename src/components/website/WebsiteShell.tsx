@@ -11,6 +11,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const publications = [{ slug: "books", title: "Books" }, { slug: "e-magazines", title: "E-Magazines" }];
+// Only offered once there is an article to read.
+const blogLink = { slug: "blogs", title: "Blog" };
 
 function SocialLinks({ links, className = "" }: { links: SocialLink[]; className?: string }) {
   return <nav className={`web-social-links ${className}`} aria-label="IBMV social media">
@@ -21,10 +23,10 @@ function SocialLinks({ links, className = "" }: { links: SocialLink[]; className
   </nav>;
 }
 
-export function WebsiteShell({ children, collections, settings }: { children: React.ReactNode; collections: PublicCollection[]; settings: SiteSettings }) {
+export function WebsiteShell({ children, collections, settings, hasBlogs }: { children: React.ReactNode; collections: PublicCollection[]; settings: SiteSettings; hasBlogs: boolean }) {
   const groups = [
     { label: "Courses", links: collections },
-    { label: "Publications", links: publications },
+    { label: "Publications", links: hasBlogs ? [...publications, blogLink] : publications },
     { label: "About us", links: institutionLinks },
   ];
   const { contact, links: urls } = settings;
@@ -98,7 +100,7 @@ export function WebsiteShell({ children, collections, settings }: { children: Re
           <div><Link href="/website" className="web-brand"><span className="web-logo"><Logo size={38} decorative /></span><span>IBMV<span className="web-brand-subtitle">Bhagavata Mahavidyalaya</span></span></Link><p>A college of Vedic studies in Sri Govardhan dhama, dedicated to scriptural learning, practical application and sharing Srila Prabhupada&apos;s teachings.</p><div className="web-footer-principles"><span><BookOpen size={14} aria-hidden="true" />Study with purpose</span><span><Heart size={14} aria-hidden="true" />Grow through service</span></div><span className="web-footer-note">Public website design preview</span></div>
           <div><h2>Find your path</h2>{collections.map((item) => <Link key={item.slug} href={`/website/${item.slug}`}>{item.title}</Link>)}</div>
           <div><h2>Discover IBMV</h2>{institutionLinks.map((item) => <Link key={item.slug} href={`/website/${item.slug}`}>{item.title}</Link>)}<Link href="/website/contact">Contact us</Link></div>
-          <div><h2>Keep exploring</h2><Link href="/website/books">Books & publications</Link><Link href="/website/e-magazines">E-Magazines</Link><Link href="/website#testimonials">Testimonials</Link><Link href="/website#videos">Videos</Link><a href={urls.videoPlaylist} target="_blank" rel="noopener noreferrer"><Play size={12} aria-hidden="true" />Official video playlist<ExternalLink size={12} aria-hidden="true" /></a><Link href="/website/account">Learner access</Link><a href={urls.officialSite} target="_blank" rel="noopener noreferrer">Official IBMV website <ExternalLink size={12} aria-hidden="true" /></a></div>
+          <div><h2>Keep exploring</h2><Link href="/website/books">Books & publications</Link><Link href="/website/e-magazines">E-Magazines</Link>{hasBlogs ? <Link href="/website/blogs">Blog</Link> : null}<Link href="/website#testimonials">Testimonials</Link><Link href="/website#videos">Videos</Link><a href={urls.videoPlaylist} target="_blank" rel="noopener noreferrer"><Play size={12} aria-hidden="true" />Official video playlist<ExternalLink size={12} aria-hidden="true" /></a><Link href="/website/account">Learner access</Link><a href={urls.officialSite} target="_blank" rel="noopener noreferrer">Official IBMV website <ExternalLink size={12} aria-hidden="true" /></a></div>
         </div>
         <div className="web-container web-footer-bottom"><span>IBMV · Study. Reflect. Grow.<span className="web-footer-disclaimer">Enrollment and payments remain on the official site.</span></span><div><Link href="/website/privacy">Privacy notice</Link><Link href="/website/terms">Preview terms</Link><Link href="/">Portal selector</Link></div></div>
       </footer>

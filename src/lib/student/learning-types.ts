@@ -1,5 +1,7 @@
 /** What the student portal shows about a learner's own learning. Plain data, so client components can import it. */
 
+import type { PublicBanner } from "@/lib/banners";
+
 export type StudentCourse = {
     enrolmentId: string;
     slug: string;
@@ -17,6 +19,8 @@ export type StudentCourse = {
     officialUrl: string;
 };
 
+export type StudentRecording = { id: string; title: string; url: string };
+
 export type StudentSession = {
     id: string;
     title: string;
@@ -30,6 +34,8 @@ export type StudentSession = {
     topics: string;
     /** Only present from 15 minutes before the start until the end, and never for a cancelled session. */
     joinUrl: string | null;
+    /** Recordings staff have marked Available; never present for a cancelled session. */
+    recordings: StudentRecording[];
 };
 
 export type StudentHoliday = { date: string; reason: string };
@@ -57,9 +63,11 @@ export type HomeSummary = {
     sessionsThisWeek: number;
     unreadAnnouncements: number;
     latestAnnouncements: StudentAnnouncement[];
+    /** Live banners for the home page, in display order. */
+    banners: PublicBanner[];
 };
 
-export type LessonKind = "Text" | "Video" | "Link";
+export type LessonKind = "Text" | "Video" | "Link" | "File";
 
 export type CourseLesson = { id: string; title: string; type: LessonKind; minutes: number | null; completed: boolean };
 
@@ -82,6 +90,15 @@ export type CourseOutline = CourseProgress & {
     resumeLessonId: string | null;
 };
 
+export type LessonFile = {
+    name: string;
+    /** How the player shows it: viewed or played in the page, or offered as a download. */
+    kind: "pdf" | "audio" | "video" | "image" | "download";
+    size: string;
+    /** Streams the file for this learner only. */
+    url: string;
+};
+
 export type LessonDetail = {
     id: string;
     title: string;
@@ -92,5 +109,7 @@ export type LessonDetail = {
     body: string;
     /** The YouTube embed address for a video lesson, or the other website's address for a link lesson. */
     url: string;
+    /** The file of a file lesson; null when the file is no longer available. */
+    file: LessonFile | null;
     completed: boolean;
 };

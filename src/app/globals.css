@@ -1554,10 +1554,6 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   height: 8rem;
 }
 
-.student-banner-details {
-  background: linear-gradient(110deg, rgba(35, 20, 54, 0.95), rgba(52, 29, 74, 0.88));
-}
-
 .student-featured-art span {
   text-align: center;
   font-size: 9px;

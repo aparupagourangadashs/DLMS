@@ -5,6 +5,7 @@ import { helpContent, type HelpTask } from "./help-content";
 import { getListConfig } from "./list-configs";
 import { liveScreens } from "./live-screens";
 import { adminNav, findPage, quickCreate, type NavPage, type NavSection } from "./navigation";
+import { isLiveReportPage, reportPages } from "./reports";
 import type { ListConfig } from "./types";
 
 export type HelpArticleData = {
@@ -151,7 +152,8 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
   const customManaged = ["marketing/promotional-templates", "marketing/promo-codes", "sales/cheque-management"].includes(key);
   const customSettings = sectionSlug === "settings" && pageSlug !== "my-profile" && !liveScreens.has(key);
   const list = decision || customManaged || customSettings ? null : getListConfig(key);
-  const report = sectionSlug === "analytics" ? analytics[pageSlug] : undefined;
+  const report = sectionSlug === "analytics" && !isLiveReportPage(pageSlug) ? analytics[pageSlug] : undefined;
+  const liveReports = sectionSlug === "analytics" && isLiveReportPage(pageSlug) ? reportPages[pageSlug] : undefined;
 
   if (list) {
     if (list.summary?.length) screen.push({ heading: "Summary cards", items: list.summary.map((s) => s.label) });
@@ -179,6 +181,34 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
     screen.push({ heading: "Reports", items: report.reports.map((r) => `${r.title}: ${r.description}`) });
     if (report.restricted) screen.push({ heading: "Verification limit", items: ["The live Advanced Analytics route was access restricted. These local reports are proposals, not verified live functionality."] });
     tasks = [{ title: "Preview and export a synthetic report", steps: ["Choose a demo date range and optional branch, course, status or search filters.", "Open a report card to see its calculated synthetic rows. Change filters in the drawer if needed.", "Select a column heading to sort and use Choose preview / CSV columns to choose fields.", "Select Export to download every matching row, not only the visible page. No database or live provider is queried."] }];
+  }
+
+  if (liveReports) {
+    screen.push({
+      heading: "Report controls",
+      items: [
+        "Choose a report from the cards. A card marked Waiting needs data that arrives with a later feature, and says what it needs.",
+        "Period (the last 7, 30 or 90 days, 12 months, or your own dates, in India time), branch, course and status, for the reports that use them",
+        "Search narrows the table and the CSV file; the figures and the chart follow the other filters",
+        "Sort by any column heading, move through pages of 25 rows and switch the chart between bars, a line and an area",
+      ],
+    });
+    screen.push({ heading: "Reports", items: liveReports.map((r) => (r.waitsFor ? `${r.title} (waiting: needs ${r.waitsFor})` : `${r.title}: ${r.description}`)) });
+    tasks = [
+      {
+        title: "Read and export a report",
+        steps: [
+          "Select a report card, then set the period and any branch, course or status filters.",
+          "Read the figures and the chart, then sort or search the table underneath.",
+          "Select Export to download every matching row as a CSV file (Super Admin, Admin and Finance). Staff tied to a branch see only their own branches.",
+        ],
+      },
+    ];
+  }
+
+  if (key === "settings/audit-log") {
+    screen.push({ heading: "Search and filters", items: ["Period: today, the last 7, 30 or 90 days, all time, or your own dates", "Who, What happened and Record type", "Search by name, email, record id or address"] });
+    screen.push({ heading: "Columns", items: ["When (India time)", "Who and their role", "What happened, with its action code", "Record and its id", "Details: a one-line summary of the change, and View for the whole entry"] });
   }
 
   if (customManaged) {
@@ -216,7 +246,7 @@ export function buildHelp(sectionSlug: string, pageSlug: string): HelpArticleDat
     whoUses: content.whoUses,
     screen,
     formFields,
-    tasks: [...tasks, ...(report || customManaged ? [] : content.tasks ?? [])],
+    tasks: [...tasks, ...(report || liveReports || customManaged ? [] : content.tasks ?? [])],
     tips: content.tips ?? [],
     decision,
     related,

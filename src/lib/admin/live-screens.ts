@@ -3,6 +3,7 @@
  * Registered list screens must be listed here (a server test enforces it); custom screens are added by hand.
  */
 export const liveScreens: ReadonlySet<string> = new Set([
+    "home/dashboard",
     "users/team",
     "users/learners",
     "users/new-enrolment",
@@ -10,12 +11,17 @@ export const liveScreens: ReadonlySet<string> = new Set([
     "learning/sessions",
     "learning/announcements",
     "learning/module-library",
+    "products/events",
+    "learning/asset-library",
+    "learning/session-recordings",
     "engage/support",
     "settings/my-profile",
     "settings/sub-organizations",
     "settings/categories",
     "products/courses",
     "marketing/leads",
+    "marketing/blogs",
+    "marketing/marketing-banners",
     "marketing/testimonials",
     "website/site-settings",
     "website/books",
@@ -23,4 +29,10 @@ export const liveScreens: ReadonlySet<string> = new Set([
     "website/magazines",
     "website/videos",
     "website/legal-pages",
+    "analytics/sales-enrollment",
+    "analytics/batch-progress",
+    "analytics/marketing-analytics",
+    "analytics/trainer",
+    "analytics/more",
+    "settings/audit-log",
 ]);

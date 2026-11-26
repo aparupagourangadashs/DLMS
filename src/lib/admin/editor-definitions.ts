@@ -1,11 +1,10 @@
-import { courses, instructors, DEMO_TODAY } from "./demo-data";
+import { courses, DEMO_TODAY, instructors } from "./demo-data";
+import { eventCategories, eventCurrencies, eventPlatforms, membershipLevels } from "./events";
 import type { FormField, ListConfig } from "./types";
 
 type Form = NonNullable<ListConfig["form"]>;
 const managers = ["Hari Prasad", "Vrinda Joshi", "Mukund Rao"];
 const modules = ["Introduction to the Gita", "Karma Yoga", "Jnana Yoga", "Bhakti Yoga", "Sanskrit Alphabet", "Sandhi Rules", "Stories for Children", "Parenting with Values"];
-const assetTypes = ["Video", "Audio", "PDF", "YouTube", "Image", "Doc", "Sheet", "Slide", "Text/HTML", "Zip", "SCORM Zip", "Link/Embed", "Epub"];
-const fileTypes = assetTypes.filter((v) => !["YouTube", "Link/Embed"].includes(v));
 const questionFields: FormField[] = [
   { key: "prompt", label: "Question", type: "text", required: true },
   { key: "type", label: "Answer type", type: "select", options: ["Rating", "Text", "Choice"], defaultValue: "Rating", required: true },
@@ -15,28 +14,30 @@ const questionFields: FormField[] = [
 
 export const eventForm: Form = {
   editor: "event", steps: ["Event details & schedule", "Access & organization", "Pricing"],
-  defaults: { status: "Active", visibility: "Public" },
+  defaults: { status: "Draft", visibility: "Public" },
   fields: [
     { key: "name", label: "Event name", type: "text", required: true },
     { key: "description", label: "Description (Markdown)", type: "textarea", format: "markdown", required: true, help: "Markdown: **bold**, *italic*, # heading, and - or 1. lists. Plain text is preserved; HTML and links are never executed." },
-    { key: "image", label: "Event image (local preview)", type: "file", accept: ".png,.jpg,.jpeg,.webp", max: 5 },
-    { key: "days", label: "Event days", type: "repeat", minItems: 1, required: true, help: "Local wall-clock times in IST. Add one start/end pair per day, in chronological order.", itemFields: [
-      { key: "start", label: "Start date and time (IST)", type: "datetime-local", required: true },
-      { key: "end", label: "End date and time (IST)", type: "datetime-local", required: true },
-    ] },
+    { key: "image", label: "Event image", type: "file", accept: ".png,.jpg,.jpeg,.webp", max: 5, upload: "Image", help: "PNG, JPG or WebP, up to 5 MB." },
+    {
+      key: "days", label: "Event days", type: "repeat", minItems: 1, required: true, help: "Times are India Standard Time (IST). Add one start and end for each day, in order and without overlap.", itemFields: [
+        { key: "start", label: "Start date and time (IST)", type: "datetime-local", required: true },
+        { key: "end", label: "End date and time (IST)", type: "datetime-local", required: true },
+      ]
+    },
     { key: "status", label: "Publication status", type: "select", options: ["Draft", "Active", "Inactive"], required: true, step: 1 },
     { key: "visibility", label: "Visibility", type: "select", options: ["Public", "Private", "Unlisted"], required: true, step: 1 },
-    { key: "platform", label: "Platform", type: "select", options: ["In person", "Zoom", "YouTube Live", "Other online", "Hybrid"], required: true, step: 1 },
+    { key: "platform", label: "Platform", type: "select", options: [...eventPlatforms], required: true, step: 1 },
     { key: "venue", label: "Venue / address", type: "text", required: true, step: 1, showWhen: { key: "platform", values: ["In person", "Hybrid"] } },
-    { key: "meetingLink", label: "Meeting link", type: "url", required: true, step: 1, showWhen: { key: "platform", values: ["Zoom", "YouTube Live", "Other online", "Hybrid"] }, help: "Stored as configuration only. No meeting is created." },
+    { key: "meetingLink", label: "Meeting link", type: "url", required: true, step: 1, showWhen: { key: "platform", values: ["Zoom", "YouTube Live", "Other online", "Hybrid"] }, help: "A link to the online session. It is saved with the event; no meeting is created." },
     { key: "guestAccess", label: "Guest access", type: "select", options: ["Allowed", "Members only"], defaultValue: "Members only", required: true, step: 1 },
-    { key: "manager", label: "Event manager", type: "select", options: managers, required: true, step: 1 },
-    { key: "category", label: "Category", type: "select", options: ["Workshop", "Festival", "Retreat", "Quiz", "Other"], required: true, step: 1 },
-    { key: "membership", label: "Membership eligibility", type: "select", options: ["Everyone", "Active members", "Premium members"], defaultValue: "Everyone", required: true, step: 1 },
-    { key: "feedback", label: "Feedback form", type: "select", options: ["None", "Event satisfaction survey", "Module 1 feedback"], defaultValue: "None", step: 1 },
-    { key: "pricing", label: "Pricing", type: "select", options: ["Free", "Paid"], defaultValue: "Free", required: true, step: 2, help: "Local pricing configuration, not verified live pricing parity. No checkout or payment integration." },
+    { key: "manager", label: "Event manager", type: "select", options: [], required: true, step: 1 },
+    { key: "category", label: "Category", type: "select", options: [...eventCategories], required: true, step: 1 },
+    { key: "membership", label: "Membership eligibility", type: "select", options: [...membershipLevels], defaultValue: "Everyone", required: true, step: 1 },
+    { key: "feedback", label: "Feedback form", type: "select", options: ["None"], defaultValue: "None", step: 1, help: "Feedback forms arrive with assessments." },
+    { key: "pricing", label: "Pricing", type: "select", options: ["Free", "Paid"], defaultValue: "Free", required: true, step: 2, help: "The price is saved with the event. Selling tickets arrives with payments; nothing is charged yet." },
     { key: "price", label: "Ticket price", type: "number", min: 0.01, required: true, step: 2, showWhen: { key: "pricing", values: ["Paid"] } },
-    { key: "currency", label: "Currency", type: "select", options: ["INR", "USD", "EUR"], defaultValue: "INR", required: true, step: 2, showWhen: { key: "pricing", values: ["Paid"] } },
+    { key: "currency", label: "Currency", type: "select", options: [...eventCurrencies], defaultValue: "INR", required: true, step: 2, showWhen: { key: "pricing", values: ["Paid"] } },
     { key: "capacity", label: "Ticket capacity (blank for unlimited)", type: "number", min: 1, step: 2 },
     { key: "pricingNotes", label: "Pricing / refund notes", type: "textarea", step: 2 },
   ],
@@ -73,17 +74,6 @@ export const feedbackForm: Form = {
   ],
 };
 
-export const assetForm: Form = {
-  editor: "asset", defaults: { uploadedBy: "Demo Admin (local)", uploadedOn: DEMO_TODAY, usage: "Unused", downloads: 0 },
-  fields: [
-    { key: "type", label: "Asset type", type: "select", options: assetTypes, required: true },
-    { key: "name", label: "Asset name", type: "text", required: true },
-    { key: "description", label: "Description", type: "textarea" },
-    { key: "localFile", label: "Local file", type: "file", max: 25, required: true, showWhen: { key: "type", values: fileTypes } },
-    { key: "link", label: "External URL", type: "url", required: true, showWhen: { key: "type", values: ["YouTube", "Link/Embed"] }, help: "Stored as a link only. External embeds are not executed or fetched." },
-  ],
-};
-
 export const certificateForm: Form = {
   editor: "certificate", steps: ["Identity & validity", "Design & preview", "Automation & notifications"],
   defaults: { issued: 0, status: "Draft" },
@@ -101,10 +91,12 @@ export const certificateForm: Form = {
     { key: "heading", label: "Heading", type: "text", defaultValue: "Certificate of completion", required: true, step: 1, showWhen: { key: "design", values: ["Builder"] } },
     { key: "body", label: "Certificate body", type: "textarea", defaultValue: "Awarded to {{learner}} for completing {{course}} on {{date}}. Serial: {{serial}}", required: true, step: 1, showWhen: { key: "design", values: ["Builder"] } },
     { key: "signatory", label: "Signatory name / title", type: "text", step: 1, showWhen: { key: "design", values: ["Builder"] } },
-    { key: "customFields", label: "Custom fields", type: "repeat", step: 1, itemFields: [
-      { key: "label", label: "Field label", type: "text", required: true },
-      { key: "value", label: "Preview value", type: "text", required: true },
-    ] },
+    {
+      key: "customFields", label: "Custom fields", type: "repeat", step: 1, itemFields: [
+        { key: "label", label: "Field label", type: "text", required: true },
+        { key: "value", label: "Preview value", type: "text", required: true },
+      ]
+    },
     { key: "automation", label: "Issuance trigger", type: "select", options: ["Manual", "Course completion", "Exam passed"], defaultValue: "Manual", required: true, step: 2, help: "Configuration only. No background automation or PDF generation is implemented." },
     { key: "course", label: "Course", type: "select", options: [...courses], required: true, step: 2, showWhen: { key: "automation", values: ["Course completion"] } },
     { key: "exam", label: "Exam name", type: "text", required: true, step: 2, showWhen: { key: "automation", values: ["Exam passed"] } },

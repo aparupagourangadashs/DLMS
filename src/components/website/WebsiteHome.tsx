@@ -1,3 +1,4 @@
+import type { PublicBanner } from "@/lib/banners";
 import type { SiteSettings } from "@/lib/website/site-defaults";
 import { publicFaq } from "@/lib/website/static";
 import type { PublicBook, PublicCollection, PublicCourse, PublicTestimonial, PublicVideo } from "@/lib/website/types";
@@ -53,6 +54,7 @@ function HeroCommunityLinks({ urls }: { urls: SiteSettings["links"] }) {
 }
 
 type HomeProps = {
+  banner: PublicBanner | null;
   collections: PublicCollection[];
   courses: PublicCourse[];
   books: PublicBook[];
@@ -61,7 +63,24 @@ type HomeProps = {
   settings: SiteSettings;
 };
 
-export function WebsiteHome({ collections, courses: allCourses, books, testimonials, videos, settings }: HomeProps) {
+/** The first live banner for the home page: its text beside its image, linked when it has a destination. */
+function LaunchPanel({ banner }: { banner: PublicBanner }) {
+  const picture = <Image src={banner.imageUrl} alt={banner.name} width={1920} height={574} unoptimized sizes="(min-width: 1024px) 55vw, 90vw" />;
+  const label = banner.external ? `${banner.name} (opens in a new tab)` : banner.name;
+  return <section className="web-section web-container" aria-label="Latest from IBMV"><div className="web-launch-panel">
+    <div>
+      <p className="web-eyebrow">Latest from IBMV</p>
+      <h2>{banner.name}</h2>
+      {banner.description ? <p>{banner.description}</p> : null}
+      {banner.href ? (banner.external
+        ? <a className="web-btn web-btn-gold" href={banner.href} target="_blank" rel="noopener noreferrer">Learn more<span className="sr-only"> about {banner.name} (opens in a new tab)</span><ExternalLink size={16} aria-hidden="true" /></a>
+        : <Link className="web-btn web-btn-gold" href={banner.href}>Learn more<span className="sr-only"> about {banner.name}</span><ArrowRight size={16} aria-hidden="true" /></Link>) : null}
+    </div>
+    {banner.href ? (banner.external ? <a href={banner.href} target="_blank" rel="noopener noreferrer" aria-label={label}>{picture}</a> : <Link href={banner.href} aria-label={label}>{picture}</Link>) : <div>{picture}</div>}
+  </div></section>;
+}
+
+export function WebsiteHome({ banner, collections, courses: allCourses, books, testimonials, videos, settings }: HomeProps) {
   const featured = collections[0];
   const coverBooks = [books[0], books[2] ?? books[1]].filter((book): book is PublicBook => Boolean(book));
   return <>
@@ -84,7 +103,7 @@ export function WebsiteHome({ collections, courses: allCourses, books, testimoni
       return <section className={`web-section web-collection-showcase web-showcase-${collection.color}`} key={collection.slug}><div className="web-container"><div className="web-section-heading"><div><p className="web-eyebrow">{collection.short}</p><h2>{collection.title}</h2></div><div><p>{collection.description}</p><Link className="web-text-link" href={`/website/${collection.slug}`}>View all {courses.length} courses<ArrowRight size={17} aria-hidden="true" /></Link></div></div><p className="web-swipe-hint">Swipe to explore the courses →</p><div className="web-course-grid web-home-course-row">{courses.slice(0, 3).map((course) => <PublicCourseCard course={course} key={course.slug} />)}</div></div></section>;
     })}
     <WebsiteTestimonials testimonials={testimonials} figures={settings.communityFigures} sourceUrl={settings.links.testimonialsSource} />
-    <section className="web-section web-container"><div className="web-launch-panel"><div><p className="web-eyebrow">Bhakti Vedanta · Module 3</p><h2>Study the final cantos<br /><em>of the Bhagavatam.</em></h2><p>Explore the Eleventh and Twelfth Cantos of Srimad-Bhagavatam in Bhakti Vedanta Module 3. Visit the official course page for the schedule, eligibility and enrollment details.</p><a className="web-btn web-btn-gold" href="https://www.ibmedu.org/course-details/BhaktiVedantaModule-3-115238" target="_blank" rel="noopener noreferrer">View official offering<ExternalLink size={16} aria-hidden="true" /></a></div><a href="https://www.ibmedu.org/course-details/BhaktiVedantaModule-3-115238" target="_blank" rel="noopener noreferrer"><Image src="/student-course-launch.jpg" alt="Bhakti Vedanta Module 3 official IBMV banner; opens the official course page" width={1920} height={574} sizes="(min-width: 1024px) 55vw, 90vw" /></a></div></section>
+    {banner ? <LaunchPanel banner={banner} /> : null}
     <section className="web-mission"><div className="web-container web-mission-grid"><div className="web-mission-art" aria-hidden="true"><span /><BookOpen size={100} strokeWidth={0.8} /><span className="web-mission-art-word">STUDY<br />PRACTISE · SHARE</span></div><div><p className="web-eyebrow">Our mission · Sri Govardhan dhama</p><h2>Learn the Bhagavatam.<br /><em>Live its teachings.</em></h2><p>Based in Sri Govardhan dhama, ISKCON Bhagavata Mahavidyalaya brings the study of Srimad-Bhagavatam and the Gaudiya Vaishnava tradition into daily practice. Guided by Srila Prabhupada&apos;s teachings, the institution nurtures a taste for scripture and prepares learners to share that knowledge through teaching and service.</p><Link href="/website/iskcon-bhagavata-mahavidyalaya" className="web-text-link">Discover our educational mission<ArrowRight size={18} aria-hidden="true" /></Link></div></div></section>
     <WebsiteVideos videos={videos} playlistUrl={settings.links.videoPlaylist} />
     <section id="publications" className="web-section web-container web-reading-grid"><div><p className="web-eyebrow">IBMV publications · English and Hindi</p><h2>Read, reflect<br /><em>and deepen your study.</em></h2><p className="web-body-copy">Explore Srimad Bhagavata Mahapuranam, Sri Damodar Lila and other publications on the personalities, prayers and teachings of the bhakti tradition. Find English and Hindi titles to support your reading and study.</p><Link href="/website/books" className="web-btn">Explore publications<ArrowRight size={17} aria-hidden="true" /></Link></div><Link href="/website/books" className="web-publication-art web-publication-covers" aria-label="Explore books and reading resources">{coverBooks.map((book) => <Image key={book.id} src={book.image.src} alt={book.title} width={book.image.width} height={book.image.height} sizes="(min-width: 1024px) 230px, 40vw" />)}</Link></section>

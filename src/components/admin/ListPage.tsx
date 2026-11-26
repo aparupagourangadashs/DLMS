@@ -128,10 +128,10 @@ function plural(s: string) {
   return `${s}s`;
 }
 
-export function ListPage({ pageKey, status, config, remote = false }: { pageKey: string; status: ScreenStatus; config: ListConfig; remote?: boolean }) {
+export function ListPage({ pageKey, status, config, remote = false, initialQuery = "" }: { pageKey: string; status: ScreenStatus; config: ListConfig; remote?: boolean; initialQuery?: string }) {
   const [localRows, setRows] = useState<Row[]>(config.rows);
   const [tab, setTab] = useState<string>(config.tabs?.items[0]?.value ?? ALL);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -151,6 +151,7 @@ export function ListPage({ pageKey, status, config, remote = false }: { pageKey:
   const remoteList = useResourceList<Row>(resourceUrl, { ...baseParams, page, pageSize: PAGE_SIZE }, { enabled: remote });
   const rows = useMemo(() => (remote ? remoteList.rows ?? [] : localRows), [remote, remoteList.rows, localRows]);
   const remoteTotal = remoteList.meta?.total;
+  const summary = remote ? remoteList.meta?.summary : config.summary;
   const pendingCreate = useAdminUi((s) => s.pendingCreate === pageKey);
   const setPendingCreate = useAdminUi((s) => s.setPendingCreate);
   const formOpen = editing !== null || (pendingCreate && Boolean(config.form));
@@ -363,9 +364,9 @@ export function ListPage({ pageKey, status, config, remote = false }: { pageKey:
 
       {remote ? null : <DemoNotice />}
 
-      {config.summary ? (
+      {summary ? (
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-          {config.summary.map((s, i) => (
+          {summary.map((s, i) => (
             <StatCard key={s.label} label={s.label} value={s.value} hint={s.hint} tone={s.tone} color={statColor(s.tone, cardCycle[i % cardCycle.length])} />
           ))}
         </div>
@@ -685,6 +686,7 @@ export function ListPage({ pageKey, status, config, remote = false }: { pageKey:
           fields={config.form.fields}
           steps={config.form.steps}
           editor={config.form.editor}
+          live={remote}
           initial={formRow ?? config.form.defaults}
           submitLabel={formRow ? "Save changes" : `Create ${entity}`}
           onClose={closeForm}

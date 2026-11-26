@@ -1,4 +1,5 @@
 import { WebsiteShell } from "@/components/website/WebsiteShell";
+import { hasPublishedBlogs } from "@/server/services/public/blogs";
 import { listCollections } from "@/server/services/public/catalog";
 import { getSiteSettings } from "@/server/services/public/site";
 import type { Metadata } from "next";
@@ -22,6 +23,6 @@ export const metadata: Metadata = {
 };
 
 export default async function WebsiteLayout({ children }: { children: React.ReactNode }) {
-  const [collections, settings] = await Promise.all([listCollections(), getSiteSettings()]);
-  return <div className={devanagari.variable}><WebsiteShell collections={collections} settings={settings}>{children}</WebsiteShell></div>;
+  const [collections, settings, hasBlogs] = await Promise.all([listCollections(), getSiteSettings(), hasPublishedBlogs()]);
+  return <div className={devanagari.variable}><WebsiteShell collections={collections} settings={settings} hasBlogs={hasBlogs}>{children}</WebsiteShell></div>;
 }

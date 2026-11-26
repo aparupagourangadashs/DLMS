@@ -19,13 +19,13 @@ const statuses = ["Open", "In progress", "Resolved"] as const;
 const tone = { Open: "warning", "In progress": "info", Resolved: "success" } as const;
 const when = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 
-export function SupportInbox({ currentUserId, canWrite, status }: { currentUserId: string; canWrite: boolean; status: ScreenStatus }) {
+export function SupportInbox({ currentUserId, canWrite, status, initialOpenId }: { currentUserId: string; canWrite: boolean; status: ScreenStatus; initialOpenId?: string }) {
     const [tab, setTab] = useState<string>("Open");
     const [search, setSearch] = useState("");
     const [q, setQ] = useState("");
     const list = useResourceList<SupportListItem>("/api/admin/support", { tab: tab === "All" ? undefined : tab, q, pageSize: 50 });
 
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(initialOpenId ?? null);
     const [thread, setThread] = useState<SupportThread | null>(null);
     const [threadError, setThreadError] = useState("");
     const [reply, setReply] = useState("");

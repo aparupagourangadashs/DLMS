@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/Button";
 import { ApiError, apiClient } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
 import type { CourseOutline, CourseProgress, LessonDetail, LessonKind } from "@/lib/student/learning-types";
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Circle, CircleCheck, CirclePlay, Clock3, ExternalLink, FileText, Link2 } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Circle, CircleCheck, CirclePlay, Clock3, Download, ExternalLink, FileText, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { StudentEmpty, StudentHeading, StudentPanel } from "./StudentUi";
 
-const kindIcon = { Text: FileText, Video: CirclePlay, Link: Link2 } satisfies Record<LessonKind, unknown>;
+const kindIcon = { Text: FileText, Video: CirclePlay, Link: Link2, File: Download } satisfies Record<LessonKind, unknown>;
 
 const lessonTextClass =
     "text-base leading-loose [&_h2]:mt-6 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-5 [&_h3]:font-serif [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:font-semibold [&_li]:mt-1 [&_ol]:mt-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mt-4 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-6 [&>*:first-child]:mt-0";
@@ -55,6 +55,39 @@ function LessonBody({ lesson }: { lesson: LessonDetail }) {
                         <span className="sr-only">(opens in a new tab)</span>
                     </a>
                 ) : null}
+            </div>
+        );
+    }
+    if (lesson.type === "File") {
+        const file = lesson.file;
+        if (!file) return <p role="alert" className="text-sm text-danger">This file is no longer available. Please tell your teacher.</p>;
+        return (
+            <div className="space-y-3">
+                {file.kind === "video" ? <video controls preload="metadata" src={file.url} className="w-full rounded-xl border border-border bg-black" /> : null}
+                {file.kind === "audio" ? <audio controls preload="metadata" src={file.url} className="w-full" /> : null}
+                {file.kind === "image" ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- A private stream for one learner cannot go through the image optimizer.
+                    <img src={file.url} alt={lesson.title} className="max-h-[70vh] max-w-full rounded-xl border border-border" />
+                ) : null}
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-accent-soft/40 p-4">
+                    <FileText className="size-5 shrink-0 text-accent" aria-hidden="true" />
+                    <p className="min-w-0 flex-1 text-sm break-all">
+                        {file.name}
+                        <span className="block text-xs text-muted">{file.size}</span>
+                    </p>
+                    {file.kind === "pdf" ? (
+                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-fg hover:brightness-110">
+                            Open the PDF
+                            <ExternalLink className="size-4" aria-hidden="true" />
+                            <span className="sr-only">(opens in a new tab)</span>
+                        </a>
+                    ) : null}
+                    <a href={`${file.url}?download=1`} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold hover:bg-accent/10">
+                        Download
+                        <Download className="size-4" aria-hidden="true" />
+                    </a>
+                </div>
+                <p className="text-xs text-muted">Opening a file does not complete the lesson. Mark it complete when you are done.</p>
             </div>
         );
     }

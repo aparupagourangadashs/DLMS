@@ -1,12 +1,15 @@
 "use client";
 
 import { HELP_HOME, adminNav, findPage, helpHref, pageHref, parseAdminPath } from "@/lib/admin/navigation";
+import { MIN_QUERY, type SearchGroup } from "@/lib/admin/search";
+import { ApiError, apiClient } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
 import { colorFor } from "@/lib/colors";
+import { useDebounced } from "@/lib/use-debounced";
 import { useAdminUi } from "@/store/admin-ui";
-import { CircleHelp, CornerDownLeft, Search } from "lucide-react";
+import { BookOpen, CalendarDays, CircleHelp, CornerDownLeft, FileText, GraduationCap, Image as ImageIcon, Inbox, Layers, LifeBuoy, Megaphone, Newspaper, Quote, Search, UserRound, UsersRound, type LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleNav } from "./AdminAccess";
 
 const allPages = [
@@ -15,6 +18,14 @@ const allPages = [
   ),
   { key: "help", sectionSlug: "help", section: "Help", label: "Help center", description: "How to use every admin page, step by step", href: HELP_HOME, Icon: CircleHelp },
 ];
+
+const groupIcons: Record<string, LucideIcon> = {
+  learners: UserRound, team: UsersRound, courses: GraduationCap, batches: Layers, events: CalendarDays, announcements: Megaphone, blogs: Newspaper,
+  leads: Inbox, support: LifeBuoy, assets: ImageIcon, modules: BookOpen, banners: ImageIcon, testimonials: Quote, books: BookOpen, people: UserRound,
+};
+
+/** One line in the results: a page of the admin panel or a record found in the database. */
+type Entry = { id: string; href: string; group: string; title: string; subtitle: string; section: string; Icon: LucideIcon; context?: string };
 
 function isTyping(target: EventTarget | null) {
   const el = target as HTMLElement | null;
@@ -50,6 +61,9 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const typed = query.trim();
+  const term = useDebounced(typed, 250);
+  const [found, setFound] = useState<{ term: string; groups: SearchGroup[]; error?: string } | null>(null);
   const nav = useVisibleNav();
   const allowed = useMemo(() => new Set(nav.flatMap((s) => s.pages.map((p) => `${s.slug}/${p.slug}`))), [nav]);
   const pages = useMemo(() => allPages.filter((p) => p.key === "help" || allowed.has(p.key)), [allowed]);
@@ -57,6 +71,20 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     ref.current?.showModal();
   }, []);
+
+  // Records come from the server once typing pauses; a newer search cancels the one before it.
+  useEffect(() => {
+    if (term.length < MIN_QUERY) return;
+    const controller = new AbortController();
+    apiClient
+      .get<{ groups: SearchGroup[] }>("/api/admin/search", { q: term }, { signal: controller.signal })
+      .then((result) => setFound({ term, groups: result.data.groups }))
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setFound({ term, groups: [], error: error instanceof ApiError ? error.message : "Records could not be searched." });
+      });
+    return () => controller.abort();
+  }, [term]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -80,6 +108,16 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
     onClose();
     router.push(href);
   };
+
+  // Pages answer at once; records only count once they are for what is typed now.
+  const settled = typed.length >= MIN_QUERY && found?.term === typed ? found : null;
+  const searching = typed.length >= MIN_QUERY && settled === null;
+  const entries: Entry[] = [
+    ...results.map((r) => ({ id: `page-${r.key}`, href: r.href, group: "Pages", title: r.label, subtitle: r.description, section: r.sectionSlug, Icon: r.Icon, context: r.section })),
+    ...(settled?.groups ?? []).flatMap((g) => g.hits.map((h) => ({ id: `${g.key}-${h.id}`, href: h.href, group: g.label, title: h.title, subtitle: h.subtitle, section: g.section, Icon: groupIcons[g.key] ?? FileText }))),
+  ];
+  const current = Math.min(active, entries.length - 1);
+  const grouped = typed.length >= MIN_QUERY;
 
   return (
     <dialog
@@ -111,52 +149,67 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
               e.preventDefault();
-              setActive((a) => Math.min(a + 1, results.length - 1));
+              setActive(Math.min(current + 1, entries.length - 1));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
-              setActive((a) => Math.max(a - 1, 0));
-            } else if (e.key === "Enter" && results[active]) {
+              setActive(Math.max(current - 1, 0));
+            } else if (e.key === "Enter" && entries[current]) {
               e.preventDefault();
-              go(results[active].href);
+              go(entries[current].href);
             }
           }}
           role="combobox"
           aria-expanded="true"
           aria-controls="command-results"
-          aria-activedescendant={results[active] ? `cmd-${results[active].key}` : undefined}
-          aria-label="Search pages"
-          placeholder="Search pages, e.g. learners, batches, campaigns…"
+          aria-activedescendant={entries[current] ? `cmd-${entries[current].id}` : undefined}
+          aria-label="Search pages and records"
+          placeholder="Search pages and records, e.g. a learner, batch or course…"
           className="h-14 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
         />
         <kbd className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted">Esc</kbd>
       </div>
-      <ul id="command-results" role="listbox" aria-label="Pages" className="max-h-[50vh] overflow-y-auto p-2">
-        {results.length === 0 ? (
-          <li className="px-3 py-8 text-center text-sm text-muted">No pages match “{query}”.</li>
-        ) : (
-          results.map((r, i) => (
+      <ul id="command-results" role="listbox" aria-label="Results" className="max-h-[50vh] overflow-y-auto p-2">
+        {entries.length === 0 && !searching ? (
+          <li className="px-3 py-8 text-center text-sm text-muted">No pages or records match “{query}”.</li>
+        ) : null}
+        {entries.map((r, i) => (
+          <Fragment key={r.id}>
+            {grouped && r.group !== entries[i - 1]?.group ? (
+              <li role="presentation" className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">
+                {r.group}
+              </li>
+            ) : null}
             <li
-              key={r.key}
-              id={`cmd-${r.key}`}
+              id={`cmd-${r.id}`}
               role="option"
-              aria-selected={i === active}
+              aria-selected={i === current}
               onMouseEnter={() => setActive(i)}
               onClick={() => go(r.href)}
-              className={cn("flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5", i === active && "bg-accent-soft")}
+              className={cn("flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5", i === current && "bg-accent-soft")}
             >
-              <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", colorFor(r.sectionSlug).tile)} aria-hidden="true">
+              <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", colorFor(r.section).tile)} aria-hidden="true">
                 <r.Icon className="size-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">
-                  {r.label} <span className="font-normal text-muted">· {r.section}</span>
+                <span className="block truncate text-sm font-medium">
+                  {r.title} {r.context ? <span className="font-normal text-muted">· {r.context}</span> : null}
                 </span>
-                <span className="block truncate text-xs text-muted">{r.description}</span>
+                {r.subtitle ? <span className="block truncate text-xs text-muted">{r.subtitle}</span> : null}
               </span>
-              {i === active ? <CornerDownLeft className="size-4 text-muted" aria-hidden="true" /> : null}
+              {i === current ? <CornerDownLeft className="size-4 text-muted" aria-hidden="true" /> : null}
             </li>
-          ))
-        )}
+          </Fragment>
+        ))}
+        {searching ? (
+          <li role="status" className="px-3 py-3 text-xs text-muted">
+            Searching records…
+          </li>
+        ) : null}
+        {settled?.error ? (
+          <li role="alert" className="px-3 py-3 text-xs text-danger">
+            {settled.error}
+          </li>
+        ) : null}
       </ul>
     </dialog>
   );

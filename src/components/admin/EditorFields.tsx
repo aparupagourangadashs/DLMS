@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowUp, CalendarDays, Check, FileImage, FileText, Film, FolderOpen, ListChecks, Music, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { DatePicker, DateTimePicker } from "@/components/ui/DatePicker";
+import { Field, inputClass } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
+import { isVisible, readItems, validateEditor, type EditorValues } from "@/lib/admin/editor-validation";
+import type { FormField } from "@/lib/admin/types";
 import { cn } from "@/lib/cn";
 import { cardCycle, palette } from "@/lib/colors";
-import { Button } from "@/components/ui/Button";
-import { Field, inputClass } from "@/components/ui/Field";
-import { DatePicker, DateTimePicker } from "@/components/ui/DatePicker";
-import { Select } from "@/components/ui/Select";
+import { ArrowUp, CalendarDays, Check, FileImage, FileText, Film, FolderOpen, ListChecks, Music, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { MarkdownEditor } from "./MarkdownEditor";
-import type { FormField } from "@/lib/admin/types";
-import { isVisible, readItems, validateEditor, type EditorValues } from "@/lib/admin/editor-validation";
+import { UploadFile } from "./UploadFile";
 
 const formats: Record<string, string> = {
   Video: ".mp4,.webm", Audio: ".mp3,.wav,.ogg", PDF: ".pdf", Image: ".png,.jpg,.jpeg,.webp",
@@ -35,21 +36,21 @@ function LocalFile({ field, value, assetType, change, fileError, error }: {
         <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", palette.sky.solid)}><FileIcon className="size-6" aria-hidden="true" /></span>
         <div className="min-w-0"><p className="text-sm font-semibold">Choose a local {assetType?.toLowerCase() ?? "file"}</p><p className="mt-0.5 break-words text-xs text-muted">{accept.split(",").join(" · ")} · up to {field.max ?? 25} MB</p></div>
       </div>
-    <input ref={input} id={`f-${field.key}`} type="file" accept={accept} className={`${inputClass} h-auto min-w-0 py-2 text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-accent file:px-2 file:py-1.5 file:text-xs file:font-semibold file:text-accent-fg`}
-      required={field.required} aria-invalid={!!error} aria-describedby={`f-${field.key}-${error ? "error" : "help"}`} onChange={(e) => {
-        const file = e.target.files?.[0];
-        setSelected(null); setPreview(""); change(""); fileError("");
-        if (!file) return;
-        const extension = `.${file.name.split(".").pop()?.toLowerCase()}`;
-        const mediaKind = assetType === "Video" ? "video/" : assetType === "Audio" ? "audio/" : assetType === "Image" || field.key === "image" ? "image/" : "";
-        if (!accept.split(",").includes(extension) || file.size > (field.max ?? 25) * 1024 * 1024 || file.size === 0 || (mediaKind && file.type && !file.type.startsWith(mediaKind))) {
-          fileError(`Choose a nonempty ${accept} file up to ${field.max ?? 25} MB.`);
-          e.target.value = ""; return;
-        }
-        setSelected(file);
-        setPreview(URL.createObjectURL(file));
-        change(JSON.stringify({ name: file.name, size: file.size, type: file.type, localOnly: true }));
-      }} />
+      <input ref={input} id={`f-${field.key}`} type="file" accept={accept} className={`${inputClass} h-auto min-w-0 py-2 text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-accent file:px-2 file:py-1.5 file:text-xs file:font-semibold file:text-accent-fg`}
+        required={field.required} aria-invalid={!!error} aria-describedby={`f-${field.key}-${error ? "error" : "help"}`} onChange={(e) => {
+          const file = e.target.files?.[0];
+          setSelected(null); setPreview(""); change(""); fileError("");
+          if (!file) return;
+          const extension = `.${file.name.split(".").pop()?.toLowerCase()}`;
+          const mediaKind = assetType === "Video" ? "video/" : assetType === "Audio" ? "audio/" : assetType === "Image" || field.key === "image" ? "image/" : "";
+          if (!accept.split(",").includes(extension) || file.size > (field.max ?? 25) * 1024 * 1024 || file.size === 0 || (mediaKind && file.type && !file.type.startsWith(mediaKind))) {
+            fileError(`Choose a nonempty ${accept} file up to ${field.max ?? 25} MB.`);
+            e.target.value = ""; return;
+          }
+          setSelected(file);
+          setPreview(URL.createObjectURL(file));
+          change(JSON.stringify({ name: file.name, size: file.size, type: file.type, localOnly: true }));
+        }} />
       <p className="flex items-center gap-1.5 text-xs font-medium text-muted"><FolderOpen className="size-3.5 shrink-0" aria-hidden="true" />Browse from your device · no upload</p>
     </div>
     <p id={`f-${field.key}-help`} className="text-xs text-muted">Local selection only • max {field.max ?? 25} MB. No server upload. Saved demo records retain metadata only; select the file again to preview after closing.</p>
@@ -70,8 +71,10 @@ export function EditorFields({ fields, values, set, errors, fileError, prefix = 
 }) {
   return <>{fields.filter((f) => isVisible(f, values)).map((f) => {
     const id = `f-${prefix}${f.key}`;
-    const common = { id, name: `${prefix}${f.key}`, value: values[f.key] ?? "", required: f.required,
-      "aria-invalid": !!errors[f.key], "aria-describedby": errors[f.key] ? `${id}-error` : f.help ? `${id}-help` : undefined };
+    const common = {
+      id, name: `${prefix}${f.key}`, value: values[f.key] ?? "", required: f.required,
+      "aria-invalid": !!errors[f.key], "aria-describedby": errors[f.key] ? `${id}-error` : f.help ? `${id}-help` : undefined
+    };
     let control;
     if (f.type === "repeat") {
       const items = readItems(values[f.key]);
@@ -85,11 +88,13 @@ export function EditorFields({ fields, values, set, errors, fileError, prefix = 
             set={(key, v) => update(items.map((row, i) => i === index ? { ...row, [key]: v } : row))} />
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="soft-danger" aria-label={`Remove ${f.label} ${index + 1}`} onClick={() => update(items.filter((_, i) => i !== index))}><Trash2 className="size-3.5" aria-hidden="true" />Remove</Button>
-            {index > 0 ? <Button size="sm" variant="soft-info" aria-label={`Move ${f.label} ${index + 1} up`} onClick={() => { const next = [...items]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; update(next); }}><ArrowUp className="size-3.5" aria-hidden="true" />Move up</Button> : null}
+            {index > 0 ? <Button size="sm" variant="soft-info" aria-label={`Move ${f.label} ${index + 1} up`} onClick={() => { const next = [...items];[next[index - 1], next[index]] = [next[index], next[index - 1]]; update(next); }}><ArrowUp className="size-3.5" aria-hidden="true" />Move up</Button> : null}
           </div>
         </div>)}
         <Button size="sm" variant="soft-success" className="h-auto min-h-9 max-w-full whitespace-normal py-2 text-left" onClick={() => update([...items, Object.fromEntries((f.itemFields ?? []).map((child) => [child.key, child.defaultValue ?? ""]))])}><Plus className="size-4 shrink-0" aria-hidden="true" />Add {f.label.toLowerCase()}</Button>
       </fieldset>;
+    } else if (f.type === "file" && f.upload) {
+      control = <UploadFile key={`${id}-${values.type ?? ""}`} field={f} value={values[f.key] ?? ""} error={errors[f.key]} assetType={values.type} change={(v) => set(f.key, v)} fileError={(error) => fileError(f.key, error)} />;
     } else if (f.type === "file") {
       control = <LocalFile key={`${id}-${values.type ?? ""}`} field={f} value={values[f.key] ?? ""} error={errors[f.key]} assetType={f.key === "localFile" ? values.type : undefined} change={(v) => set(f.key, v)} fileError={(error) => fileError(f.key, error)} />;
     } else if (f.type === "multiselect") {

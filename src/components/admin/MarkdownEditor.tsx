@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef } from "react";
-import { Bold, Eye, Heading, Italic, List, ListOrdered, ShieldCheck, Type } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { palette } from "@/lib/colors";
 import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
 import { markdownBlocks, markdownInline } from "@/lib/admin/markdown";
+import { cn } from "@/lib/cn";
+import { palette } from "@/lib/colors";
+import { Bold, Eye, Heading, Italic, List, ListOrdered, ShieldCheck, Type } from "lucide-react";
+import { useRef } from "react";
 
 function Inline({ text }: { text: string }) {
   return markdownInline(text).map((part, i) => part.kind === "bold" ? <strong key={i}>{part.text}</strong>
@@ -47,19 +47,19 @@ export function MarkdownEditor({ value, label, onValueChange, ...props }: Props)
   return <div className="min-w-0 space-y-3">
     <div className="min-w-0 rounded-xl border border-border bg-surface-muted p-2.5">
       <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted"><Type className="size-4 text-accent" aria-hidden="true" />Markdown formatting</p>
-    <div role="group" aria-label={`${label} formatting`} className="flex flex-wrap gap-2">
-      <Button size="sm" variant="soft-info" aria-label="Insert bold Markdown" onClick={() => format("**", "**", "bold text")}><Bold className="size-3.5" aria-hidden="true" /><strong>Bold</strong></Button>
-      <Button size="sm" variant="soft-violet" aria-label="Insert italic Markdown" onClick={() => format("*", "*", "italic text")}><Italic className="size-3.5" aria-hidden="true" /><em>Italic</em></Button>
-      <Button size="sm" variant="soft-info" aria-label="Insert Markdown heading" onClick={() => format("# ", "", "Heading", true)}><Heading className="size-3.5" aria-hidden="true" />Heading</Button>
-      <Button size="sm" variant="soft-success" aria-label="Insert Markdown bullet list" onClick={() => format("- ", "", "List item", true)}><List className="size-3.5" aria-hidden="true" />Bullets</Button>
-      <Button size="sm" variant="soft-warning" aria-label="Insert Markdown numbered list" onClick={() => format("1. ", "", "List item", true)}><ListOrdered className="size-3.5" aria-hidden="true" />Numbered list</Button>
-    </div>
+      <div role="group" aria-label={`${label} formatting`} className="flex flex-wrap gap-2">
+        <Button size="sm" variant="soft-info" aria-label="Insert bold Markdown" onClick={() => format("**", "**", "bold text")}><Bold className="size-3.5" aria-hidden="true" /><strong>Bold</strong></Button>
+        <Button size="sm" variant="soft-violet" aria-label="Insert italic Markdown" onClick={() => format("*", "*", "italic text")}><Italic className="size-3.5" aria-hidden="true" /><em>Italic</em></Button>
+        <Button size="sm" variant="soft-info" aria-label="Insert Markdown heading" onClick={() => format("# ", "", "Heading", true)}><Heading className="size-3.5" aria-hidden="true" />Heading</Button>
+        <Button size="sm" variant="soft-success" aria-label="Insert Markdown bullet list" onClick={() => format("- ", "", "List item", true)}><List className="size-3.5" aria-hidden="true" />Bullets</Button>
+        <Button size="sm" variant="soft-warning" aria-label="Insert Markdown numbered list" onClick={() => format("1. ", "", "List item", true)}><ListOrdered className="size-3.5" aria-hidden="true" />Numbered list</Button>
+      </div>
     </div>
     <textarea {...props} ref={ref} value={value} rows={7} className={`${inputClass} h-auto py-2`} onChange={(e) => onValueChange(e.target.value)} />
     <section aria-label={`${label} formatted preview`} className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface text-sm shadow-card">
       <div className="flex items-center gap-2 border-b border-border bg-surface-muted px-3 py-2.5"><span className={cn("rounded-lg p-1.5", palette.violet.tile)}><Eye className="size-4" aria-hidden="true" /></span><h3 className="font-medium">Formatted preview · Markdown</h3></div>
       <div className="min-w-0 p-3 leading-relaxed">
-      {value ? <MarkdownPreview value={value} /> : <p className="text-muted">Your formatted description will appear here.</p>}
+        {value ? <MarkdownPreview value={value} /> : <p className="text-muted">Your formatted text will appear here.</p>}
       </div>
       <p className="flex items-center gap-1.5 border-t border-border px-3 py-2 text-xs text-muted"><ShieldCheck className="size-3.5 shrink-0 text-success" aria-hidden="true" />Safe preview · HTML remains plain text</p>
     </section>

@@ -21,8 +21,10 @@ import { useAdminUi } from "@/store/admin-ui";
 import { BookOpen, CalendarDays, CalendarOff, CalendarRange, ChevronLeft, ChevronRight, CircleCheck, Clock3, ExternalLink, LayoutGrid, List, PartyPopper, Pencil, Plus, UserRound, Users, Video, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { failure, formErrors } from "../api-errors";
 import { FormDrawer } from "../FormDrawer";
 import { PageHeader } from "../PageHeader";
+import { HolidayDrawer } from "./HolidayDrawer";
 
 type View = "list" | "day" | "week" | "month";
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -58,7 +60,7 @@ function courseColor(course: string) {
 type Loaded = { key: string; sessions: AdminSession[]; holidays: AdminHoliday[]; error?: string };
 
 /** Sessions and holidays for a date range. Rows stay on screen while the next range loads. */
-function useSessionRange(from: string, to: string, batch: string) {
+export function useSessionRange(from: string, to: string, batch: string) {
     const [nonce, setNonce] = useState(0);
     const [state, setState] = useState<Loaded>({ key: "", sessions: [], holidays: [] });
     const key = `${from}|${to}|${batch}|${nonce}`;
@@ -78,18 +80,6 @@ function useSessionRange(from: string, to: string, batch: string) {
     const refetch = useCallback(() => setNonce((n) => n + 1), []);
     const status = state.key !== key ? "loading" : state.error ? "error" : "ready";
     return { sessions: state.sessions, holidays: state.holidays, error: state.error, status, refetch } as const;
-}
-
-const failure = (error: unknown, fallback = "Something went wrong. Please try again.") => (error instanceof ApiError ? error.message : fallback);
-
-/** Form errors from the server, keyed by the form's field names. Other failures are shown as a message. */
-function formErrors(error: unknown, rename: Record<string, string> = {}) {
-    if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
-        if (error.status !== 400) toast.error(error.message);
-        return Object.fromEntries(Object.entries(error.fields).map(([key, message]) => [rename[key] ?? key, message]));
-    }
-    toast.error(failure(error));
-    return undefined;
 }
 
 type Props = {
@@ -178,19 +168,6 @@ export function SessionsCalendar({ today, batches, branches, branchRequired, can
         { key: "link", label: "Live class link", type: "url", placeholder: "https://", help: "A secure (https) Zoom, Meet or similar link. Learners see it shortly before the class." },
         { key: "topics", label: "Topics", type: "textarea", placeholder: "What this class covers" },
         { key: "repeatWeeks", label: "Repeat weekly for (weeks)", type: "number", min: 0, max: 26, placeholder: "0", help: "0 schedules this date only. 4 adds the same class on the next four weeks as well; holidays are skipped." },
-    ];
-
-    const holidayFields: FormField[] = [
-        { key: "date", label: "Date", type: "date", required: true },
-        { key: "reason", label: "Reason", type: "text", required: true, placeholder: "Diwali", help: "Learners see this on their calendar." },
-        {
-            key: "branch",
-            label: "Branch",
-            type: "select",
-            options: branchRequired ? branches : ["All branches", ...branches],
-            required: true,
-            help: branchRequired ? "Scheduled sessions of this branch on that day are cancelled." : "All branches cancels the scheduled sessions everywhere on that day.",
-        },
     ];
 
     const removeHoliday = async () => {
@@ -396,29 +373,16 @@ export function SessionsCalendar({ today, batches, branches, branchRequired, can
                 }}
             />
 
-            <FormDrawer
+            <HolidayDrawer
                 open={holidayOpen}
-                title="Mark as Holiday"
-                description="Classes scheduled on this day are cancelled and learners see the holiday on their calendar."
-                fields={holidayFields}
-                initial={{ date: cursor, branch: branchRequired ? (branches[0] ?? "") : "All branches" }}
-                submitLabel="Mark holiday"
+                date={cursor}
+                branches={branches}
+                branchRequired={branchRequired}
                 onClose={() => setHolidayOpen(false)}
-                onSubmit={async (v) => {
-                    try {
-                        const result = await apiClient.post<{ holiday: AdminHoliday; cancelled: number }>("/api/admin/sessions/holidays", {
-                            date: v.date,
-                            reason: v.reason,
-                            branch: v.branch === "All branches" ? "" : v.branch,
-                        });
-                        const n = result.data.cancelled;
-                        toast.success("Holiday added", { description: n ? `${n} scheduled ${n === 1 ? "session was" : "sessions were"} cancelled.` : "No scheduled sessions were affected." });
-                        setHolidayOpen(false);
-                        setCursor(result.data.holiday.date);
-                        refetch();
-                    } catch (caught) {
-                        return formErrors(caught);
-                    }
+                onMarked={(holiday) => {
+                    setHolidayOpen(false);
+                    setCursor(holiday.date);
+                    refetch();
                 }}
             />
 
@@ -465,7 +429,7 @@ export function SessionsCalendar({ today, batches, branches, branchRequired, can
 type Mark = "PRESENT" | "ABSENT";
 const markOf = (value: string): Mark | undefined => (value === "Present" ? "PRESENT" : value === "Absent" ? "ABSENT" : undefined);
 
-function SessionDetails({ session, canWrite, onChanged, onClose, onEdit }: { session: AdminSession; canWrite: boolean; onChanged: () => void; onClose: () => void; onEdit: () => void }) {
+export function SessionDetails({ session, canWrite, onChanged, onClose, onEdit }: { session: AdminSession; canWrite: boolean; onChanged: () => void; onClose: () => void; onEdit?: () => void }) {
     const [detail, setDetail] = useState<AdminSessionDetail | null>(null);
     const [loadError, setLoadError] = useState("");
     const [marks, setMarks] = useState<Record<string, Mark>>({});
@@ -617,6 +581,24 @@ function SessionDetails({ session, canWrite, onChanged, onClose, onEdit }: { ses
                 </section>
             ) : null}
 
+            {detail && detail.recordings.length > 0 ? (
+                <section aria-label="Recordings" className="flex flex-col gap-3">
+                    <h3 className="text-sm font-semibold">Recordings</h3>
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                        {detail.recordings.map((r) => (
+                            <li key={r.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+                                <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1 text-sm text-accent underline underline-offset-2">
+                                    <span className="truncate">{r.title}</span>
+                                    <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" />
+                                    <span className="sr-only">(opens in a new tab)</span>
+                                </a>
+                                <Badge tone={toneFor(r.status, { Available: "success", Processing: "warning", Failed: "danger" })}>{r.status}</Badge>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            ) : null}
+
             {editable && cancelling ? (
                 <section aria-label="Cancel this session" className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50/60 p-4 dark:border-red-500/30 dark:bg-red-500/10">
                     <Field id="cancel-reason" label="Why is it cancelled?" required help="Learners of this batch see this reason." error={reasonError}>
@@ -639,7 +621,7 @@ function SessionDetails({ session, canWrite, onChanged, onClose, onEdit }: { ses
                 </section>
             ) : editable ? (
                 <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-                    <Button variant="soft-info" onClick={onEdit}><Pencil className="size-4" aria-hidden="true" />Edit or reschedule</Button>
+                    {onEdit ? <Button variant="soft-info" onClick={onEdit}><Pencil className="size-4" aria-hidden="true" />Edit or reschedule</Button> : null}
                     <Button variant="soft-danger" onClick={() => setCancelling(true)}>Cancel session</Button>
                 </div>
             ) : null}

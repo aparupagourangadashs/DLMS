@@ -3379,3 +3379,249 @@
     transform: none;
   }
 }
+
+/* Blog */
+.web-article-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.web-article-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.web-article-card:hover {
+  box-shadow: var(--web-shadow);
+  transform: translateY(-2px);
+}
+
+.web-article-card:focus-within {
+  outline: 3px solid #a97824;
+  outline-offset: 3px;
+}
+
+.web-article-cover {
+  position: relative;
+  display: grid;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, #2c2942, #51405a);
+  color: #e7c784;
+}
+
+.web-article-cover img {
+  object-fit: cover;
+}
+
+.web-article-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.web-article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.web-article-card h2 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+/* One link per card: the title's link covers the whole card. */
+.web-article-card h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.web-article-card h2 a:focus-visible {
+  outline: none;
+}
+
+.web-article-card h2+p {
+  margin-top: 0;
+}
+
+.web-article-card-body>p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.web-article-card-body>p:not(.web-article-meta):not(.web-article-author) {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.web-article-card .web-article-author {
+  margin-top: auto;
+  color: var(--web-plum);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.web-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 44px;
+  font-size: 12px;
+}
+
+.web-pagination a,
+.web-pagination [aria-disabled="true"] {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  font-weight: 600;
+}
+
+.web-pagination a:hover {
+  border-color: #a97824;
+}
+
+.web-pagination [aria-disabled="true"] {
+  opacity: 0.45;
+}
+
+.web-article-hero h1 {
+  font-size: clamp(2.1rem, 3.8vw, 3.5rem);
+  max-width: 860px;
+}
+
+.web-article-byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 24px;
+  color: #d6d1dd;
+  font-size: 12px;
+}
+
+.web-article-byline span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.web-article-figure {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 40px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f0eee7;
+}
+
+.web-article-figure img {
+  object-fit: cover;
+}
+
+.web-article-text {
+  padding-top: 56px;
+}
+
+.web-article-text .web-article-lead {
+  margin-bottom: 28px;
+  color: var(--web-plum);
+  font-family: var(--font-crimson), Georgia, serif;
+  font-size: 22px;
+  line-height: 1.6;
+}
+
+.web-article-text p,
+.web-article-text li {
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.web-article-text h2 {
+  margin-top: 44px;
+  font-size: 30px;
+}
+
+.web-article-text h3,
+.web-article-text h4 {
+  margin: 32px 0 14px;
+  font-family: var(--font-crimson), Georgia, serif;
+  line-height: 1.2;
+}
+
+.web-article-text h4 {
+  font-size: 19px;
+}
+
+.web-article-text ul,
+.web-article-text ol {
+  margin: 0 0 22px;
+  padding-left: 1.5em;
+}
+
+.web-article-text ul {
+  list-style: disc;
+}
+
+.web-article-text ol {
+  list-style: decimal;
+}
+
+.web-article-text li+li {
+  margin-top: 6px;
+}
+
+.web-article-text .web-text-link {
+  margin-top: 28px;
+}
+
+@media (max-width: 1023px) {
+  .web-article-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .web-article-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .web-article-text {
+    padding-top: 36px;
+  }
+
+  .web-article-text .web-article-lead {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .web-article-card:hover {
+    transform: none;
+  }
+}

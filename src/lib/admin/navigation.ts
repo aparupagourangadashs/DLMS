@@ -132,7 +132,7 @@ const sections: Omit<NavSection, "landingPage">[] = [
       { slug: "trainer", label: "Trainer", description: "Instructor sessions, attendance and ratings.", status: "proposed" },
       { slug: "notification-logs", label: "Notification Logs", description: "Delivery logs for every channel.", status: "proposed" },
       { slug: "community-analytics", label: "Community Analytics", description: "Community activity and engagement.", status: "proposed" },
-      { slug: "more", label: "More", description: "Synthetic branch, storage, bandwidth, task, user-time and wallet reports.", status: "ready" },
+      { slug: "more", label: "More", description: "Branch statistics and storage from live data. Bandwidth, tasks, user time and wallet reports are listed as waiting.", status: "ready" },
       { slug: "advanced-analytics", label: "Advanced Analytics", description: "Custom cross-module reports.", status: "proposed" },
     ],
   },
@@ -142,6 +142,7 @@ const sections: Omit<NavSection, "landingPage">[] = [
     icon: Settings,
     pages: [
       { slug: "my-profile", label: "My Profile", description: "Your personal details, preferences and password.", status: "ready" },
+      { slug: "audit-log", label: "Audit Log", description: "Who did what and when across the admin panel. Super Admins only.", status: "ready" },
       { slug: "sub-organizations", label: "Sub-Organizations", description: "Demo branches, managers and activity.", status: "ready" },
       { slug: "system-notifications", label: "System Notifications", description: "Event-family preferences and unconnected delivery channels.", status: "ready" },
       { slug: "categories", label: "Categories", description: "Course and product category hierarchy.", status: "ready" },

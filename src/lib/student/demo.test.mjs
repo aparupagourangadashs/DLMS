@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
 import { test } from "node:test";
-import { calendarDays, courseBanners, courses, progress, sessions, shiftCalendarDate, studentHref, studentNav, studentToday } from "./demo.ts";
+import { calendarDays, courses, progress, sessions, shiftCalendarDate, studentHref, studentNav, studentToday } from "./demo.ts";
 import { allowedPromotionalChannels, missingProfileItems, profileCompletion } from "./profile.ts";
 
 const sample = { name: "Asha Rao", username: "asha", email: "asha@example.com" };
@@ -19,17 +18,6 @@ test("promotional messages need the promotional switch and a channel switch", ()
   assert.deepEqual(allowedPromotionalChannels(off), [], "channels alone are not consent");
   assert.deepEqual(allowedPromotionalChannels({ ...off, promotional: true, sms: false, push: false }), ["whatsapp", "email"]);
   assert.deepEqual(allowedPromotionalChannels({ promotional: true, whatsapp: false, email: false, sms: false, push: false }), []);
-});
-
-test("both reference carousel artworks are stored locally with official destinations", () => {
-  assert.equal(courseBanners.length, 2);
-  assert.equal(new Set(courseBanners.map((banner) => banner.image)).size, 2);
-  for (const banner of courseBanners) {
-    assert.ok(existsSync(new URL(`../../../public${banner.image}`, import.meta.url)));
-    assert.ok(banner.alt && banner.width > 0 && banner.height > 0);
-    assert.equal(new URL(banner.href).hostname, "www.ibmedu.org");
-    assert.ok(!banner.href.includes("/myaccount/"));
-  }
 });
 
 test("today's schedule uses IST at midnight boundaries and handles empty dates", () => {
