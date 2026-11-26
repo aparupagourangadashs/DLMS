@@ -11,8 +11,10 @@ One application for the three IBMV portals: the **admin panel**, the **student p
 The October 2026 reference review is implemented as **local demo workflows**,
 not connected production services:
 
-- **Dashboard:** four weekly metric sparklines, a ten-day active-user chart,
-  and enrollment/sales trends with Bar/Line/Area controls and totals.
+- **Dashboard (live since B4b):** today's sessions with attendance, holidays and
+  date navigation, weekly attendance against the week before, and signups vs
+  enrollments by week with Bar/Line/Area controls. Time spent, views, rating,
+  daily active users and sales show "No data yet" until their data exists.
 - **Learning:** multi-day event wizard with Markdown description/preview and
   pricing; batch dates, managers, modules and community configuration;
   feedback templates and question builder; required question-bank metadata;
@@ -26,9 +28,13 @@ not connected production services:
   preview, hierarchical categories, scoped custom fields, branch managers and
   activity, validated grading bands, fee descriptions, wallet history/usage,
   and nine notification families with global channel controls.
-- **Analytics:** 49 deterministic synthetic reports, including the More
-  category. Date/branch/course/status/search filters recalculate previews;
-  exports download all matching rows as CSV rather than only the visible page.
+- **Analytics:** five pages (Sales & Enrollment, Batch & Progress, Marketing,
+  Trainer and More) now show live reports from the database; see
+  [Backend: in progress](#backend-in-progress). The other four pages
+  (Feedback & Rating, Notification Logs, Community Analytics and Advanced
+  Analytics) still show deterministic synthetic reports, with date, branch,
+  course, status and search filters that recalculate the previews; exports
+  download all matching rows as CSV rather than only the visible page.
 
 The detailed implementation matrix and integration boundaries are in
 [the admin specification](copilot/ADMIN_PANEL_SPEC.md#9-local-demo-implementation).
@@ -39,8 +45,8 @@ stated otherwise. No changes are made to the reference site's records.
 
 | Portal | Status |
 | --- | --- |
-| Admin panel (`/admin`) | All 9 sections and 60 screens. Team, Learners, Support Inbox, My Profile, Sub-Organizations, Courses, Categories, Leads, Testimonials, **Batches, Sessions, Announcements, New Enrolment** and the **Website** group (Site Settings, Books, People, Magazines, Videos, Legal Pages) are **connected to the database**; the rest remain a clickable frontend with demo data, ready for customer review |
-| Student portal (`/student`) | 13 core review screens plus 3 original sample-course reading previews; sign-in is required. **Home, My Learning, Calendar, Announcements, Profile, Preferences and Help read and save your own records**; purchases, certificates, exams, communities and the course player still show **demo data** until their backend phase lands |
+| Admin panel (`/admin`) | All 9 sections and 60 screens. Team, Learners, Support Inbox, My Profile, Sub-Organizations, Courses, Categories, Leads, Testimonials, Batches, Sessions, Announcements, New Enrolment, **Module Library** and the **Website** group (Site Settings, Books, People, Magazines, Videos, Legal Pages) are **connected to the database**; the rest remain a clickable frontend with demo data, ready for customer review |
+| Student portal (`/student`) | 13 core review screens plus 3 original sample-course reading previews; sign-in is required. **Home, My Learning, the course player, Calendar, Announcements, Profile, Preferences and Help read and save your own records**; purchases, certificates, exams and communities still show **demo data** until their backend phase lands |
 | Public website (`/website`) | 144 routes rendered **from the database**: Home, six collections, 127 course pages, publications, institutional pages, contact and legal pages. Admin edits appear on the site immediately |
 
 Admin screens are labelled by how well the source specification supports them:
@@ -209,7 +215,7 @@ npm install
 cp .env.example .env   # then set DATABASE_URL and AUTH_SECRET (see below)
 npm run db:migrate   # creates tables in the database named in DATABASE_URL
 npm run db:generate  # regenerate the Prisma client after a schema change
-npm run db:seed      # first Super Admin, catalog (6 categories, 127 courses, 9 books), site settings, demo accounts and Demo Batch 1
+npm run db:seed      # first Super Admin, catalog (6 categories, 127 courses, 9 books), site settings, the launch banners, demo accounts and Demo Batch 1
 npm run dev          # http://localhost:3000, admin panel at /admin
 ```
 
@@ -222,6 +228,7 @@ npm run dev          # http://localhost:3000, admin panel at /admin
 3. `prisma migrate dev` needs rights to create a shadow database; a local account such as `root` is fine for development only.
 4. Check the connection at `GET /api/health` (`{"status":"ok","db":"up"}`).
 5. Sign in at `/login` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (Super Admin). With `SEED_DEMO_PASSWORD` set, the seed also creates demo staff (`demo.staff1..10@ibmv.local`), a demo learner (`learner@ibmv.local`) and a running **Demo Batch 1** (sessions placed around the day you seed, enrolments and two announcements) for local testing. Change or remove these before any shared deployment.
+6. Uploaded files (the Asset Library) are kept on disk, outside `public/`, in `./storage` (ignored by git). Optional settings in `.env`: `STORAGE_LOCAL_DIR` (another folder, which must be writable and backed up) and `UPLOAD_MAX_MB` (largest file, default 25, at most 30).
 
 The backend build plan and per-page progress are in [copilot/backend/MASTER_PLAN.md](copilot/backend/MASTER_PLAN.md).
 
@@ -238,6 +245,12 @@ The backend build plan and per-page progress are in [copilot/backend/MASTER_PLAN
 | `node scripts/smoke-b1.mjs`, `smoke-b2.mjs`, `smoke-website.mjs` | HTTP checks against a running `npm run start` (need the seeded accounts); they remove the temporary records they create |
 | `npx tsx scripts/smoke-b3.mjs` | The B3 HTTP checks (learner profile, preferences, support, Learners, Support Inbox); needs `tsx` for its database clean-up |
 | `npx tsx scripts/smoke-b4.mjs` | The B4 HTTP checks (batches, enrolments, sessions, holidays, attendance, announcements, and what a learner sees); needs the seeded demo batch and `tsx` for its database clean-up |
+| `npx tsx scripts/smoke-b4b.mjs` | The B4b HTTP checks (Module Library, modules on a course, the learner's lessons and progress, recordings, the dashboard); same needs as the B4 script |
+| `npx tsx scripts/smoke-b2b.mjs` | The Asset Library HTTP checks (uploads, public images, protected files, file lessons); needs the seeded demo accounts and `tsx` |
+| `npx tsx scripts/smoke-b2b-marketing.mjs` | The Marketing Banners and Events HTTP checks (access rules, validation, what the website home and the student home show); needs the seeded banners and demo accounts. It sets the seeded website banner aside while it runs and puts it back |
+| `npx tsx scripts/smoke-b2b-blogs.mjs` | The Blogs HTTP checks (access rules, Markdown rendering, drafts and hidden articles, paging, the view counter, the menu link); needs the seeded demo accounts and `tsx` |
+| `npx tsx scripts/smoke-b8.mjs` | The Analytics HTTP checks (who may open or export a report, every live and waiting report, the filters and their errors, the figures against the database, a branch-bound administrator, the CSV file and its audit entry, the pages); needs the seeded demo accounts and `tsx`. It creates one throwaway administrator (`smoke.b8.*`) and removes it |
+| `npx tsx scripts/smoke-b8b.mjs` | The shell-feature HTTP checks: the noti, and the support requests and leads they wrote, left by the smoke scriptstold, marking read, nobody else's messages), the audit log (Super Admin only, filters, export entries), global search (who may find what, branch limits, the `?q=` link, the search rate limit) and the pages; needs the seeded demo accounts, at least two branches and `tsx`. It creates a support request, a lead, two learners and a branch-bound administrator (`smoke.b8b.*`) and removes them with the notifications they caused |
 | `npx tsx scripts/cleanup-smoke.mjs` | Remove throwaway `smoke.*` accounts left by the B1 script |
 | `npm run db:generate` | Generate the Prisma client into `src/generated/prisma` |
 | `npm run db:migrate` | Create/apply a development migration |
@@ -337,8 +350,8 @@ icons, use blue/green/violet styling, and provide 44px touch targets.
 
 The backend is being built phase by phase; see [copilot/backend/MASTER_PLAN.md](copilot/backend/MASTER_PLAN.md) for the plan and status. Screens that have not been reached yet are still demo-backed.
 
-- **Live now:** sign-in/registration/password reset, role gates and audit (B1); catalog and public content (B2): courses, categories, books, people, magazines, videos, testimonials, leads, legal pages, site settings, and the public website reading all of it; learners and support (B3): learner profile and preferences, registration numbers, the Learners screen and the Support Inbox; learning operations (B4): batches, enrolments (single, bulk, CSV), sessions with holidays and attendance, announcements, and the learner's Home, My Learning, Calendar and Announcements.
-- **Next:** B5 commerce. Tracked separately: B2b (Blogs, Banners, Events, Module Library, Asset Library with uploads), B3b (Segments, Custom Fields, Learner Experience) and B4b (course player and lesson progress, Session Recordings, the Dashboard's sessions and enrolments).
+- **Live now:** sign-in/registration/password reset, role gates and audit (B1); catalog and public content (B2): courses, categories, books, people, magazines, videos, testimonials, leads, legal pages, site settings, and the public website reading all of it; learners and support (B3): learner profile and preferences, registration numbers, the Learners screen and the Support Inbox; learning operations (B4): batches, enrolments (single, bulk, CSV), sessions with holidays and attendance, announcements, and the learner's Home, My Learning, Calendar and Announcements; course content (B4b): the Module Library, modules added to courses, the learner's course player with saved lesson progress, Session Recordings (links, with "Watch recording" for learners) and the admin Dashboard's sessions, attendance and enrolments; content tools (B2b): the Asset Library with real uploads and file lessons, Marketing Banners (the website home and the student home show the live ones), Events, and Blogs with the public Blog pages; analytics (B8, first slice): live reports on the Sales & Enrollment, Batch & Progress, Marketing, Trainer and More pages (enrolments by day and by course, batch and learner progress, attendance, module progress, inactive learners, trainers and the session log, lead sources, branch statistics, storage), each with period, branch, course and status filters, search, sorting, a chart and a CSV export of every matching row. Reports that need payments, assessments, campaigns or activity tracking are listed as waiting and say what they need; shell features (B8, second slice): the notification bell (staff are told of a new support request, an assignment and a bulk-book enquiry), Ctrl+K search of pages and of records from 15 places, limited by role and branch, and Settings > Audit Log for Super Admins.
+- **Next:** B5 commerce, which also feeds the waiting reports. Tracked separately: B2b (editable About and Srila Prabhupada copy), B3b (Segments, Custom Fields, Learner Experience) and the rest of B8 (activity tracking and the Dashboard cards).
 
 - **Database: MySQL/MariaDB with Prisma 7** (`prisma/schema.prisma`, client in `src/generated/prisma`, server-only access via `src/server/db.ts`).
 - **Auth.js (NextAuth v5)** with role-based access, enforced on the server, not just hidden in the menu.

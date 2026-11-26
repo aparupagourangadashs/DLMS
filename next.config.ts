@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  // The proxy buffers request bodies and silently cuts them at 10 MB; uploads can be 25 MB (UPLOAD_MAX_MB, up to 30).
+  experimental: { proxyClientMaxBodySize: "32mb" },
   async headers() {
     return [
       {

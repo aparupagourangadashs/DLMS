@@ -126,7 +126,7 @@ branch-scoped staff cannot open other branch learners; export respects permissio
 | **Announcements** | `/admin/learning/announcements` | list | `Announcement` + audience (all / batch / segment), urgency High/Medium/Low, tags, `publishAt` (scheduled), status; publish creates `InAppNotification` rows and enqueues delivery per learner consent; edit after publish allowed with audit; student unread state independent | Registry; form: title, audience (batches/segments from lookups), urgency, publish at, message (markdown), tags |
 | **Session Recordings** | `/admin/learning/session-recordings` | list | `Recording` linked to `Session`; status Processing/Available/Failed; source: upload to storage or approved external URL; visibility follows batch enrolment; tabs by batch status; filters date/batch; delete (soft) | Registry; selectable rows with bulk delete; `view` opens a player using signed URL |
 | **New Enrolment** | `/admin/users/new-enrolment` | custom `NewEnrolment` | Four modes. Single: email lookup (`GET /api/admin/learners/lookup?email=`) -> choose course/batch, access dates, optional send-welcome; Bulk: CSV upload -> validate-only dry run returns per-row result (valid/duplicate/invalid/unknown course) -> confirm commit; Learner Registration: create account without enrolment; Advanced Bulk: CSV with course/batch/dates/status per row. Rules: idempotent (existing active enrolment is skipped, not duplicated), max rows per file, size cap, transactional per row with a result report downloadable as CSV, all rows audited, optional notifications honor consent | Replace `knownEmails` prop with API lookup; show outcome table (created/skipped/failed); keep step UX |
-| **Dashboard (core)** | `/admin` | custom `Dashboard.tsx` | `GET /api/admin/dashboard?week=`: today's sessions (scheduled/cancelled/sign-ins/non-sign-ins/attendance) with date navigation; enrollment (signups vs enrollments) and sales series; daily active users; weekly cards (time spent, views, rating, attendance) with previous-week comparison. A4 delivers sessions + enrolments; time spent, views, active users, rating need `UserActivity` and feedback data (B8) | Replace `demo-data` series; chart components stay; cards show "No data yet" instead of fake values |
+| **Dashboard (core)** | `/admin` | custom `Dashboard.tsx` | Server read of the overview (`getDashboardOverview`) plus `GET /api/admin/sessions` for the day: today's sessions (scheduled/cancelled/sign-ins/non-sign-ins/attendance) with date navigation; enrollment (signups vs enrollments) and sales series; daily active users; weekly cards (time spent, views, rating, attendance) with previous-week comparison. A4 delivers sessions + enrolments; time spent, views, active users, rating need `UserActivity` and feedback data (B8) | Replace `demo-data` series; chart components stay; cards show "No data yet" instead of fake values |
 
 Exit gate: admin creates batch, sessions, enrols a learner; learner sees them
 in the student portal; attendance recorded; bulk enrolment dry-run + commit works.
@@ -243,10 +243,10 @@ Each keeps its `DecisionPage` until IBMV approves requirements.
 
 | Feature | Backend |
 |---|---|
-| Global search (Ctrl+K) | `GET /api/admin/search?q=` fans out to learners, courses, batches, announcements, blogs... filtered by permission and branch; `CommandPalette` calls it (debounced) in addition to static route entries |
+| Global search (Ctrl+K) | **Done** (2026-11-26). `GET /api/admin/search?q=` (two letters or more, 120 a minute per person) looks in 15 places: learners, team, courses, batches, events, announcements, blog articles, leads, support requests, assets, modules, banners, testimonials, books and website people. It shows five of each, only from screens the role may open, and branch-bound staff only see their own branches' learners, team and batches (plus unassigned batches). `CommandPalette` shows pages at once and records after a short pause; a record opens its list with `?q=` filling the search box, and a support request opens its conversation with `?open=` |
 | Quick-create (New) | Unchanged links to editors; hide per permission |
-| Notification bell | `InAppNotification` for staff (new support request, failed payment, low wallet, bounced cheque) |
-| Audit view | `GET /api/admin/audit` list page (Super Admin) with filters actor/entity/date |
+| Notification bell | **Done for what exists** (2026-11-26). `InAppNotification` (one row per person, read state, on-site link only, dropped after 90 days) with `GET /api/admin/notifications` and `POST /api/admin/notifications/read`. Staff are told of a new support request (roles that can read support requests), of a request assigned to them, and of a bulk-book enquiry (roles that can change leads). Failed payment, low wallet and bounced cheque arrive with B5 and B7. The learner bell (S6) reuses the table |
+| Audit view | **Done** (2026-11-26). `GET /api/admin/audit` and `/options` (`audit:read`, Super Admin only) with period (India days), who (a person, learners, or no account), action, record type and text search, sorted by time, action or record, 25 to a page, with the before and after of each entry. Page: Settings > Audit Log |
 
 ---
 
@@ -267,24 +267,24 @@ Status: `Todo`, `In progress`, `Done`. Pattern: **L** = generic list via registr
 
 | Section | Page | Pattern | Phase | Status |
 |---|---|---|---|---|
-| Home | Dashboard | C | A4 core, A8 full | Todo (sessions and enrolments part tracked as B4b) |
-| Products | Events | L + editor | A2 (B2b) | Todo |
+| Home | Dashboard | C | A4 core, A8 full | **Done (core)** (2026-11-26): today's sessions with attendance, holidays and date navigation, weekly attendance with last-week comparison, signups vs enrollments by week; time spent, views, rating, daily active users and sales show "No data yet" until B5/B8 |
+| Products | Events | L + editor | A2 (B2b) | **Done** (2026-11-26); three-step editor with up to 30 days in IST (overlap and real-date checks), platform-based venue and https link, free or paid price (minor units), capacity, manager from active staff, poster from an upload; active events cannot be deleted; ticket sales arrive with B5, feedback forms with B6, public event pages are not built |
 | Products | Mentorships | D | A8 (conditional) | Todo |
 | Products | eBooks | D | A8 (conditional) | Todo |
 | Products | Test Series | D | A8 (conditional) | Todo |
 | Products | Playlists | D | A8 (conditional) | Todo |
 | Products | **Courses (new)** | L + editor | A2 | **Done** (2026-11-25) |
 | Products | **Memberships (new)** | L | A5 | Todo |
-| Learning | Batches | L + editor | A4 | **Done** (2026-11-25); modules and batch community arrive with the module library and communities |
+| Learning | Batches | L + editor | A4 | **Done** (2026-11-25); batch progress is the average of learners' course progress; choosing modules per batch and batch communities are not built |
 | Learning | Sessions | C | A4 | **Done** (2026-11-25); create, weekly repeat, reschedule, cancel, holidays, attendance |
 | Learning | Announcements | L | A4 | **Done** (2026-11-25); audience all or one batch (segments with B3b); in-app only, delivery with B7 |
 | Learning | Feedback Forms | L + editor | A6 | Todo |
-| Learning | Module Library | L | A2 (B2b) | Todo |
+| Learning | Module Library | L | A4 (B4b) | **Done** (2026-11-26); text, YouTube, link and file lessons in an ordered editor, used-module delete blocked; modules are added to a course in the Courses editor; quizzes arrive with assessments |
 | Learning | Question Bank | L | A6 | Todo |
-| Learning | Asset Library | L + editor | A2 (B2b, needs uploads, D4) | Todo |
+| Learning | Asset Library | L + editor | A2 (B2b, needs uploads, D4) | **Done** (2026-11-26); uploads to a local storage driver (`STORAGE_LOCAL_DIR`, `UPLOAD_MAX_MB`), YouTube/link assets, replace file, de-duplication, summary cards, usage from lessons; delete blocked while used; images public, other files private |
 | Learning | Assessments | L | A6 | Todo |
 | Learning | Submissions | L + review | A6 | Todo |
-| Learning | Session Recordings | L | A4 (B4b) | Todo |
+| Learning | Session Recordings | L | A4 (B4b) | Done (links; bulk delete later) |
 | Learning | Certificates | L + editor | A6 | Todo |
 | Users | Learners | L | A3 | **Done** (2026-11-25); Enrolled/Completed tabs and course/batch filters added with A4 (2026-11-25) |
 | Users | Team | L | A1 | **Done** (2026-11-25) |
@@ -295,8 +295,8 @@ Status: `Todo`, `In progress`, `Done`. Pattern: **L** = generic list via registr
 | Engage | **Support inbox (new)** | custom | A3 | **Done** (2026-11-25) |
 | Marketing | Campaigns | L | A7 | Todo |
 | Marketing | Workflows | D | A7 (conditional) | Todo |
-| Marketing | Blogs | L | A2 (B2b) | Todo |
-| Marketing | Marketing Banners | L | A2 (B2b) | Todo |
+| Marketing | Blogs | L | A2 (B2b) | **Done** (2026-11-26); Markdown article with summary, optional cover upload, author from active staff, Draft/Published/Hidden, web address made from the title (editable, unique), first publication date kept, views counted by the public page; the list searches, filters by visibility and created date and sorts; a published article cannot be deleted |
+| Marketing | Marketing Banners | L | A2 (B2b) | **Done** (2026-11-26); image upload, https or on-site link, show-from/until dates (IST days), display order, Website home or Student portal home; the website home and student home read them; images stay in the Asset Library when a banner is deleted |
 | Marketing | Leads | L | A2 | **Done** (2026-11-25) |
 | Marketing | Promotional Templates | C | A7 | Todo |
 | Marketing | Promo Codes | C | A5 | Todo |
@@ -304,16 +304,17 @@ Status: `Todo`, `In progress`, `Done`. Pattern: **L** = generic list via registr
 | Sales | Abandoned Cart | L | A5 | Todo |
 | Sales | Cheque Management | C | A5 | Todo |
 | Sales | **Orders and payments (new)** | L | A5 | Todo |
-| Analytics | Sales & Enrollment | C | A8 | Todo |
-| Analytics | Batch & Progress | C | A8 | Todo |
-| Analytics | Feedback & Rating | C | A8 | Todo |
-| Analytics | Marketing | C | A8 | Todo |
-| Analytics | Trainer | C | A8 | Todo |
-| Analytics | Notification Logs | C | A8 | Todo |
-| Analytics | Community Analytics | C | A8 | Todo |
-| Analytics | More | C | A8 | Todo |
+| Analytics | Sales & Enrollment | C | A8 | **In progress** (2026-11-26): live Product Enrollments and Course Wise Enrollments; Sales Overview, Payments Received, GST Report, Event and Membership Enrollments wait for B5 (and D6) |
+| Analytics | Batch & Progress | C | A8 | **In progress** (2026-11-26): live Batch Progress, Learner Progress, Attendance, Batch Attendance, Module Progress and Inactive Learners (14 days); Batch Performance, Batch Assessment, Assessment Attempts and Issued Certificates wait for B6 |
+| Analytics | Feedback & Rating | C | A8 | Todo (sample data until B6) |
+| Analytics | Marketing | C | A8 | **In progress** (2026-11-26): live Lead Sources; Campaign Performance waits for B7 and Promo Code Usage for B5 |
+| Analytics | Trainer | C | A8 | **In progress** (2026-11-26): live Trainer Summary and Session Log; ratings arrive with feedback forms (B6) |
+| Analytics | Notification Logs | C | A8 | Todo (sample data until B7) |
+| Analytics | Community Analytics | C | A8 | Todo (sample data until B7) |
+| Analytics | More | C | A8 | **In progress** (2026-11-26): live Branch Statistics and Storage Consumption; Bandwidth waits for a download log, Scheduled Tasks and Wallet Recharges for B7, User-time for activity tracking |
 | Analytics | Advanced Analytics | D / C | A8 (conditional) | Todo |
 | Settings | My Profile | C | A1 | **Done** (2026-11-25) |
+| Settings | **Audit Log (new)** | C | A8 | **Done** (2026-11-26); Super Admin only |
 | Settings | Sub-Organizations | C | A1 | **Done** (2026-11-25) |
 | Settings | System Notifications | C | A7 | Todo |
 | Settings | Categories | C | A2 | **Done** (2026-11-25) |
@@ -325,7 +326,7 @@ Status: `Todo`, `In progress`, `Done`. Pattern: **L** = generic list via registr
 | Settings | Utility Wallet | C | A7 | Todo |
 | Website | **Site Settings, Books, People, Magazines, Videos, Legal Pages (new group)** | C + L | A2 | **Done** (2026-11-25) |
 | Shell | Login, permission-aware nav | n/a | A1 | **Done** (2026-11-25) |
-| Shell | Global search, notification bell, audit view | n/a | A8 | Todo |
+| Shell | Global search, notification bell, audit view | n/a | A8 | **Done** (2026-11-26); see the shell features table above |
 
 ## Admin permission keys (initial)
 

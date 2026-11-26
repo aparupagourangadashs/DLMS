@@ -128,7 +128,7 @@ Roles map to sets in `src/server/auth/permissions.ts`.
 - [x] `writeAudit({ actorId, action, entity, entityId, before?, after?, ip })` used by service code (not UI).
 - [x] Audited so far: team create/update/archive/restore, branch create/update/pause/reactivate, profile update, password change/reset, learner registration, CSV export. The rest of the mandatory list (learner delete/archive, enrolment, publish, order/payment, refund, cheque, certificate, grade, settings, wallet) is added by the phase that introduces each action.
 - [x] Redact secrets and large payloads (`src/server/audit/redact.ts`); before/after hold only the changed fields.
-- [ ] Read endpoint `GET /api/admin/audit` (Super Admin) and the audit view: deferred to A8.
+- [x] Read endpoint `GET /api/admin/audit` (Super Admin) and the audit view (Settings > Audit Log): done in B8 (2026-11-26).
 
 ### B1.6 Pages delivered in B1
 

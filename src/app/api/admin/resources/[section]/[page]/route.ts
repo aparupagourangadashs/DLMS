@@ -12,8 +12,8 @@ export const GET = apiHandler<Params, "staff">(
     const def = getResource(`${params.section}/${params.page}`);
     assertCan(user, def.resource, "read");
     const query = parseListQuery(new URL(request.url).searchParams, { sortableKeys: def.sortableKeys });
-    const { rows, total, tabCounts } = await def.list(query, { user, ip });
-    return ok(rows, { page: query.page, pageSize: query.pageSize, total, ...(tabCounts ? { tabCounts } : {}) });
+    const { rows, total, tabCounts, summary } = await def.list(query, { user, ip });
+    return ok(rows, { page: query.page, pageSize: query.pageSize, total, ...(tabCounts ? { tabCounts } : {}), ...(summary ? { summary } : {}) });
   },
   { auth: "staff" },
 );

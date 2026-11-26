@@ -204,6 +204,71 @@ try {
     result = await page(null, `/student/learning/${slug}`);
     check("the anonymous course page redirects to sign-in", result.status >= 300 && result.location.includes("/login"), `${result.status} ${result.location}`);
 
+    // ---- Session recordings ----
+    const startsAt = new Date(Date.now() - 2 * 3_600_000);
+    const classTitle = `${tag} Class ${stamp}`;
+    const session = await prisma.session.create({ data: { batchId: batch.id, title: classTitle, startsAt, endsAt: new Date(startsAt.getTime() + 3_600_000) } });
+    const istStamp = new Date(startsAt.getTime() + 330 * 60_000).toISOString();
+    const classLabel = `${istStamp.slice(0, 10)} ${istStamp.slice(11, 16)} · ${batchName} · ${classTitle}`;
+    const recordingPath = "/api/admin/resources/learning/session-recordings";
+    const recordingBody = (over = {}) => ({ session: classLabel, title: "", url: "https://example.org/recording", status: "Available", ...over });
+    result = await page(admin, "/admin/learning/session-recordings");
+    check("admin opens Session Recordings", result.status === 200 && result.html.includes("Add Recording"), result.status);
+    r = await send(admin, "POST", recordingPath, recordingBody({ url: "http://example.org/recording" }));
+    body = await r.json();
+    check("a recording link must be https", r.status === 400 && body.error?.fields?.url, `${r.status} ${brief(body)}`);
+    r = await send(admin, "POST", recordingPath, recordingBody({ session: "No such class" }));
+    check("a class that is not in the list is refused", r.status === 400, r.status);
+    r = await send(admin, "POST", recordingPath, recordingBody());
+    body = await r.json();
+    const recording = body.data;
+    check("admin adds a recording to the class", r.status === 201 && recording?.name === classTitle && recording.status === "Available", `${r.status} ${brief(body)}`);
+    r = await send(admin, "POST", recordingPath, recordingBody({ title: "Hidden cut", status: "Processing", url: "https://example.org/processing" }));
+    check("admin adds one that is still processing", r.status === 201, r.status);
+    r = await req(admin, `${recordingPath}?q=${encodeURIComponent(tag)}&pageSize=10`);
+    body = await r.json();
+    check("the list shows both recordings", r.status === 200 && body.meta.total === 2 && body.data.every((row) => row.batch === batchName), `${r.status} ${brief(body.meta)}`);
+    r = await send(teacher, "DELETE", `${recordingPath}/${recording.id}`);
+    check("an instructor cannot delete recordings", r.status === 403, r.status);
+    r = await send(teacher, "POST", recordingPath, recordingBody({ title: "By teacher" }));
+    check("an instructor can add recordings", r.status === 201, r.status);
+    r = await req(learner, `/api/student/calendar?from=${addDays(today, -1)}&to=${today}`);
+    body = await r.json();
+    const mine = body.data?.sessions?.find((s) => s.title === classTitle);
+    check("the learner sees the Available recordings only", r.status === 200 && mine?.recordings?.length === 2 && mine.recordings.every((x) => x.url.startsWith("https://")) && !JSON.stringify(mine.recordings).includes("processing"), `${r.status} ${brief(mine)}`);
+    r = await req(outsider, `/api/student/calendar?from=${addDays(today, -1)}&to=${today}`);
+    body = await r.json();
+    check("another learner does not see them", !(body.data?.sessions ?? []).some((s) => s.title === classTitle), brief(body.data?.sessions));
+    r = await req(admin, `/api/admin/sessions/${session.id}`);
+    body = await r.json();
+    check("the class detail lists every recording with its status", r.status === 200 && body.data?.recordings?.length === 3 && body.data.recordings.some((x) => x.status === "Processing"), `${r.status} ${brief(body.data?.recordings)}`);
+    r = await send(admin, "DELETE", `${recordingPath}/${recording.id}`);
+    check("admin deletes a recording", r.status === 200 || r.status === 204, r.status);
+    r = await req(admin, `${recordingPath}/${recording.id}`);
+    check("a deleted recording is 404", r.status === 404, r.status);
+    r = await req(null, recordingPath);
+    check("anonymous recordings list is 401", r.status === 401, r.status);
+
+    // ---- Dashboard figures ----
+    // The first learner finished the course, so a second one is enrolled to be marked present.
+    const marked = await prisma.user.findUnique({ where: { email: "demo.learner1@ibmv.local" } });
+    r = await send(admin, "POST", "/api/admin/enrolments", { email: "demo.learner1@ibmv.local", batchId: batch.id });
+    check("admin enrols a second learner in the batch", r.status === 201, r.status);
+    const dayPath = `/api/admin/sessions?from=${addDays(today, -1)}&to=${today}`;
+    const classNow = async () => (await (await req(admin, dayPath)).json()).data?.sessions?.find((s) => s.id === session.id);
+    let held = await classNow();
+    check("a class with no attendance reports none marked", held?.marked === 0 && held.attended === 0 && held.enrolled === 1, brief(held));
+    r = await send(admin, "PUT", `/api/admin/sessions/${session.id}/attendance`, { marks: [{ userId: marked.id, status: "PRESENT" }] });
+    check("admin marks the learner present", r.status === 200, r.status);
+    held = await classNow();
+    check("the class then reports one marked and present", held?.marked === 1 && held.attended === 1, brief(held));
+    result = await page(admin, "/admin");
+    check("the dashboard shows live sections, not the demo notice", result.status === 200 && result.html.includes("Weekly performance") && result.html.includes("Signups vs enrollments") && !result.html.includes("Demo screen with sample data"), result.status);
+    result = await page(teacher, "/admin");
+    check("an instructor opens the dashboard too", result.status === 200 && result.html.includes("Weekly performance"), result.status);
+    result = await page(null, "/admin");
+    check("the anonymous dashboard redirects to sign-in", result.status >= 300 && result.location.includes("/login"), `${result.status} ${result.location}`);
+
     // ---- A module edit keeps the learner's progress ----
     r = await send(admin, "PATCH", `${modulePath}/${mod.id}`, { name: moduleName, description: "Smoke module", status: "Published", lessons: JSON.stringify([{ ...saved[2], title: "Read on (moved)" }, saved[0], saved[1], { title: "Extra", type: "Text", minutes: "", content: "One more.", url: "" }]) });
     body = await r.json();

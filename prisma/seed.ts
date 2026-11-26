@@ -1,4 +1,7 @@
 import "dotenv/config";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import type { Role } from "../src/generated/prisma/client";
 import { people } from "../src/lib/admin/demo-data";
 import { addDays, fromIst, istToday } from "../src/lib/ist";
@@ -9,6 +12,7 @@ import { defaultSiteSettings, siteSettingKeys } from "../src/lib/website/site-de
 import { hashPassword } from "../src/server/auth/password";
 import { createPrismaClient } from "../src/server/prisma-factory";
 import { nextRegistrationNo } from "../src/server/services/registration";
+import { getStorage, newStorageKey } from "../src/server/storage";
 
 const prisma = createPrismaClient();
 
@@ -286,9 +290,45 @@ async function seedDemoLearning() {
   console.log("Demo learning data ready: Demo Batch 1 with sessions, enrolments and announcements.");
 }
 
+/** The two launch artworks that were fixed on the website and student home, now editable banners. Existing banners are never replaced. */
+async function seedBanners() {
+  if ((await prisma.banner.count()) > 0) return;
+  const artwork = async (file: string, name: string) => {
+    const bytes = fs.readFileSync(path.join(process.cwd(), "public", file));
+    const sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+    let key = (await prisma.asset.findFirst({ where: { sha256, storageKey: { not: null } }, select: { storageKey: true } }))?.storageKey ?? null;
+    if (!key) {
+      key = newStorageKey();
+      await getStorage().put(key, bytes);
+    }
+    return prisma.asset.create({ data: { type: "IMAGE", name, status: "READY", fileName: file, storageKey: key, mimeType: "image/jpeg", sizeBytes: bytes.length, sha256 } });
+  };
+  const launch = await artwork("student-course-launch.jpg", "Bhakti Vedanta Module 3 launch banner");
+  const shastri = await artwork("student-bhakti-shastri.jpg", "Bhakti Shastri (English) artwork");
+  const module3 = "https://www.ibmedu.org/course-details/BhaktiVedantaModule-3-115238";
+  await prisma.banner.createMany({
+    data: [
+      {
+        name: "Bhakti Vedanta Module 3", imageAssetId: launch.id, placement: "WEBSITE_HOME", status: "PUBLISHED", sortOrder: 0, linkUrl: module3,
+        description: "Explore the Eleventh and Twelfth Cantos of Srimad-Bhagavatam in Bhakti Vedanta Module 3. Visit the official course page for the schedule, eligibility and enrollment details.",
+      },
+      {
+        name: "Bhakti Vedanta Module 3. 2 November 2026 to 12 May 2027, 7\u20139 PM IST, Monday\u2013Thursday", imageAssetId: launch.id, placement: "STUDENT_HOME", status: "PUBLISHED", sortOrder: 0, linkUrl: module3,
+        description: "2 Nov 2026 \u2013 12 May 2027 \u00b7 7\u20139 PM IST \u00b7 Monday\u2013Thursday",
+      },
+      {
+        name: "Bhakti Shastri (English) course artwork depicting Krishna teaching Arjuna", imageAssetId: shastri.id, placement: "STUDENT_HOME", status: "PUBLISHED", sortOrder: 1, linkUrl: "https://www.ibmedu.org/",
+        description: "Explore Bhakti Shastri study opportunities through the official IBMV website.",
+      },
+    ],
+  });
+  console.log("Banners ready: 1 for the website home, 2 for the student home.");
+}
+
 async function main() {
   await seedReference();
   await seedCatalog();
+  await seedBanners();
   if (process.env.SEED_DEMO !== "0") await seedDemo();
 }
 

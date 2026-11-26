@@ -73,6 +73,10 @@ model User {
   instructedSessions  Session[]
   attendance          Attendance[]
   announcementReads   AnnouncementRead[]
+  uploadedAssets      Asset[]                  @relation("AssetUploader")
+  managedEvents       Event[]                  @relation("EventManager")
+  blogs               Blog[]                   @relation("BlogAuthor")
+  notifications       InAppNotification[]
 
   @@index([kind, status])
   @@index([role])
@@ -767,6 +771,7 @@ model Session {
   batch      Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
   instructor User?        @relation(fields: [instructorId], references: [id], onDelete: SetNull)
   attendance Attendance[]
+  recordings Recording[]
 
   @@index([batchId, startsAt])
   @@index([startsAt, status])
@@ -846,14 +851,38 @@ model AnnouncementRead {
 }
 
 // ---------------------------------------------------------------------------
-// B4b: course content and learner progress
+// B4b: course content, learner progress and session recordings
 // ---------------------------------------------------------------------------
 
-// PDFs, audio and other uploads arrive with the Asset Library.
+// Uploads arrive with the Asset Library; until then a recording is a link to a video kept elsewhere.
+enum RecordingStatus {
+  PROCESSING
+  AVAILABLE
+  FAILED
+}
+
+// Learners of the session's batch see only AVAILABLE recordings.
+model Recording {
+  id          String          @id @default(cuid())
+  sessionId   String
+  title       String?         @db.VarChar(300)
+  url         String          @db.VarChar(500)
+  status      RecordingStatus @default(AVAILABLE)
+  createdById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, status])
+}
+
+// A lesson is text, a YouTube video, a link, or a file from the Asset Library.
 enum ContentType {
   TEXT
   VIDEO
   LINK
+  FILE
 }
 
 // A reusable group of lessons. Learners only see PUBLISHED modules that a course includes.
@@ -881,12 +910,16 @@ model ModuleContent {
   body      String?     @db.Text
   // https link: a YouTube address for VIDEO, any site for LINK.
   url       String?     @db.VarChar(500)
+  // The file a FILE lesson shows; an asset in use cannot be deleted.
+  assetId   String?
   sortOrder Int         @default(0)
 
   module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  asset    Asset?           @relation(fields: [assetId], references: [id], onDelete: Restrict)
   progress LessonProgress[]
 
   @@index([moduleId, sortOrder])
+  @@index([assetId])
 }
 
 model CourseModule {
@@ -912,4 +945,213 @@ model LessonProgress {
 
   @@id([enrolmentId, contentId])
   @@index([contentId])
+}
+
+enum AssetType {
+  VIDEO
+  AUDIO
+  PDF
+  YOUTUBE
+  IMAGE
+  DOC
+  SHEET
+  SLIDE
+  TEXT_HTML
+  ZIP
+  SCORM_ZIP
+  LINK
+  EPUB
+}
+
+enum AssetStatus {
+  STAGED
+  READY
+}
+
+// An uploaded file or an external link. A STAGED asset was uploaded but its form was not saved; it is purged after a day.
+// Images are public; every other file needs a staff session, and learners reach it through the lessons that use it.
+// Two assets with the same content share one stored file (`storageKey`).
+model Asset {
+  id           String      @id @default(cuid())
+  type         AssetType
+  name         String      @db.VarChar(200)
+  description  String?     @db.Text
+  status       AssetStatus @default(STAGED)
+  fileName     String?     @db.VarChar(255)
+  storageKey   String?     @db.VarChar(80)
+  mimeType     String?     @db.VarChar(100)
+  sizeBytes    Int?
+  sha256       String?     @db.Char(64)
+  // https address of a YouTube or link asset.
+  url          String?     @db.VarChar(500)
+  downloads    Int         @default(0)
+  uploadedById String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  uploadedBy User?           @relation("AssetUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  lessons    ModuleContent[]
+  banners    Banner[]
+  events     Event[]
+  blogs      Blog[]
+
+  @@index([status, createdAt])
+  @@index([type])
+  @@index([sha256])
+  @@index([storageKey])
+}
+
+enum BannerPlacement {
+  WEBSITE_HOME
+  STUDENT_HOME
+}
+
+// A promotional image with an optional link. It shows while PUBLISHED and inside its optional window (IST days, inclusive).
+model Banner {
+  id           String          @id @default(cuid())
+  name         String          @db.VarChar(200)
+  description  String?         @db.VarChar(400)
+  imageAssetId String
+  // An https address, or a path on this site that starts with a single slash.
+  linkUrl      String?         @db.VarChar(500)
+  placement    BannerPlacement
+  status       PublishStatus   @default(DRAFT)
+  sortOrder    Int             @default(0)
+  startsOn     DateTime?       @db.Date
+  endsOn       DateTime?       @db.Date
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  image Asset @relation(fields: [imageAssetId], references: [id], onDelete: Restrict)
+
+  @@index([placement, status, sortOrder])
+  @@index([imageAssetId])
+}
+
+enum EventStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum EventVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum EventPlatform {
+  IN_PERSON
+  ZOOM
+  YOUTUBE_LIVE
+  OTHER_ONLINE
+  HYBRID
+}
+
+// A festival, workshop or quiz held on one or more days. Ticketing arrives with commerce.
+model Event {
+  id                    String          @id @default(cuid())
+  name                  String          @db.VarChar(200)
+  // Markdown, stored as written and rendered safely.
+  description           String          @db.Text
+  imageAssetId          String?
+  status                EventStatus     @default(DRAFT)
+  visibility            EventVisibility @default(PUBLIC)
+  platform              EventPlatform
+  venue                 String?         @db.VarChar(300)
+  meetingLink           String?         @db.VarChar(500)
+  guestsAllowed         Boolean         @default(false)
+  managerId             String?
+  category              String          @db.VarChar(40)
+  membershipEligibility String          @db.VarChar(40)
+  isPaid                Boolean         @default(false)
+  // Whole minor units (paise, cents) of `currency`.
+  priceMinor            Int?
+  currency              String?         @db.VarChar(3)
+  capacity              Int?
+  pricingNotes          String?         @db.Text
+  // Start of the first day and end of the last, kept for sorting and "upcoming".
+  startsAt              DateTime
+  endsAt                DateTime
+  createdById           String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  image   Asset?     @relation(fields: [imageAssetId], references: [id], onDelete: Restrict)
+  manager User?      @relation("EventManager", fields: [managerId], references: [id], onDelete: SetNull)
+  days    EventDay[]
+
+  @@index([status, visibility])
+  @@index([startsAt])
+  @@index([managerId])
+  @@index([imageAssetId])
+}
+
+model EventDay {
+  id        String   @id @default(cuid())
+  eventId   String
+  startsAt  DateTime
+  endsAt    DateTime
+  sortOrder Int      @default(0)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, sortOrder])
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+}
+
+// An article on the public website. Only PUBLISHED articles are public; HIDDEN ones are offline but kept.
+model Blog {
+  id           String     @id @default(cuid())
+  // The last part of the public address, /website/blogs/<slug>.
+  slug         String     @unique @db.VarChar(160)
+  title        String     @db.VarChar(200)
+  // Shown on the list and in search results; the start of the body is used when empty.
+  summary      String?    @db.VarChar(400)
+  // Markdown, stored as written and rendered safely.
+  body         String     @db.MediumText
+  coverAssetId String?
+  authorId     String?
+  status       BlogStatus @default(DRAFT)
+  // Counted by the public page. A raw update keeps `updatedAt` for editor saves only.
+  views        Int        @default(0)
+  // When it was first published; kept if the article is hidden and published again.
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  cover  Asset? @relation(fields: [coverAssetId], references: [id], onDelete: Restrict)
+  author User?  @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+  @@index([authorId])
+  @@index([coverAssetId])
+}
+
+// ---------------------------------------------------------------------------
+// B8: Notifications
+// ---------------------------------------------------------------------------
+
+// One message in one person's notification bell. Staff get them for support requests and enquiries; the learner bell reuses the table.
+model InAppNotification {
+  id        String    @id @default(cuid())
+  userId    String
+  // What happened, for example support.request or lead.new.
+  kind      String    @db.VarChar(40)
+  title     String    @db.VarChar(200)
+  body      String?   @db.VarChar(500)
+  // An on-site path the message opens.
+  href      String?   @db.VarChar(300)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([createdAt])
 }

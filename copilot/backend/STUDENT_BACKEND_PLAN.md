@@ -269,9 +269,9 @@ a certificate that verifies on the public page.
 | Settings: Profile | S2 | **Done** (2026-11-25); email and registration number are read-only, pincode accepts international postal codes |
 | Settings: Preferences | S2 | **Done** (2026-11-25); saved with an explicit Save button; the consent rule is `allowedPromotionalChannels`; automatic timezone is a one-time detect, not refreshed on every visit |
 | Help | S2 | **Done** (2026-11-25); messages, replies and contact details; FAQ copy still static |
-| Home | S3 | **Done** (2026-11-25); profile card, today's classes (join link from 15 minutes before), counts, latest announcements and active courses are live |
+| Home | S3 | **Done** (2026-11-25); profile card, today's classes (join link from 15 minutes before), counts, latest announcements and active courses are live; the "Latest from IBMV" carousel shows the live `Student portal home` banners from Marketing Banners (2026-11-26) and is hidden when there are none |
 | My Learning | S3 | **Done** (2026-11-25); the learner's enrolments with status, batch and access dates; sample course previews stay clearly labelled |
-| Course player | S3 | Todo (B4b); needs the module library; progress stays 0% until it lands |
+| Course player | S3 | **Done** (2026-11-26); enrolled learners open a course's published modules and lessons, complete lessons explicitly and resume where they left off; progress shows in My Learning, Home and the admin's batch list. Text lessons render safe Markdown, videos are YouTube embeds, links open the other site in a new tab, file lessons stream the PDF, audio, video or image from the Asset Library to enrolled learners only (Range support, download option); watch-time rules wait for later phases |
 | Announcements | S3 | **Done** (2026-11-25); audience and schedule rules, urgency order, read status saved per learner; search and unread filter run in the browser over the latest 200 notices |
 | Calendar | S3 | **Done** (2026-11-25); the learner's classes and holidays for the visible range, refreshed every minute; events and timezone display arrive later |
 | My Purchases (+ checkout) | S4 | Todo |

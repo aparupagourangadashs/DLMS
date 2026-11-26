@@ -113,7 +113,7 @@ verified by a test; no personal data in logs.
 
 | Task | Detail |
 |---|---|
-| Blogs (new public pages) | `/website/blogs` (list) and `/website/blogs/[slug]` backed by `Blog` published records; the admin Blogs screen already exists, but the public pages do not. View counter increments server-side with simple abuse limits |
+| Blogs (new public pages) | `/website/blogs` (list, nine per page) and `/website/blogs/[slug]` backed by `Blog` published records, built with B2b (2026-11-26). A browser beacon (`POST /api/public/blogs/[slug]/views`) counts a visit once per tab session, and the server ignores a visitor's repeats within the hour; the menu shows a Blog link only while an article is published |
 | SEO | `sitemap.ts`, `robots.ts`, canonical URLs, Open Graph, `Course`/`Organization` JSON-LD, redirect map from existing official URLs; current preview is `noindex` and must be lifted only for the approved production domain |
 | Performance | `next/image` for DB-driven images (asset records provide width/height), cache headers/CDN, ISR for course pages, Core Web Vitals budget |
 | Accessibility | Re-run keyboard/screen-reader checks after dynamic content; error/empty/loading states announced |
@@ -137,7 +137,7 @@ verified by a test; no personal data in logs.
 | Page | Phase | Status |
 |---|---|---|
 | Shell | W1 | **Done** (2026-11-25) |
-| Home | W1 | **Done** (2026-11-25); banners deferred to B2b, hero figures and community figures come from Site Settings |
+| Home | W1 | **Done** (2026-11-25); the launch panel shows the first live `Website home` banner from Marketing Banners (2026-11-26) and is hidden when there is none; hero figures and community figures come from Site Settings |
 | 6 collection catalogs | W1 | **Done** (2026-11-25) |
 | Course detail (127) | W1 | **Done** (2026-11-25); rendered on demand from the database (static params, revalidation tags and JSON-LD move to W5) |
 | Books (+ bulk form) | W1 / W2 | **Done** (2026-11-25); form creates a lead, honeypot + minimum fill time + IP/email rate limits; quantity 1-1,000 |
@@ -148,5 +148,5 @@ verified by a test; no personal data in logs.
 | Account handoff | W1 / W3 | Handoff links from Site Settings (**Done** for W1); native links wait for D2/D9 |
 | Terms, Privacy | W1 | **Done** (2026-11-25); shows the latest published version, keeps the notice when none |
 | Verify certificate (new) | W4 | Todo |
-| Blogs (new) | W5 | Todo |
+| Blogs (new) | W5 / B2b | **Done** (2026-11-26); list with paging and article pages render from the database, Markdown shown safely, drafts and hidden articles are 404; SEO, sitemap and caching stay with the W5 row below |
 | SEO, performance, accessibility | W5 | Todo |

@@ -29,7 +29,7 @@ constraints while writing each migration. Parent: [MASTER_PLAN.md](./MASTER_PLAN
 | `Branch` | name, city?, managerId?, status | Sub-Organizations page |
 | `StaffProfile` | userId (1:1), displayName, branchId?, timezone, dob?, gender?, altMobile?, address fields, notificationPrefs Json | My Profile and Team |
 | `UserBranch` | userId, branchId | Staff branch scope (many-to-many) |
-| `AuditEvent` | actorId?, action, entity, entityId, before Json?, after Json?, ip?, createdAt | Append-only |
+| `AuditEvent` | actorId?, action, entity, entityId, before Json?, after Json?, ip?, createdAt | Append-only. Read by Settings > Audit Log (Super Admin) |
 
 ## B2: Catalog and public content
 
@@ -40,14 +40,14 @@ constraints while writing each migration. Parent: [MASTER_PLAN.md](./MASTER_PLAN
 | `CourseSchedule` | courseId, startDate?, endDate?, daysOfWeek, startTime, timezone, detailed Json | "View detailed schedule" |
 | `CourseFaq` | courseId, question, answer, sortOrder | |
 | `Instructor` | name, bio?, imageAssetId?, userId? | Teacher filter and detail page |
-| `Module` | title, description?, status | Module Library |
-| `ModuleContent` | moduleId, assetId?, type (`LESSON`/`ASSET`/`QUIZ`), title, body?, sortOrder, minutes? | Lessons shown by the student player |
-| `CourseModule` | courseId, moduleId, sortOrder | Course structure |
-| `Asset` | name, fileName, type (13 admin types), storageKey?, externalUrl?, mimeType, sizeBytes, uploadedById, downloads, status | Asset Library; usage computed from references |
-| `Event` | name, description (markdown), imageAssetId?, status, visibility, platform, venue?, meetingLink?, guestAccess, managerId, category, membershipEligibility, feedbackFormId?, pricing fields, capacity? | Admin Events |
-| `EventDay` | eventId, startsAt, endsAt, sortOrder | Multi-day, non-overlapping |
-| `Blog` | slug, title, body, authorId, status (`DRAFT`/`PUBLISHED`/`HIDDEN`), views, publishedAt? | |
-| `Banner` | name, imageAssetId, linkUrl?, placement (`WEBSITE_HOME`/`STUDENT_HOME`), status, sortOrder, startsAt?, endsAt? | |
+| `Module` | name (unique), description?, status (`DRAFT`/`PUBLISHED`/`ARCHIVED`) | Module Library (B4b); learners see only published modules |
+| `ModuleContent` | moduleId, type (`TEXT`/`VIDEO`/`LINK`/`FILE`), title, minutes?, body? (Markdown), url? (https; YouTube for video), assetId? (`FILE`), sortOrder | Lessons shown by the student player; quizzes arrive with assessments |
+| `CourseModule` | courseId, moduleId, sortOrder | Course structure; a module in use cannot be deleted |
+| `Asset` | type (13 admin types), name, description?, status (`STAGED`/`READY`), fileName?, storageKey?, mimeType?, sizeBytes?, sha256?, url? (YouTube/link), downloads, uploadedById? | B2b Asset Library. Images are public; other files need staff or a lesson that uses them. Equal content shares one `storageKey`; a lesson in use blocks deletion (`Restrict`); `STAGED` uploads are purged after a day |
+| `Event` | name, description (Markdown), imageAssetId? (Restrict), status (`DRAFT`/`ACTIVE`/`INACTIVE`), visibility (`PUBLIC`/`PRIVATE`/`UNLISTED`), platform (`IN_PERSON`/`ZOOM`/`YOUTUBE_LIVE`/`OTHER_ONLINE`/`HYBRID`), venue?, meetingLink? (https), guestsAllowed, managerId? (staff, `SetNull`), category, membershipEligibility, isPaid, priceMinor? + currency? (minor units), capacity?, pricingNotes?, startsAt/endsAt (first day's start, last day's end, for sorting) | B2b Events. Venue only for in-person/hybrid, link only for online/hybrid; an active event cannot be deleted; feedback forms and ticket sales arrive later |
+| `EventDay` | eventId (cascade), startsAt, endsAt, sortOrder | Up to 30 days, stored as instants, entered in IST; in order and without overlap |
+| `Blog` | slug (unique, `/website/blogs/<slug>`), title, summary?, body (Markdown, `MEDIUMTEXT`), coverAssetId? (Restrict), authorId? (staff, `SetNull`), status (`DRAFT`/`PUBLISHED`/`HIDDEN`), views, publishedAt? | B2b Blogs. Only `PUBLISHED` is public; `publishedAt` is set the first time and kept; `views` is raised by a raw update so `updatedAt` changes only when an editor saves; a published article cannot be deleted |
+| `Banner` | name, description? (400), imageAssetId (Restrict), linkUrl? (https or a path on this site), placement (`WEBSITE_HOME`/`STUDENT_HOME`), status (`DRAFT`/`PUBLISHED`/`ARCHIVED`), sortOrder, startsOn?/endsOn? (IST calendar days, inclusive) | B2b Marketing Banners. Shows while published, inside its days and with a ready image; the image stays in the Asset Library if the banner is deleted |
 | `Testimonial` | name, city?, courseId?, format (`TEXT`/`VIDEO`), quote, videoUrl?, rating?, status, sortOrder | Website + admin |
 | `Video` | title, youtubeId, thumbnailAssetId?, sortOrder, status | Website videos strip |
 | `Person` | name, roleTitle, bio?, imageAssetId?, group (`ADVISORY`/`TEAM`), sortOrder, status | Our Team / Advisory Board |
@@ -85,7 +85,19 @@ constraints while writing each migration. Parent: [MASTER_PLAN.md](./MASTER_PLAN
 - The app writes a session as `SCHEDULED` or `CANCELLED`; "Completed" is derived once its end time has passed (the `COMPLETED` value exists for later use). A holiday cancels the scheduled sessions of the affected branch (or every branch) on that day.
 - `Announcement.audience` is `ALL` or `BATCH` (rows in `AnnouncementBatch`); segments arrive with B3b. `tags` is a JSON array limited to an allow-list. A learner sees a notice when it is `PUBLISHED`, its `publishAt` has passed, and the audience matches an active or completed enrolment.
 - Learner status is derived: Registered (no active enrolment), Enrolled (at least one), Completed (only completed ones). Only On leave and Archived are stored, as `LearnerProfile.status`.
-- Not yet built (B4b): `BatchModule`, `Recording`, `LessonProgress`, `JobQueue`. `Enrolment.progressPercent` stays 0 until lesson progress is recorded.
+- Not yet built: `BatchModule`, `JobQueue`.
+
+**B4b, session recordings** (migration `session_recordings`): `Recording` and `RecordingStatus` (`PROCESSING`/`AVAILABLE`/`FAILED`).
+
+- A recording is an external `https://` link attached to a session (up to ten per session); uploads wait for the Asset Library. Learners see only `AVAILABLE` recordings of non-cancelled sessions of their own batches. Deleting is a hard delete (audited as `recording.delete`); deleting a session or batch removes its recordings.
+- Branch-scoped staff reach the recordings of their branches' batches and of batches with no branch.
+
+**B4b, course content** (migration `course_content`): `Module`, `ModuleContent`, `CourseModule` and `LessonProgress`.
+
+- A course lists its modules in order (`CourseModule`); every batch and learner of that course uses them. Choosing modules per batch (`BatchModule`) is not built.
+- Editing a module keeps each lesson's id (the form carries it), so learners' completions survive reordering and renaming. A lesson left out of the edit is deleted with its progress.
+- A learner completes lessons explicitly; opening a lesson never completes it. Progress is `floor(100 x done / total)` over the lessons of the course's published modules, 100 only when every lesson is done. Reaching 100 sets an active enrolment to `COMPLETED`; a completed enrolment stays completed if lessons are added later, and its stored percentage is corrected the next time the learner opens the course.
+- Access to content follows the enrolment: `ACTIVE` or `COMPLETED`, inside any access dates (the last access day counts). `LessonProgress` is keyed by enrolment and lesson.
 
 | Model | Key fields | Notes |
 |---|---|---|
@@ -93,14 +105,14 @@ constraints while writing each migration. Parent: [MASTER_PLAN.md](./MASTER_PLAN
 | `BatchManager` | batchId, userId | Additional managers; the primary one is `Batch.managerId` |
 | `BatchModule` | batchId, moduleId, sortOrder, instructorId? | "Module & instructor" column (B4b) |
 | `Enrolment` | userId, courseId, batchId?, source (`ADMIN`/`SELF`/`ORDER`/`MEMBERSHIP`/`BULK`), status (`ACTIVE`/`COMPLETED`/`CANCELLED`/`EXPIRED`), enrolledAt, accessStartsAt?, accessEndsAt?, progressPercent, createdById? | Authorizes learner access; `orderId` arrives with B5 |
-| `Session` | batchId, title, startsAt, endsAt, timezone, joinUrl?, status (`SCHEDULED`/`CANCELLED`/`COMPLETED`), topics, instructorId?, cancelReason? | `recordingId?` arrives with recordings (B4b) |
+| `Session` | batchId, title, startsAt, endsAt, timezone, joinUrl?, status (`SCHEDULED`/`CANCELLED`/`COMPLETED`), topics, instructorId?, cancelReason? | Has many `Recording` |
 | `Attendance` | sessionId, userId, status (`PRESENT`/`ABSENT`), signedInAt?, markedById? | One row per learner and session |
 | `Holiday` | date, branchId?, reason, createdById? | "Mark as Holiday"; no branch means every branch |
-| `Recording` | sessionId, assetId?/url, status (`PROCESSING`/`AVAILABLE`/`FAILED`), visibility | B4b |
+| `Recording` | sessionId, title?, url, status (`PROCESSING`/`AVAILABLE`/`FAILED`), createdById? | B4b; `assetId?` arrives with the Asset Library |
 | `Announcement` | title, body, urgency (`HIGH`/`MEDIUM`/`LOW`), tags Json?, audience (`ALL`/`BATCH`), publishAt, createdById?, status | |
 | `AnnouncementBatch` | announcementId, batchId | The batches a `BATCH` notice is for |
 | `AnnouncementRead` | announcementId, userId, readAt | Unread toggle |
-| `LessonProgress` | enrollmentId, moduleContentId, status (`NOT_STARTED`/`IN_PROGRESS`/`COMPLETED`), completedAt?, lastPositionSeconds? | Server-side completion rules (B4b) |
+| `LessonProgress` | enrolmentId, contentId, completedAt | One row per completed lesson and enrolment (B4b) |
 | `LearnerNote` | (optional later) | Not in current UI |
 | `JobQueue` | type, payload Json, runAt, status, attempts, lastError | Reminders, campaigns, certificate PDFs (B4b/B7) |
 
@@ -163,12 +175,18 @@ constraints while writing each migration. Parent: [MASTER_PLAN.md](./MASTER_PLAN
 | `NotificationLog` | channel, recipient, templateId?, relatedType, relatedId, status (`QUEUED`/`SENT`/`DELIVERED`/`FAILED`/`OPTED_OUT`), providerMessageId?, error?, createdAt | Never store full message bodies with sensitive data |
 | `SystemNotificationSetting` | family, event, channels Json, enabled | Nine event families |
 | `Workflow` / `WorkflowRun` | trigger, conditions, actions Json, status | Only if D8 approves |
-| `InAppNotification` | userId, title, body, readAt?, link? | Notification centre |
+| `InAppNotification` | userId, kind, title, body?, href? (an on-site path), readAt?, createdAt | Notification centre. Added in B8 for the staff bell; the learner bell reuses it. Indexed by (userId, readAt, createdAt); rows older than 90 days are deleted when new ones are written |
 | `PushSubscription` | userId, endpoint, keys, createdAt | Web push |
 
 ## B8: Analytics
 
 Reports query transactional tables through `src/server/services/analytics`.
+The first slice (2026-11-26) added no tables: each report reads the existing
+ones (batches, enrolments, lesson progress, sessions and attendance, users,
+leads, assets, branches), builds its rows in memory (at most 10,000 rows and
+200,000 scanned records per report) and the engine then applies search, order
+and paging. Reports that need a model that does not exist yet are listed as
+*Waiting* in `src/lib/admin/reports.ts` with the phase that supplies it.
 Add summary tables only if measured performance requires them:
 
 | Model | Purpose |
