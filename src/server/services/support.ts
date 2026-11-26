@@ -7,6 +7,7 @@ import { NotFound, ValidationError } from "@/server/http/errors";
 import type { ListQuery } from "@/server/http/list-query";
 import { parseWith } from "@/server/http/validate";
 import { sendEmail } from "@/server/notify/email";
+import { notifyStaff, notifyUser } from "@/server/services/notifications";
 import { getSiteSettings } from "@/server/services/public/site";
 import { z } from "zod";
 
@@ -33,6 +34,7 @@ export async function createSupportRequest(user: Pick<SessionUser, "id" | "name"
     const { message } = parseWith(createSchema, input);
     const request = await prisma.supportRequest.create({ data: { userId: user.id, name: user.name, email: user.email, message }, include: withReplies });
     await writeAudit({ actorId: user.id, action: "support.create", entity: "SupportRequest", entityId: request.id, ip });
+    await notifyStaff("supportRequests:read", { kind: "support.request", title: `New support request from ${user.name}`, body: message, href: `/admin/engage/support?open=${request.id}` });
 
     const { contact } = await getSiteSettings();
     await sendEmail({ to: contact.email, subject: "New learner support request", text: `${user.name} <${user.email}> wrote:\n\n${message}\n\nOpen Engage > Support Inbox in the admin to reply.` });
@@ -146,6 +148,10 @@ export async function updateSupportRequest(id: string, input: unknown, actor: { 
             after: { status: update.status ?? existing.status, assignedToId: update.assignedToId === undefined ? existing.assignedToId : update.assignedToId },
             ip: actor.ip,
         });
+        const assignee = update.assignedToId;
+        if (typeof assignee === "string" && assignee !== existing.assignedToId && assignee !== actor.id) {
+            await notifyUser(assignee, { kind: "support.assigned", title: "A support request was assigned to you", body: `${existing.name}: ${existing.message}`, href: `/admin/engage/support?open=${id}` });
+        }
     }
     return getSupportThread(id);
 }

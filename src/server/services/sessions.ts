@@ -52,19 +52,26 @@ function displayStatus(session: Pick<SessionRow, "status" | "endsAt">, now = new
     return session.status === "COMPLETED" || session.endsAt < now ? "Completed" : "Scheduled";
 }
 
-type Counts = { enrolled: Map<string, number>; attended: Map<string, number>; staff: Map<string, string> };
+type Counts = { enrolled: Map<string, number>; attended: Map<string, number>; marked: Map<string, number>; staff: Map<string, string> };
 
 async function countsFor(sessions: SessionRow[]): Promise<Counts> {
     const batchIds = [...new Set(sessions.map((s) => s.batchId))];
     const ids = sessions.map((s) => s.id);
-    const [enrolled, attended, staff] = await Promise.all([
+    const [enrolled, marks, staff] = await Promise.all([
         batchIds.length ? prisma.enrolment.groupBy({ by: ["batchId"], where: { batchId: { in: batchIds }, status: "ACTIVE" }, _count: { _all: true } }) : [],
-        ids.length ? prisma.attendance.groupBy({ by: ["sessionId"], where: { sessionId: { in: ids }, status: "PRESENT" }, _count: { _all: true } }) : [],
+        ids.length ? prisma.attendance.groupBy({ by: ["sessionId", "status"], where: { sessionId: { in: ids } }, _count: { _all: true } }) : [],
         staffOptions(),
     ]);
+    const attended = new Map<string, number>();
+    const marked = new Map<string, number>();
+    for (const g of marks) {
+        marked.set(g.sessionId, (marked.get(g.sessionId) ?? 0) + g._count._all);
+        if (g.status === "PRESENT") attended.set(g.sessionId, g._count._all);
+    }
     return {
         enrolled: new Map(enrolled.flatMap((g) => (g.batchId ? [[g.batchId, g._count._all] as const] : []))),
-        attended: new Map(attended.map((g) => [g.sessionId, g._count._all] as const)),
+        attended,
+        marked,
         staff: labelMap(staff),
     };
 }
@@ -89,6 +96,7 @@ function toDto(session: SessionRow, counts: Counts): AdminSession {
         topics: session.topics ?? "",
         enrolled: counts.enrolled.get(session.batchId) ?? 0,
         attended: counts.attended.get(session.id) ?? 0,
+        marked: counts.marked.get(session.id) ?? 0,
     };
 }
 
@@ -267,13 +275,14 @@ export async function removeHoliday(id: string, actor: SessionActor) {
 export async function getSessionDetail(id: string, actor: SessionActor): Promise<AdminSessionDetail> {
     const session = await loadSession(id, actor);
     const [dto] = await dtos([session]);
-    const [enrolments, marks] = await Promise.all([
+    const [enrolments, marks, recordings] = await Promise.all([
         prisma.enrolment.findMany({
             where: { batchId: session.batchId, status: "ACTIVE" },
             select: { userId: true, user: { select: { email: true, learnerProfile: { select: { name: true, registrationNo: true } } } } },
             orderBy: { enrolledAt: "asc" },
         }),
         prisma.attendance.findMany({ where: { sessionId: id }, select: { userId: true, status: true } }),
+        prisma.recording.findMany({ where: { sessionId: id }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, url: true, status: true } }),
     ]);
     const markOf = new Map(marks.map((m) => [m.userId, m.status]));
     return {
@@ -286,6 +295,7 @@ export async function getSessionDetail(id: string, actor: SessionActor): Promise
             mark: markOf.get(e.userId) === "PRESENT" ? "Present" : markOf.get(e.userId) === "ABSENT" ? "Absent" : "Not marked",
         })),
         canMarkAttendance: session.status !== "CANCELLED" && session.startsAt <= new Date(),
+        recordings: recordings.map((r) => ({ id: r.id, title: r.title || session.title, url: r.url, status: r.status === "AVAILABLE" ? "Available" : r.status === "PROCESSING" ? "Processing" : "Failed" })),
     };
 }
 
