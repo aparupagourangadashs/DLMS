@@ -274,11 +274,11 @@ a certificate that verifies on the public page.
 | Course player | S3 | **Done** (2026-11-26); enrolled learners open a course's published modules and lessons, complete lessons explicitly and resume where they left off; progress shows in My Learning, Home and the admin's batch list. Text lessons render safe Markdown, videos are YouTube embeds, links open the other site in a new tab, file lessons stream the PDF, audio, video or image from the Asset Library to enrolled learners only (Range support, download option); watch-time rules wait for later phases |
 | Announcements | S3 | **Done** (2026-11-25); audience and schedule rules, urgency order, read status saved per learner; search and unread filter run in the browser over the latest 200 notices |
 | Calendar | S3 | **Done** (2026-11-25); the learner's classes and holidays for the visible range, refreshed every minute; events and timezone display arrive later |
-| My Purchases (+ checkout) | S4 | Todo |
-| Memberships | S4 | Todo |
-| Refer & Earn | S4 | Todo |
-| Exams (+ exam taking) | S5 | Todo |
-| Certificates | S5 | Todo |
+| My Purchases (+ checkout) | S4 | **In progress** (2026-11-27); real order history and details, free-course order; Razorpay checkout deferred |
+| Memberships | S4 | **Done** (2026-11-27); live plans and learner memberships |
+| Refer & Earn | S4 | **Done** (2026-11-27); live referral code, server balance and transactions |
+| Exams (+ exam taking) | S5 | **Done** (2026-11-27); live exam list, server-timed attempts, autosave, submission and result |
+| Certificates | S5 | **Done** (2026-11-27); live issued-certificate list, private download and public verification link |
 | Communities | S6 | Todo |
 | Notification centre, search | S6 | Todo |
 | Privacy and polish | S7 | Todo |

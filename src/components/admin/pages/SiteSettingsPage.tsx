@@ -131,6 +131,25 @@ export function SiteSettingsPage({ initial }: { initial: SiteSettings }) {
                     <Button className="mt-3" size="sm" variant="soft-success" disabled={settings.communityFigures.length >= 8} onClick={() => update((d) => { d.communityFigures.push({ value: "", label: "", color: "teal" }); return d; })}><Plus className="size-4" aria-hidden="true" />Add figure</Button>
                     <p className="mt-4 flex items-center gap-2 text-xs text-muted"><Globe className="size-3.5" aria-hidden="true" />These are figures reported by IBMV, not live counts. Keep the wording honest.</p>
                 </Card>
+
+                {([
+                    ["institution", "About IBMV", "The public About IBMV page"],
+                    ["prabhupada", "Srila Prabhupada", "The public inspiration page"],
+                ] as const).map(([key, title, help]) => (
+                    <Card className="p-5 xl:col-span-2" key={key}>
+                        <SectionTitle icon={Sparkles}>{title}</SectionTitle>
+                        <p className="-mt-2 mb-4 text-xs text-muted">{help}</p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                            {text(`${key}-eyebrow`, "Eyebrow", `${key}.eyebrow`, settings[key].eyebrow, (v) => update((d) => { d[key].eyebrow = v; return d; }))}
+                            {text(`${key}-title`, "Page title", `${key}.title`, settings[key].title, (v) => update((d) => { d[key].title = v; return d; }))}
+                            <div className="md:col-span-2"><Field id={`${key}-description`} label="Introduction"><textarea id={`${key}-description`} rows={2} className={`${inputClass} h-auto py-2`} value={settings[key].description} onChange={(e) => update((d) => { d[key].description = e.target.value; return d; })} /></Field></div>
+                            {text(`${key}-intro-heading`, "First heading", `${key}.introHeading`, settings[key].introHeading, (v) => update((d) => { d[key].introHeading = v; return d; }))}
+                            <div className="md:col-span-2"><Field id={`${key}-intro`} label="Main copy"><textarea id={`${key}-intro`} rows={5} className={`${inputClass} h-auto py-2`} value={settings[key].intro} onChange={(e) => update((d) => { d[key].intro = e.target.value; return d; })} /></Field></div>
+                            {text(`${key}-closing-heading`, "Closing heading", `${key}.closingHeading`, settings[key].closingHeading, (v) => update((d) => { d[key].closingHeading = v; return d; }))}
+                            <div className="md:col-span-2"><Field id={`${key}-closing`} label="Closing copy"><textarea id={`${key}-closing`} rows={4} className={`${inputClass} h-auto py-2`} value={settings[key].closing} onChange={(e) => update((d) => { d[key].closing = e.target.value; return d; })} /></Field></div>
+                        </div>
+                    </Card>
+                ))}
             </div>
         </>
     );

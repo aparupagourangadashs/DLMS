@@ -18,9 +18,11 @@ export type SiteSettings = {
     };
     hero: { reportedLearners: string; stats: HeroStat[] };
     communityFigures: CommunityFigure[];
+    institution: { eyebrow: string; title: string; description: string; introHeading: string; intro: string; closingHeading: string; closing: string };
+    prabhupada: { eyebrow: string; title: string; description: string; introHeading: string; intro: string; closingHeading: string; closing: string };
 };
 
-export const siteSettingKeys = ["contact", "social", "links", "hero", "communityFigures"] as const;
+export const siteSettingKeys = ["contact", "social", "links", "hero", "communityFigures", "institution", "prabhupada"] as const;
 export type SiteSettingKey = (typeof siteSettingKeys)[number];
 
 export const defaultSiteSettings: SiteSettings = {
@@ -65,4 +67,22 @@ export const defaultSiteSettings: SiteSettings = {
         { value: "100K+", label: "Community members", color: "blue" },
         { value: "42+", label: "Countries", color: "rose" },
     ],
+    institution: {
+        eyebrow: "About the institution",
+        title: "Rooted in wisdom. Open to the world.",
+        description: "ISKCON Bhagavata Mahavidyalaya · A space for shastric learning and reflection.",
+        introHeading: "A meaningful relationship with learning.",
+        intro: "This public portal brings course discovery, publications and institutional information into a welcoming, connected experience.",
+        closingHeading: "Read with attention. Reflect with care.",
+        closing: "We design the experience around clear information, accessible navigation and respect for each learner's starting point.",
+    },
+    prabhupada: {
+        eyebrow: "Our inspiration",
+        title: "A legacy of sharing wisdom.",
+        description: "Remembering Srila Prabhupada's contribution to making the bhakti tradition accessible around the world.",
+        introHeading: "Knowledge shared with compassion.",
+        intro: "A. C. Bhaktivedanta Swami Prabhupada founded the International Society for Krishna Consciousness in 1966. Through his teaching, translations and writing, he introduced readers around the world to the Bhagavad-gita and the bhakti tradition.",
+        closingHeading: "Read with attention. Reflect with care.",
+        closing: "This introduction is original institutional copy and not a reproduced biography or quotation.",
+    },
 };

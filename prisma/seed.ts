@@ -325,11 +325,223 @@ async function seedBanners() {
   console.log("Banners ready: 1 for the website home, 2 for the student home.");
 }
 
+async function seedB3b() {
+  const fields = [
+    { entity: "LEARNER" as const, placement: "SIGNUP" as const, label: "Preferred language", type: "Dropdown", required: true, options: ["English", "Hindi"], sortOrder: 0 },
+    { entity: "LEARNER" as const, placement: "OFFLINE_ADMISSION" as const, label: "Spiritual name", type: "Text", required: false, options: undefined, sortOrder: 0 },
+  ];
+  for (const field of fields) {
+    await prisma.customField.upsert({
+      where: { entity_placement_label: { entity: field.entity, placement: field.placement, label: field.label } },
+      update: {},
+      create: field,
+    });
+  }
+
+  if (!(await prisma.segment.findUnique({ where: { name: "Active learners" } }))) {
+    const active = await prisma.segment.create({
+      data: { name: "Active learners", type: "DYNAMIC", rules: { status: "REGISTERED", branchId: "", courseId: "" } },
+    });
+    const members = await prisma.user.findMany({ where: { kind: "LEARNER", status: "ACTIVE" }, select: { id: true }, take: 100 });
+    if (members.length) await prisma.segmentMember.createMany({ data: members.map((member) => ({ segmentId: active.id, userId: member.id })), skipDuplicates: true });
+  }
+  console.log("B3b data ready: learner custom fields and the Active learners segment.");
+}
+
+async function seedB5() {
+  const planSpecs = [
+    { name: "Monthly Learner", description: "Monthly access to member-only learning updates.", priceMinor: 99900, interval: "MONTHLY" as const, benefits: ["Member community updates", "Priority support"] },
+    { name: "Annual Learner", description: "A full year of member learning access.", priceMinor: 799900, interval: "YEARLY" as const, benefits: ["Member learning updates", "Priority support", "Annual programme offer"] },
+  ];
+  for (const [index, plan] of planSpecs.entries()) {
+    await prisma.membershipPlan.upsert({
+      where: { name: plan.name },
+      update: {},
+      create: { ...plan, status: "PUBLISHED", sortOrder: index },
+    });
+  }
+  const learner = await prisma.learnerProfile.findFirst({ where: { user: { email: "learner@ibmv.local" } } });
+  if (learner) {
+    await prisma.referralCode.upsert({
+      where: { learnerId: learner.id },
+      update: {},
+      create: { learnerId: learner.id, code: `IBMV-${learner.registrationNo?.replace(/[^A-Za-z0-9]/g, "").slice(-6) || "LEARN"}` },
+    });
+  }
+  console.log("B5 data ready: 2 membership plans and learner referral code.");
+}
+
+async function seedB7() {
+  const communitySpecs = [
+    { name: "Study Circle", description: "A welcoming space for thoughtful questions and shared reflections.", layout: "MESSAGE" as const },
+    { name: "Reading Room", description: "Reading habits, study prompts and a little encouragement.", layout: "FEED" as const },
+  ];
+  for (const [index, spec] of communitySpecs.entries()) {
+    const community = await prisma.community.upsert({
+      where: { name: spec.name },
+      update: {},
+      create: { ...spec, sortOrder: index },
+    });
+    const learner = await prisma.user.findUnique({ where: { email: "learner@ibmv.local" } });
+    if (learner) {
+      await prisma.communityMember.upsert({
+        where: { communityId_userId: { communityId: community.id, userId: learner.id } },
+        update: {},
+        create: { communityId: community.id, userId: learner.id, role: "MEMBER" },
+      });
+      if (index === 0 && !(await prisma.communityPost.findFirst({ where: { communityId: community.id }, select: { id: true } }))) {
+        await prisma.communityPost.create({
+          data: {
+            communityId: community.id,
+            authorId: learner.id,
+            body: "Welcome to the Study Circle. Introduce one thoughtful question for our next discussion.",
+            pinned: true,
+          },
+        });
+      }
+    }
+  }
+
+  const templates = [
+    { channel: "EMAIL" as const, name: "Course invitation", subject: "Explore your next course", body: "Hello {{learner_name}}, explore {{course_name}} with IBMV.", replyTo: "learning@example.com", unsubscribeText: "Unsubscribe from promotional emails" },
+    { channel: "SMS" as const, name: "Session reminder", body: "Hello {{learner_name}}, your session starts soon." },
+  ];
+  for (const template of templates) {
+    await prisma.messageTemplate.upsert({
+      where: { channel_name: { channel: template.channel, name: template.name } },
+      update: {},
+      create: template,
+    });
+  }
+
+  for (const channel of ["WHATSAPP", "SMS", "EMAIL", "AI"] as const) {
+    await prisma.walletAccount.upsert({ where: { channel }, update: {}, create: { channel, balance: 0 } });
+  }
+  console.log("B7 data ready: 2 communities, 2 console templates and 4 wallet accounts.");
+}
+
+async function seedB6() {
+  const grades = [
+    { name: "A+", minPercent: 90, maxPercent: 100, remark: "Distinction", sortOrder: 0 },
+    { name: "A", minPercent: 75, maxPercent: 89, remark: "First class", sortOrder: 1 },
+    { name: "B", minPercent: 60, maxPercent: 74, remark: "Second class", sortOrder: 2 },
+    { name: "C", minPercent: 40, maxPercent: 59, remark: "Pass", sortOrder: 3 },
+    { name: "Not passed", minPercent: 0, maxPercent: 39, remark: "Retake required", sortOrder: 4 },
+  ];
+  for (const grade of grades) {
+    const existing = await prisma.gradeBand.findFirst({ where: { name: grade.name }, select: { id: true } });
+    if (existing) await prisma.gradeBand.update({ where: { id: existing.id }, data: grade });
+    else await prisma.gradeBand.create({ data: grade });
+  }
+
+  const bankSpecs = [
+    {
+      code: "QB-1040",
+      name: "Gita Chapter 2 MCQs",
+      difficulty: "Medium",
+      exam: "Bhakti Shastri Final",
+      subject: "Bhagavad Gita",
+      topic: "Verses",
+      description: "Synthetic Chapter 2 multiple-choice questions for the demo learner.",
+      question: {
+        prompt: "According to Bhagavad-gita 2.47, what action is in our control?",
+        options: ["The fruit of action", "Both action and the fruit", "The right to perform prescribed action", "The outcome of every action"],
+        answer: { option: 2 },
+        explanation: "The verse directs us to focus on action and not become attached to results.",
+      },
+    },
+    {
+      code: "QB-1041",
+      name: "Sanskrit Grammar Basics",
+      difficulty: "Easy",
+      exam: "Weekly Quiz",
+      subject: "Sanskrit",
+      topic: "Grammar",
+      description: "Synthetic introductory Sanskrit grammar questions.",
+      question: {
+        prompt: "What is the correct meaning of 'namaste'?",
+        options: ["I salute you", "Good morning", "See you later", "Thank you"],
+        answer: { option: 0 },
+        explanation: "Namaste is a respectful greeting meaning salutations or I bow to you.",
+      },
+    },
+  ];
+  for (const spec of bankSpecs) {
+    let bank = await prisma.questionBank.findUnique({ where: { code: spec.code } });
+    if (!bank) {
+      bank = await prisma.questionBank.create({
+        data: {
+          code: spec.code,
+          name: spec.name,
+          difficulty: spec.difficulty,
+          exam: spec.exam,
+          subject: spec.subject,
+          topic: spec.topic,
+          description: spec.description,
+          status: "PUBLISHED",
+          questions: {
+            create: {
+              type: "MCQ",
+              prompt: spec.question.prompt,
+              options: spec.question.options,
+              answer: spec.question.answer,
+              marks: 1,
+              explanation: spec.question.explanation,
+              sortOrder: 0,
+            },
+          },
+        },
+      });
+    }
+  }
+
+  const course = await prisma.course.findFirst({ where: { status: "PUBLISHED" }, orderBy: { title: "asc" } });
+  const bank = await prisma.questionBank.findUnique({ where: { code: "QB-1040" } });
+  if (course && bank && !(await prisma.assessment.findFirst({ where: { name: "Chapter 2 knowledge check" }, select: { id: true } }))) {
+    await prisma.assessment.create({
+      data: {
+        name: "Chapter 2 knowledge check",
+        kind: "EXAM",
+        status: "PUBLISHED",
+        maxAttempts: 3,
+        durationMinutes: 15,
+        totalMarks: 1,
+        passPercent: 60,
+        bankId: bank.id,
+        instructions: "Choose one answer. This synthetic check is for development and verification only.",
+        courses: { create: { courseId: course.id } },
+      },
+    });
+  }
+  if (!(await prisma.certificateTemplate.findFirst({ where: { serialPrefix: "IBMV" }, select: { id: true } }))) {
+    await prisma.certificateTemplate.create({
+      data: {
+        name: "Demo course completion certificate",
+        serialPrefix: "IBMV",
+        description: "Synthetic certificate used to verify the B6 issue and verification flows.",
+        status: "ACTIVE",
+        expiryRule: "LIFETIME",
+        designSource: "BUILDER",
+        layout: "LANDSCAPE",
+        heading: "Certificate of completion",
+        body: "Awarded to {{learner}} for completing {{course}}.",
+        automation: "MANUAL",
+        threshold: 100,
+      },
+    });
+  }
+  console.log("B6 data ready: 5 grade bands, 2 question banks and 1 demo exam.");
+}
+
 async function main() {
   await seedReference();
   await seedCatalog();
   await seedBanners();
   if (process.env.SEED_DEMO !== "0") await seedDemo();
+  await seedB3b();
+  await seedB5();
+  await seedB7();
+  await seedB6();
 }
 
 main()

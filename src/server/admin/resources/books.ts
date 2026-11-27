@@ -8,6 +8,7 @@ import type { ListQuery } from "@/server/http/list-query";
 import { parseWith } from "@/server/http/validate";
 import { z } from "zod";
 import { httpsUrl, imageRef, optionalInt, parseRepeat, statusFromLabel, statusLabels } from "./helpers";
+import { claimImage, uploadedId } from "@/server/services/assets";
 
 const include = { links: { orderBy: { id: "asc" } } } satisfies Prisma.BookInclude;
 type BookRow = Prisma.BookGetPayload<{ include: typeof include }>;
@@ -31,12 +32,14 @@ const bookSchema = z.object({
 });
 
 export function toBookRow(book: BookRow): Row {
+    const assetMatch = /^\/api\/assets\/([^/]+)\/file$/.exec(book.imageUrl);
+    const image = assetMatch ? JSON.stringify({ id: assetMatch[1], name: "Book cover", size: 0 }) : book.imageUrl;
     return {
         id: book.id,
         title: book.title,
         language: book.language,
         publisher: book.publisher ?? "",
-        imageUrl: book.imageUrl,
+        imageUrl: image,
         imageWidth: book.imageWidth,
         imageHeight: book.imageHeight,
         status: statusLabels[book.status],
@@ -85,9 +88,16 @@ function parse(input: unknown) {
 
 async function create(input: unknown, ctx: ResourceContext): Promise<Row> {
     const { parsed, status, links } = parse(input);
+    let imageUrl = parsed.imageUrl;
+    if (uploadedId(imageUrl)) {
+        const assetId = await claimImage(imageUrl, { name: parsed.title, actorId: ctx.user.id, field: "imageUrl", maxBytes: 5 * 1024 * 1024 });
+        imageUrl = assetId ? `/api/assets/${assetId}/file` : "";
+    } else if (imageUrl && !imageRef.safeParse(imageUrl).success) {
+        throw new ValidationError({ imageUrl: "Use a site path or an https:// image URL, or choose an Asset Library image." });
+    }
     const book = await prisma.book.create({
         data: {
-            title: parsed.title, language: parsed.language, publisher: parsed.publisher || null, imageUrl: parsed.imageUrl,
+            title: parsed.title, language: parsed.language, publisher: parsed.publisher || null, imageUrl,
             imageWidth: parsed.imageWidth ?? 600, imageHeight: parsed.imageHeight ?? 840, status, sortOrder: parsed.sortOrder ?? 0,
             links: { create: links },
         },
@@ -99,12 +109,19 @@ async function create(input: unknown, ctx: ResourceContext): Promise<Row> {
 async function update(id: string, input: unknown, ctx: ResourceContext): Promise<Row> {
     const existing = await load(id);
     const { parsed, status, links } = parse(input);
+    let imageUrl = parsed.imageUrl;
+    if (uploadedId(imageUrl)) {
+        const assetId = await claimImage(imageUrl, { name: parsed.title, actorId: ctx.user.id, field: "imageUrl", current: /^\/api\/assets\/([^/]+)\/file$/.exec(existing.imageUrl)?.[1], maxBytes: 5 * 1024 * 1024 });
+        imageUrl = assetId ? `/api/assets/${assetId}/file` : existing.imageUrl;
+    } else if (imageUrl && !imageRef.safeParse(imageUrl).success) {
+        throw new ValidationError({ imageUrl: "Use a site path or an https:// image URL, or choose an Asset Library image." });
+    }
     await prisma.$transaction([
         prisma.bookLink.deleteMany({ where: { bookId: id } }),
         prisma.book.update({
             where: { id },
             data: {
-                title: parsed.title, language: parsed.language, publisher: parsed.publisher || null, imageUrl: parsed.imageUrl,
+                title: parsed.title, language: parsed.language, publisher: parsed.publisher || null, imageUrl,
                 imageWidth: parsed.imageWidth ?? existing.imageWidth, imageHeight: parsed.imageHeight ?? existing.imageHeight,
                 status, sortOrder: parsed.sortOrder ?? existing.sortOrder, links: { create: links },
             },

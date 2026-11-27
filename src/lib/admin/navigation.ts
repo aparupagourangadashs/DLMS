@@ -55,6 +55,7 @@ const sections: Omit<NavSection, "landingPage">[] = [
       { slug: "test-series", label: "Test Series", description: "Bundled practice tests sold as a product.", status: "decision" },
       { slug: "playlists", label: "Playlists", description: "Curated collections of recorded content.", status: "decision" },
       { slug: "courses", label: "Courses", description: "The public course catalog: details, pricing, FAQs, order and publishing.", status: "ready" },
+      { slug: "memberships", label: "Memberships", description: "Membership plans, pricing, interval and benefits.", status: "ready" },
     ],
   },
   {

@@ -49,21 +49,31 @@ export async function getCourseOutline(userId: string, slug: string, now = new D
     const enrolment = await prisma.enrolment.findFirst({
         where: { ...accessWhere(userId, istToday(now)), course: { slug } },
         orderBy: [{ status: "asc" }, { enrolledAt: "desc" }],
-        include: { course: { select: { slug: true, title: true } }, batch: { select: { name: true } } },
+        include: { course: { select: { slug: true, title: true } }, batch: { select: { name: true, modules: { orderBy: { sortOrder: "asc" }, select: { moduleId: true } } } } },
     });
     if (!enrolment) throw new NotFound();
 
-    const [links, completed] = await Promise.all([
-        prisma.courseModule.findMany({
-            where: { courseId: enrolment.courseId, module: { status: "PUBLISHED" } },
-            orderBy: { sortOrder: "asc" },
-            include: { module: { select: { id: true, name: true, description: true, contents: { orderBy: { sortOrder: "asc" }, select: { id: true, title: true, type: true, minutes: true } } } } },
-        }),
+    const batchModuleIds = enrolment.batch?.modules.map((entry) => entry.moduleId) ?? [];
+    const [linkedModules, completed] = await Promise.all([
+        batchModuleIds.length
+            ? prisma.module.findMany({
+                where: { id: { in: batchModuleIds }, status: "PUBLISHED" },
+                select: { id: true, name: true, description: true, contents: { orderBy: { sortOrder: "asc" }, select: { id: true, title: true, type: true, minutes: true } } },
+            })
+            : prisma.courseModule.findMany({
+                where: { courseId: enrolment.courseId, module: { status: "PUBLISHED" } },
+                orderBy: { sortOrder: "asc" },
+                include: { module: { select: { id: true, name: true, description: true, contents: { orderBy: { sortOrder: "asc" }, select: { id: true, title: true, type: true, minutes: true } } } } },
+            }).then((rows) => rows.map((row) => row.module)),
         prisma.lessonProgress.findMany({ where: { enrolmentId: enrolment.id }, select: { contentId: true } }),
     ]);
+    const moduleById = new Map(linkedModules.map((module) => [module.id, module]));
+    const orderedModules = batchModuleIds.length
+        ? batchModuleIds.map((id) => moduleById.get(id)).filter((module): module is (typeof linkedModules)[number] => Boolean(module))
+        : linkedModules;
     const done = new Set(completed.map((c) => c.contentId));
-    const modules = links
-        .map(({ module }) => ({
+    const modules = orderedModules
+        .map((module) => ({
             id: module.id,
             name: module.name,
             description: module.description ?? "",
@@ -94,8 +104,11 @@ async function accessibleLesson(userId: string, lessonId: string, now: Date) {
     const enrolment = await prisma.enrolment.findFirst({
         where: { ...accessWhere(userId, today), course: { modules: { some: { moduleId: lesson.moduleId } } } },
         orderBy: [{ status: "asc" }, { enrolledAt: "desc" }],
+        include: { batch: { select: { modules: { select: { moduleId: true } } } } },
     });
     if (!enrolment) throw new NotFound();
+    const batchModuleIds = enrolment.batch?.modules.map((entry) => entry.moduleId) ?? [];
+    if (batchModuleIds.length && !batchModuleIds.includes(lesson.moduleId)) throw new NotFound();
     return { lesson, enrolment };
 }
 
@@ -133,9 +146,13 @@ export async function completeLesson(userId: string, lessonId: string, now = new
         create: { enrolmentId: enrolment.id, contentId: lesson.id },
         update: {},
     });
+    const batchModuleIds = (enrolment as typeof enrolment & { batch?: { modules: Array<{ moduleId: string }> } }).batch?.modules.map((entry) => entry.moduleId) ?? [];
+    const lessonWhere: Prisma.ModuleContentWhereInput = batchModuleIds.length
+        ? { moduleId: { in: batchModuleIds }, module: { status: "PUBLISHED" } }
+        : countedLessons(enrolment.courseId);
     const [total, done] = await Promise.all([
-        prisma.moduleContent.count({ where: countedLessons(enrolment.courseId) }),
-        prisma.lessonProgress.count({ where: { enrolmentId: enrolment.id, content: countedLessons(enrolment.courseId) } }),
+        prisma.moduleContent.count({ where: lessonWhere }),
+        prisma.lessonProgress.count({ where: { enrolmentId: enrolment.id, content: lessonWhere } }),
     ]);
     const progress = summarize(total, done, enrolment);
     await persist(enrolment, progress);

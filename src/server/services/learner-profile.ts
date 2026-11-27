@@ -36,6 +36,7 @@ export const learnerProfileSchema = z
         pincode: z.string().trim().regex(/^([A-Za-z0-9][A-Za-z0-9 -]{2,9})?$/, "Enter a valid postal code."),
         permanent: z.string().trim().max(300),
         source: z.enum(["", "website", "friend", "other"], { error: "Choose one of the listed options." }),
+        customFields: z.record(z.string(), z.string()).optional(),
     })
     .partial();
 
@@ -79,7 +80,7 @@ export async function getLearnerProfile(userId: string): Promise<LearnerProfileD
 /** The learner's own edit. Email and registration number are read-only here: email is the sign-in identity. */
 export async function updateLearnerProfile(userId: string, input: unknown, ip?: string): Promise<LearnerProfileDto> {
     const data = parseWith(learnerProfileSchema, input);
-    await load(userId);
+    const user = await load(userId);
 
     if (data.username) {
         const taken = await prisma.learnerProfile.findFirst({ where: { username: data.username, userId: { not: userId } }, select: { id: true } });
@@ -109,6 +110,19 @@ export async function updateLearnerProfile(userId: string, input: unknown, ip?: 
         where: { id: userId },
         data: { ...(data.mobile !== undefined ? { phone: data.mobile || null } : {}), learnerProfile: { update: profile } },
     });
+    if (data.customFields) {
+        const fields = await prisma.customField.findMany({ where: { entity: "LEARNER", placement: "SIGNUP" }, orderBy: { sortOrder: "asc" } });
+        for (const field of fields) {
+            const value = data.customFields[field.id] ?? "";
+            if (field.required && !value.trim()) throw new ValidationError({ [`customFields.${field.id}`]: `${field.label} is required.` });
+            if (field.type === "Email" && value && !z.email().safeParse(value).success) throw new ValidationError({ [`customFields.${field.id}`]: "Enter a valid email address." });
+            await prisma.customFieldValue.upsert({
+                where: { fieldId_entityId: { fieldId: field.id, entityId: user.learnerProfile.id } },
+                create: { fieldId: field.id, entityId: user.learnerProfile.id, value },
+                update: { value },
+            });
+        }
+    }
     // Field names only: the values are personal data and stay out of the audit log.
     await writeAudit({ actorId: userId, action: "profile.update", entity: "User", entityId: userId, after: { fields: Object.keys(data) }, ip });
     return getLearnerProfile(userId);

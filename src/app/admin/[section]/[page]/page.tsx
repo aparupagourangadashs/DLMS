@@ -22,6 +22,7 @@ import {
 import { SiteSettingsPage } from "@/components/admin/pages/SiteSettingsPage";
 import { SubOrganizationsPage } from "@/components/admin/pages/SubOrganizations";
 import { SupportInbox } from "@/components/admin/pages/SupportInbox";
+import { SegmentsPage } from "@/components/admin/pages/SegmentsPage";
 import { SystemNotifications } from "@/components/admin/pages/SystemNotifications";
 import { analytics } from "@/lib/admin/analytics";
 import { demoCommunities } from "@/lib/admin/community";
@@ -116,6 +117,8 @@ export default async function AdminSectionPage({ params, searchParams }: PagePro
       return <UtilityWalletSettingsPage />;
     case "settings/system-notifications":
       return <SystemNotifications />;
+    case "users/segments":
+      return <SegmentsPage />;
   }
 
   if (section === "analytics" && isLiveReportPage(page)) {

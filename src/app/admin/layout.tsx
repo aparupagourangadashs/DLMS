@@ -4,6 +4,7 @@ import { FloatingHelp, MobileNav, Sidebar } from "@/components/admin/Sidebar";
 import { Topbar } from "@/components/admin/Topbar";
 import { roleLabels } from "@/server/auth/permissions";
 import { pageStaff } from "@/server/auth/session";
+import { ActivityTracker } from "@/components/activity/ActivityTracker";
 
 export const metadata = {
   title: { default: "Admin", template: "%s · Admin · IBMV Learning Platform" },
@@ -13,6 +14,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const user = await pageStaff();
   return (
     <AdminAccessProvider role={user.role}>
+      <ActivityTracker />
       <div className="admin-shell flex min-h-dvh">
         <a
           href="#main"

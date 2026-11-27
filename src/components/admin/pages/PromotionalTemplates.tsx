@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Eye, FilePlus2, Mail, MessageCircle, MessageSquare, PencilLine, Search, Smartphone, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { palette, type ColorKey } from "@/lib/colors";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
-import { useDemoRecords } from "@/lib/admin/use-demo-records";
+import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClass } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { toast } from "sonner";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
 const channels = ["Email", "SMS", "WhatsApp", "Push"] as const;
@@ -33,7 +34,21 @@ function ContentPreview({ content }: { content: string }) {
 }
 
 export function PromotionalTemplates() {
-  const [records, save] = useDemoRecords("dl-lms-demo-promotional-templates-v1", initial);
+  const [records, setRecords] = useState<Template[]>(initial);
+  useEffect(() => {
+    apiClient.get<Array<{ id: string; channel: "EMAIL" | "SMS" | "WHATSAPP" | "PUSH"; name: string; subject: string | null; body: string; replyTo: string | null; unsubscribeText: string | null }>>("/api/admin/b7/templates").then(({ data }) => {
+      if (data.length) setRecords(data.map((template) => ({
+        id: template.id,
+        channel: template.channel === "WHATSAPP" ? "WhatsApp" : template.channel === "EMAIL" ? "Email" : template.channel === "SMS" ? "SMS" : "Push",
+        name: template.name,
+        subject: template.subject ?? "",
+        replyTo: template.replyTo ?? "",
+        content: template.body,
+        unsubscribe: Boolean(template.unsubscribeText),
+        unsubscribeText: template.unsubscribeText ?? "Unsubscribe from promotional emails",
+      })));
+    }).catch(() => undefined);
+  }, []);
   const [channel, setChannel] = useState<Channel>("Email");
   const [draft, setDraft] = useState<Template | null>(null);
   const [query, setQuery] = useState("");
@@ -42,7 +57,7 @@ export function PromotionalTemplates() {
   const limit = draft?.channel === "Push" ? 240 : draft?.channel === "SMS" ? 1600 : 20000;
   const filtered = records.filter((template) => template.channel === channel && `${template.name} ${template.subject} ${template.content}`.toLowerCase().includes(query.toLowerCase()));
   function update(values: Partial<Template>) { if (draft) { setDraft({ ...draft, ...values }); setError(""); } }
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!draft) return;
     if (!draft.name.trim() || !draft.content.trim()) { setError("Name and message content cannot be blank."); return; }
@@ -52,8 +67,25 @@ export function PromotionalTemplates() {
     if (draft.content.length > limit) { setError(`Content exceeds the ${limit.toLocaleString()} character demo limit.`); return; }
     if (records.some((template) => template.id !== draft.id && template.channel === draft.channel && template.name.toLowerCase() === draft.name.trim().toLowerCase())) { setError("A template with this name already exists in this channel."); return; }
     const next = { ...draft, id: draft.id || crypto.randomUUID(), name: draft.name.trim(), subject: draft.subject.trim(), replyTo: draft.replyTo.trim() };
-    save(draft.id ? records.map((record) => record.id === draft.id ? next : record) : [...records, next]);
-    setDraft(null);
+    try {
+      const payload = {
+        channel: next.channel === "WhatsApp" ? "WHATSAPP" : next.channel.toUpperCase(),
+        name: next.name,
+        subject: next.subject,
+        body: next.content,
+        replyTo: next.replyTo,
+        unsubscribeText: next.unsubscribeText,
+      };
+      const result = draft.id
+        ? await apiClient.patch<{ id: string }>(`/api/admin/b7/templates/${draft.id}`, payload)
+        : await apiClient.post<{ id: string }>("/api/admin/b7/templates", payload);
+      const saved = { ...next, id: result.data.id };
+      setRecords((current) => draft.id ? current.map((record) => record.id === draft.id ? saved : record) : [...current, saved]);
+      setDraft(null);
+      toast.success("Template saved");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save the template.");
+    }
   }
   return <>
     <PageHeader title="Promotional Templates" description="Reusable message drafts for Email, SMS, WhatsApp and Push." status="ready" actions={<Button variant="gold" onClick={() => { setDraft(empty(channel)); setError(""); }}><FilePlus2 className="size-4" aria-hidden="true" />Add Template</Button>} />
@@ -99,6 +131,6 @@ export function PromotionalTemplates() {
         <div className="flex flex-wrap justify-end gap-2"><Button onClick={() => setDraft(null)}>Cancel</Button><Button type="submit" variant="success"><FilePlus2 className="size-4" aria-hidden="true" />Save local draft</Button></div>
       </form>}
     </Modal>
-    <Modal open={remove !== null} onClose={() => setRemove(null)} title="Delete local template?" footer={<><Button onClick={() => setRemove(null)}>Cancel</Button><Button variant="danger" onClick={() => { save(records.filter((record) => record.id !== remove?.id)); setRemove(null); }}><Trash2 className="size-4" aria-hidden="true" />Delete demo draft</Button></>}><p className="text-sm">Delete {remove?.name} from this browser&apos;s demo drafts? No provider template will be changed.</p></Modal>
+    <Modal open={remove !== null} onClose={() => setRemove(null)} title="Delete local template?" footer={<><Button onClick={() => setRemove(null)}>Cancel</Button><Button variant="danger" onClick={async () => { if (!remove) return; try { await apiClient.delete(`/api/admin/b7/templates/${remove.id}`); setRecords((current) => current.filter((record) => record.id !== remove.id)); setRemove(null); toast.success("Template deleted"); } catch (cause) { toast.error(cause instanceof Error ? cause.message : "Could not delete the template."); } }}><Trash2 className="size-4" aria-hidden="true" />Delete draft</Button></>}><p className="text-sm">Delete {remove?.name}? Provider templates are not changed.</p></Modal>
   </>;
 }

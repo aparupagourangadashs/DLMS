@@ -298,6 +298,18 @@ export function ListPage({ pageKey, status, config, remote = false, initialQuery
     setConfirm(null);
   };
 
+  const bulkDeleteRecordings = async () => {
+    if (pageKey !== "learning/session-recordings" || selected.size === 0) return;
+    try {
+      const result = await apiClient.post<{ deleted: number }>("/api/admin/recordings/bulk-delete", { ids: [...selected] });
+      toast.success(`${result.data.deleted} recording${result.data.deleted === 1 ? "" : "s"} deleted`);
+      setSelected(new Set());
+      remoteList.refetch();
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Could not delete the selected recordings.");
+    }
+  };
+
   const allOnPageSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
   const nameOf = (row: Row) => String(row[nameKeyOf(config)] ?? entity);
   const actionsFor = (row: Row) => (config.rowActions ?? []).filter((action) => appliesTo(row, action));
@@ -463,6 +475,12 @@ export function ListPage({ pageKey, status, config, remote = false, initialQuery
             {selected.size > 0 ? (
               <div className="ml-auto flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-1 text-sm" role="status">
                 <span className="font-medium">{selected.size} selected</span>
+                {pageKey === "learning/session-recordings" ? (
+                  <Button size="sm" variant="soft-danger" onClick={() => void bulkDeleteRecordings()}>
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                    Delete
+                  </Button>
+                ) : null}
                 <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
                   Clear
                 </Button>

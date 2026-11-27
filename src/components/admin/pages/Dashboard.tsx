@@ -12,7 +12,7 @@ import { Popover } from "@/components/ui/Popover";
 import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { TableHeading, TableScroll } from "@/components/ui/Table";
-import type { AttendanceSummary, DashboardOverview, EnrolmentSeries } from "@/lib/admin/dashboard";
+import type { ActivitySummary, AttendanceSummary, DashboardOverview, EnrolmentSeries } from "@/lib/admin/dashboard";
 import type { AdminSession } from "@/lib/admin/sessions";
 import { cn } from "@/lib/cn";
 import { palette } from "@/lib/colors";
@@ -91,14 +91,14 @@ export function Dashboard({ overview, canSeeSessions, canWriteSessions, branches
                 }
             />
 
-            <WeeklyPerformance attendance={overview.attendance} />
-            <ActivityAndEnrolments series={overview.series} />
+            <WeeklyPerformance attendance={overview.attendance} activity={overview.activity ?? null} />
+            <ActivityAndEnrolments series={overview.series} activity={overview.activity ?? null} />
             {canSeeSessions ? <TodaysSessions today={overview.today} canWrite={canWriteSessions} branches={branches} branchRequired={branchRequired} onSchedule={scheduleSession} /> : null}
         </>
     );
 }
 
-function WeeklyPerformance({ attendance }: { attendance: AttendanceSummary | null }) {
+function WeeklyPerformance({ attendance, activity }: { attendance: AttendanceSummary | null; activity: ActivitySummary | null }) {
     const known = attendance !== null && attendance.percent !== null;
     const change = known && attendance.previousPercent ? Math.round(((attendance.percent! - attendance.previousPercent) / attendance.previousPercent) * 100) : undefined;
     const trend = attendance && attendance.days.length >= 2 ? { labels: attendance.days.map((d) => formatDate(d.date)), values: attendance.days.map((d) => d.percent), unit: "%" } : undefined;
@@ -108,8 +108,8 @@ function WeeklyPerformance({ attendance }: { attendance: AttendanceSummary | nul
                 Weekly performance <span className="text-sm font-normal text-muted">· Last 7 days</span>
             </h2>
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <StatCard label="Avg. time spent" value="—" hint="No data yet" color="indigo" icon={<Clock />} />
-                <StatCard label="Total views" value="—" hint="No data yet" color="sky" icon={<Eye />} />
+                <StatCard label="Avg. time spent" value={activity?.averageTimeSec === null || activity?.averageTimeSec === undefined ? "—" : `${Math.round(activity.averageTimeSec / 60)}m`} hint={activity ? "Tracked activity" : "No data yet"} color="indigo" icon={<Clock />} />
+                <StatCard label="Total views" value={activity ? activity.totalViews.toLocaleString("en-IN") : "—"} hint={activity ? "Last 10 days" : "No data yet"} color="sky" icon={<Eye />} />
                 <StatCard label="Avg. rating" value="—" hint="No data yet" color="amber" icon={<Star />} />
                 {attendance ? (
                     <StatCard
@@ -128,7 +128,7 @@ function WeeklyPerformance({ attendance }: { attendance: AttendanceSummary | nul
     );
 }
 
-function ActivityAndEnrolments({ series }: { series: EnrolmentSeries | null }) {
+function ActivityAndEnrolments({ series, activity }: { series: EnrolmentSeries | null; activity: ActivitySummary | null }) {
     const [chart, setChart] = useState<"signups" | "sales">("signups");
     const [chartType, setChartType] = useState<ChartType>("bar");
 
@@ -136,7 +136,12 @@ function ActivityAndEnrolments({ series }: { series: EnrolmentSeries | null }) {
         <div className={cn("mb-6 grid min-w-0 gap-5", series && "xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]")}>
             <Card className="min-w-0">
                 <CardHeader title={<span className="flex items-center gap-2"><Users className="size-4 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />Daily active users</span>} description="Last 10 days" />
-                <EmptyState icon={<Users className="size-5" />} title="No data yet" description="Daily active learners appear once learner activity is tracked." className="py-10" />
+                {activity?.trend.length ? (
+                    <div className="p-5">
+                        <p className="mb-4 text-sm text-muted"><strong className="mr-2 text-3xl font-semibold text-foreground">{activity.dailyActiveUsers}</strong>active today</p>
+                        <BarChart title="Daily active users" labels={activity.trend.map((row) => formatDate(row.date).slice(0, 6))} chartType="bar" series={[{ label: "Active users", values: activity.trend.map((row) => row.activeUsers), colorClass: "fill-accent", swatchClass: "bg-accent" }]} />
+                    </div>
+                ) : <EmptyState icon={<Users className="size-5" />} title="No data yet" description="Daily active users appear once learner activity is tracked." className="py-10" />}
             </Card>
             {series ? (
                 <Card className="min-w-0">

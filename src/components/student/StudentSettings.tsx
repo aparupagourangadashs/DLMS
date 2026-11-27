@@ -10,7 +10,7 @@ import { commonTimezones, genderOptions, sourceOptions, type LearnerPreferencesD
 import { Bell, Globe, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { StudentAvatar } from "./StudentAvatar";
 import { StudentHeading, StudentPanel } from "./StudentUi";
@@ -41,6 +41,10 @@ function Profile({ initial, today }: { initial: LearnerProfileDto; today: string
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<Array<{ id: string; label: string; type: string; required: boolean; options: string[]; value: string }>>([]);
+  useEffect(() => {
+    apiClient.get<typeof customFields>("/api/student/custom-fields").then(({ data }) => setCustomFields(data)).catch(() => setCustomFields([]));
+  }, []);
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
@@ -48,7 +52,10 @@ function Profile({ initial, today }: { initial: LearnerProfileDto; today: string
     setErrors({});
     try {
       // Email and registration number are not editable here, so they are not sent.
-      const editable = Object.fromEntries(Object.entries(draft).filter(([key]) => key !== "email" && key !== "registrationNo"));
+      const editable = {
+        ...Object.fromEntries(Object.entries(draft).filter(([key]) => key !== "email" && key !== "registrationNo" && key !== "customFields")),
+        customFields: Object.fromEntries(customFields.map((field) => [field.id, field.value])),
+      };
       const result = await apiClient.patch<LearnerProfileDto>("/api/student/profile", editable);
       setValues(result.data);
       setEditing(false);
@@ -84,7 +91,13 @@ function Profile({ initial, today }: { initial: LearnerProfileDto; today: string
               : field.type === "gender" || field.type === "source" ? <Select id={id} value={value} onValueChange={update} options={options} />
                 : <input id={id} type={field.type ?? "text"} value={value} maxLength={field.key === "address" || field.key === "permanent" ? 300 : 120} onChange={(event) => update(event.target.value)} className={inputClass} aria-invalid={Boolean(errors[field.key])} autoComplete="off" />}
         </Field>;
-      })}</div></StudentPanel>)}</div>
+      })}</div></StudentPanel>)}
+      {customFields.length ? <StudentPanel title="Additional information"><div className="grid gap-4 sm:grid-cols-2">{customFields.map((field) => <Field key={field.id} id={`custom-${field.id}`} label={field.label} required={field.required}>
+        {!editing ? <p className="min-h-11 rounded-xl bg-accent-soft/40 px-3 py-3 text-sm break-words">{field.value || "Not provided"}</p>
+          : field.type === "Dropdown" ? <Select id={`custom-${field.id}`} value={field.value} onValueChange={(value) => setCustomFields((current) => current.map((item) => item.id === field.id ? { ...item, value } : item))} options={field.options.map((option) => ({ value: option, label: option }))} />
+            : <input id={`custom-${field.id}`} className={inputClass} type={field.type === "Email" ? "email" : field.type === "Number" ? "number" : field.type === "Date" ? "date" : "text"} value={field.value} onChange={(event) => setCustomFields((current) => current.map((item) => item.id === field.id ? { ...item, value: event.target.value } : item))} />}
+      </Field>)}</div></StudentPanel> : null}
+      </div>
     </form>
   );
 }

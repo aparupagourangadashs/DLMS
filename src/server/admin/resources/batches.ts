@@ -15,6 +15,7 @@ const include = {
     course: { select: { id: true, title: true } },
     branch: { select: { id: true, name: true } },
     extraManagers: { select: { userId: true } },
+    modules: { orderBy: { sortOrder: "asc" }, include: { module: { select: { id: true, name: true } } } },
 } satisfies Prisma.BatchInclude;
 type BatchRow = Prisma.BatchGetPayload<{ include: typeof include }>;
 
@@ -32,6 +33,7 @@ const schema = z
         instructor: z.string().min(1, "Choose the instructor."),
         manager: z.string().min(1, "Choose the primary manager."),
         additionalManagers: z.array(z.string()).max(20).default([]),
+        modules: z.array(z.string()).max(50).default([]),
         branch: z.string().trim().default(""),
         status: z.string().default("Active"),
     })
@@ -77,6 +79,8 @@ export function toBatchRow(batch: BatchRow, look: Lookups, stats?: { learners: n
         instructor: label(batch.instructorId),
         manager: label(batch.managerId),
         additionalManagers: batch.extraManagers.map((m) => label(m.userId)).filter(Boolean),
+        modules: batch.modules.map((entry) => entry.module.name),
+        module: batch.modules.length ? batch.modules.map((entry) => entry.module.name).join(", ") : "Course defaults",
         branch: batch.branch?.name ?? "",
         learners: stats?.learners ?? 0,
         progress: stats?.progress ?? 0,
@@ -137,6 +141,16 @@ async function resolve(input: Input, look: Lookups, ctx: ResourceContext) {
     }
     const status = statusFromLabel(input.status);
     if (!status) throw new ValidationError({ status: "Choose Active, Completed or Archived." });
+    const moduleNames = [...new Set(input.modules)];
+    if (moduleNames.length !== input.modules.length) throw new ValidationError({ modules: "Choose each module only once." });
+    const modules = moduleNames.length ? await prisma.module.findMany({ where: { name: { in: moduleNames }, status: { not: "ARCHIVED" } }, select: { id: true, name: true } }) : [];
+    if (modules.length !== moduleNames.length) throw new ValidationError({ modules: "Choose modules that exist and are not archived." });
+    for (const name of moduleNames) {
+        const foundModule = modules.find((item) => item.name === name);
+        if (!foundModule) continue;
+        const linked = await prisma.courseModule.findFirst({ where: { courseId: courseId, moduleId: foundModule.id }, select: { courseId: true } });
+        if (!linked) throw new ValidationError({ modules: `"${name}" is not in the selected course.` });
+    }
 
     let branchId: string | null = null;
     if (input.branch) {
@@ -147,7 +161,7 @@ async function resolve(input: Input, look: Lookups, ctx: ResourceContext) {
     } else if (isScoped(ctx)) {
         branchId = ctx.user.branchIds[0];
     }
-    return { courseId, instructorId, managerId, extra, status, branchId };
+    return { courseId, instructorId, managerId, extra, status, branchId, modules: modules.map((module) => module.id) };
 }
 
 async function assertNameFree(name: string, excludeId?: string) {
@@ -158,6 +172,11 @@ async function assertNameFree(name: string, excludeId?: string) {
 const replaceManagers = (batchId: string, userIds: string[]) => [
     prisma.batchManager.deleteMany({ where: { batchId } }),
     prisma.batchManager.createMany({ data: userIds.map((userId) => ({ batchId, userId })) }),
+];
+
+const replaceModules = (batchId: string, moduleIds: string[]) => [
+    prisma.batchModule.deleteMany({ where: { batchId } }),
+    ...(moduleIds.length ? [prisma.batchModule.createMany({ data: moduleIds.map((moduleId, sortOrder) => ({ batchId, moduleId, sortOrder })) })] : []),
 ];
 
 async function create(input: unknown, ctx: ResourceContext): Promise<Row> {
@@ -176,6 +195,7 @@ async function create(input: unknown, ctx: ResourceContext): Promise<Row> {
             branchId: ids.branchId,
             status: ids.status,
             extraManagers: { create: ids.extra.map((userId) => ({ userId })) },
+            modules: { create: ids.modules.map((moduleId, sortOrder) => ({ moduleId, sortOrder })) },
         },
         include,
     });
@@ -205,6 +225,7 @@ async function update(id: string, input: unknown, ctx: ResourceContext): Promise
             },
         }),
         ...replaceManagers(id, ids.extra),
+        ...replaceModules(id, ids.modules),
     ]);
     const action = existing.status !== ids.status ? (ids.status === "COMPLETED" ? "batch.complete" : ids.status === "ARCHIVED" ? "batch.archive" : "batch.reopen") : "batch.update";
     await writeAudit({ actorId: ctx.user.id, action, entity: "Batch", entityId: id, before: { name: existing.name, status: existing.status }, after: { name: data.name, status: ids.status }, ip: ctx.ip });
@@ -236,6 +257,7 @@ async function duplicate(id: string, ctx: ResourceContext): Promise<Row> {
             branchId: source.branchId,
             status: "ACTIVE",
             extraManagers: { create: source.extraManagers.map((m) => ({ userId: m.userId })) },
+            modules: { create: source.modules.map((entry) => ({ moduleId: entry.moduleId, sortOrder: entry.sortOrder })) },
         },
         include,
     });
@@ -244,9 +266,9 @@ async function duplicate(id: string, ctx: ResourceContext): Promise<Row> {
 }
 
 async function options(): Promise<Record<string, string[]>> {
-    const [look, teachers, branches] = await Promise.all([lookups(), staffOptions(["INSTRUCTOR", "ADMIN", "SUPER_ADMIN"]), prisma.branch.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" }, select: { name: true } })]);
+    const [look, teachers, branches, modules] = await Promise.all([lookups(), staffOptions(["INSTRUCTOR", "ADMIN", "SUPER_ADMIN"]), prisma.branch.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" }, select: { name: true } }), prisma.module.findMany({ where: { status: { not: "ARCHIVED" } }, orderBy: { name: "asc" }, select: { name: true } })]);
     const staff = look.staff.map((s: Option) => s.label);
-    return { course: look.courses.map((c) => c.label), instructor: teachers.map((t) => t.label), manager: staff, additionalManagers: staff, branch: branches.map((b) => b.name) };
+    return { course: look.courses.map((c) => c.label), instructor: teachers.map((t) => t.label), manager: staff, additionalManagers: staff, modules: modules.map((module) => module.name), branch: branches.map((b) => b.name) };
 }
 
 export const batchResource: ResourceDef = {

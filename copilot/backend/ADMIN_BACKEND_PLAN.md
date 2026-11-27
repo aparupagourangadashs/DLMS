@@ -274,23 +274,23 @@ Status: `Todo`, `In progress`, `Done`. Pattern: **L** = generic list via registr
 | Products | Test Series | D | A8 (conditional) | Todo |
 | Products | Playlists | D | A8 (conditional) | Todo |
 | Products | **Courses (new)** | L + editor | A2 | **Done** (2026-11-25) |
-| Products | **Memberships (new)** | L | A5 | Todo |
+| Products | **Memberships (new)** | L | A5 | **Done** (2026-11-27) |
 | Learning | Batches | L + editor | A4 | **Done** (2026-11-25); batch progress is the average of learners' course progress; choosing modules per batch and batch communities are not built |
 | Learning | Sessions | C | A4 | **Done** (2026-11-25); create, weekly repeat, reschedule, cancel, holidays, attendance |
 | Learning | Announcements | L | A4 | **Done** (2026-11-25); audience all or one batch (segments with B3b); in-app only, delivery with B7 |
-| Learning | Feedback Forms | L + editor | A6 | Todo |
+| Learning | Feedback Forms | L + editor | A6 | **Done** (2026-11-27) |
 | Learning | Module Library | L | A4 (B4b) | **Done** (2026-11-26); text, YouTube, link and file lessons in an ordered editor, used-module delete blocked; modules are added to a course in the Courses editor; quizzes arrive with assessments |
-| Learning | Question Bank | L | A6 | Todo |
+| Learning | Question Bank | L | A6 | **Done** (2026-11-27) |
 | Learning | Asset Library | L + editor | A2 (B2b, needs uploads, D4) | **Done** (2026-11-26); uploads to a local storage driver (`STORAGE_LOCAL_DIR`, `UPLOAD_MAX_MB`), YouTube/link assets, replace file, de-duplication, summary cards, usage from lessons; delete blocked while used; images public, other files private |
-| Learning | Assessments | L | A6 | Todo |
-| Learning | Submissions | L + review | A6 | Todo |
-| Learning | Session Recordings | L | A4 (B4b) | Done (links; bulk delete later) |
-| Learning | Certificates | L + editor | A6 | Todo |
+| Learning | Assessments | L | A6 | **Done** (2026-11-27) |
+| Learning | Submissions | L + review | A6 | **Done** (2026-11-27) |
+| Learning | Session Recordings | L | A4 (B4b) | **Done** (2026-11-27); bulk delete, scope checks and audit |
+| Learning | Certificates | L + editor | A6 | **Done** (2026-11-27) |
 | Users | Learners | L | A3 | **Done** (2026-11-25); Enrolled/Completed tabs and course/batch filters added with A4 (2026-11-25) |
 | Users | Team | L | A1 | **Done** (2026-11-25) |
-| Users | Segments | L | A3 (B3b) | Todo |
+| Users | Segments | L | A3 (B3b) | **Done** (2026-11-27); static and dynamic database segments |
 | Users | New Enrolment | C | A4 | **Done** (2026-11-25); single, bulk and CSV, with dry runs; paid enrolments arrive with B5 |
-| Engage | Community | C | A7 | Todo |
+| Engage | Community | C | A7 | **In progress** (2026-11-27); database community/posts/members/endpoints |
 | Engage | Discussions | D | A7 (conditional) | Todo |
 | Engage | **Support inbox (new)** | custom | A3 | **Done** (2026-11-25) |
 | Marketing | Campaigns | L | A7 | Todo |
@@ -298,7 +298,7 @@ Status: `Todo`, `In progress`, `Done`. Pattern: **L** = generic list via registr
 | Marketing | Blogs | L | A2 (B2b) | **Done** (2026-11-26); Markdown article with summary, optional cover upload, author from active staff, Draft/Published/Hidden, web address made from the title (editable, unique), first publication date kept, views counted by the public page; the list searches, filters by visibility and created date and sorts; a published article cannot be deleted |
 | Marketing | Marketing Banners | L | A2 (B2b) | **Done** (2026-11-26); image upload, https or on-site link, show-from/until dates (IST days), display order, Website home or Student portal home; the website home and student home read them; images stay in the Asset Library when a banner is deleted |
 | Marketing | Leads | L | A2 | **Done** (2026-11-25) |
-| Marketing | Promotional Templates | C | A7 | Todo |
+| Marketing | Promotional Templates | C | A7 | **In progress** (2026-11-27); database-backed templates; provider delivery not connected |
 | Marketing | Promo Codes | C | A5 | Todo |
 | Marketing | Testimonials | L | A2 | **Done** (2026-11-25) |
 | Sales | Abandoned Cart | L | A5 | Todo |
@@ -318,11 +318,11 @@ Status: `Todo`, `In progress`, `Done`. Pattern: **L** = generic list via registr
 | Settings | Sub-Organizations | C | A1 | **Done** (2026-11-25) |
 | Settings | System Notifications | C | A7 | Todo |
 | Settings | Categories | C | A2 | **Done** (2026-11-25) |
-| Settings | Custom Fields | C | A3 (B3b) | Todo |
-| Settings | Grading System | C | A6 | Todo |
+| Settings | Custom Fields | C | A3 (B3b) | **Done** (2026-11-27); database definitions and scoped values |
+| Settings | Grading System | C | A6 | **Done** (2026-11-27) |
 | Settings | Miscellaneous Fees | C | A5 | Todo |
 | Settings | International Selling | C | A5 | Todo |
-| Settings | Learner Experience | C | A3 (B3b) | Todo |
+| Settings | Learner Experience | C | A3 (B3b) | **Done** (2026-11-27); persisted sidebar and profile visibility read by the student shell |
 | Settings | Utility Wallet | C | A7 | Todo |
 | Website | **Site Settings, Books, People, Magazines, Videos, Legal Pages (new group)** | C + L | A2 | **Done** (2026-11-25) |
 | Shell | Login, permission-aware nav | n/a | A1 | **Done** (2026-11-25) |

@@ -8,6 +8,8 @@ import type { ListQuery } from "@/server/http/list-query";
 import { parseWith } from "@/server/http/validate";
 import { z } from "zod";
 import { dateOnly, httpsUrl, imageRef, isoDay, optionalHttpsUrl, optionalInt, parseRepeat, slugify, statusFromLabel, statusLabels, yesNo } from "./helpers";
+import { claimImage } from "@/server/services/assets";
+import { uploadedId } from "@/server/services/assets";
 
 const include = {
     category: { select: { title: true, slug: true } },
@@ -45,7 +47,7 @@ const courseSchema = z
         audience: text(5000).default(""),
         assessmentPlan: text(5000).default(""),
         requirements: text(5000).default(""),
-        imageUrl: imageRef.default(""),
+        imageUrl: z.string().default(""),
         imageWidth: optionalInt(1, 10_000).default(null),
         imageHeight: optionalInt(1, 10_000).default(null),
         status: z.string().default("Draft"),
@@ -59,6 +61,8 @@ const courseSchema = z
 type CourseInput = z.output<typeof courseSchema>;
 
 export function toCourseRow(course: CourseRow): Row {
+    const assetMatch = /^\/api\/assets\/([^/]+)\/file$/.exec(course.imageUrl);
+    const image = assetMatch ? JSON.stringify({ id: assetMatch[1], name: "Course image", size: 0 }) : course.imageUrl;
     return {
         id: course.id,
         title: course.title,
@@ -83,7 +87,7 @@ export function toCourseRow(course: CourseRow): Row {
         audience: course.audience ?? "",
         assessmentPlan: course.assessmentPlan ?? "",
         requirements: course.requirements ?? "",
-        imageUrl: course.imageUrl,
+        imageUrl: image,
         imageWidth: course.imageWidth,
         imageHeight: course.imageHeight,
         status: statusLabels[course.status],
@@ -118,7 +122,7 @@ function resolveStatus(label: string) {
     return status;
 }
 
-async function data(input: CourseInput, existing?: CourseRow): Promise<Prisma.CourseUncheckedCreateInput> {
+async function data(input: CourseInput, ctx: ResourceContext, existing?: CourseRow): Promise<Prisma.CourseUncheckedCreateInput> {
     const category = await resolveCategory(input.category);
     const status = resolveStatus(input.status);
     const slug = input.slug ? input.slug : existing?.slug ?? (await uniqueSlug(input.title));
@@ -126,6 +130,14 @@ async function data(input: CourseInput, existing?: CourseRow): Promise<Prisma.Co
         throw new Conflict("Another course already uses this URL name.", { slug: "Already in use." });
     }
     if (input.isFree && input.price) throw new ValidationError({ price: "Leave the price empty for a free course." });
+    let imageUrl = input.imageUrl;
+    if (uploadedId(input.imageUrl)) {
+        const assetId = await claimImage(input.imageUrl, { name: input.title, actorId: ctx.user.id, field: "imageUrl", maxBytes: 5 * 1024 * 1024 });
+        imageUrl = assetId ? `/api/assets/${assetId}/file` : existing?.imageUrl ?? "";
+    } else if (imageUrl) {
+        const valid = imageRef.safeParse(imageUrl);
+        if (!valid.success) throw new ValidationError({ imageUrl: "Use a site path or an https:// image URL, or choose an Asset Library image." });
+    }
     return {
         slug,
         title: input.title,
@@ -139,7 +151,7 @@ async function data(input: CourseInput, existing?: CourseRow): Promise<Prisma.Co
         priceMinor: input.isFree || input.price === null ? null : input.price * 100,
         isFree: input.isFree,
         certificateOffered: input.certificateOffered,
-        imageUrl: input.imageUrl,
+        imageUrl,
         imageWidth: input.imageWidth ?? existing?.imageWidth ?? 1000,
         imageHeight: input.imageHeight ?? existing?.imageHeight ?? 563,
         officialUrl: input.officialUrl,
@@ -222,7 +234,7 @@ async function create(input: unknown, ctx: ResourceContext): Promise<Row> {
     const parsed = parseWith(courseSchema, input);
     const faqs = parseRepeat(parsed.faqs, faqSchema, 30, "faqs");
     const moduleIds = await resolveModules(parseRepeat(parsed.modules, moduleRefSchema, 50, "modules"));
-    const course = await prisma.course.create({ data: await data(parsed) });
+    const course = await prisma.course.create({ data: await data(parsed, ctx) });
     await saveFaqs(course.id, faqs);
     await saveModules(course.id, moduleIds);
     await writeAudit({ actorId: ctx.user.id, action: "course.create", entity: "Course", entityId: course.id, after: { title: course.title, status: course.status }, ip: ctx.ip });
@@ -234,7 +246,7 @@ async function update(id: string, input: unknown, ctx: ResourceContext): Promise
     const parsed = parseWith(courseSchema, input);
     const faqs = parseRepeat(parsed.faqs, faqSchema, 30, "faqs");
     const moduleIds = await resolveModules(parseRepeat(parsed.modules, moduleRefSchema, 50, "modules"));
-    await prisma.course.update({ where: { id }, data: await data(parsed, existing) });
+    await prisma.course.update({ where: { id }, data: await data(parsed, ctx, existing) });
     await saveFaqs(id, faqs);
     await saveModules(id, moduleIds);
     const after = await load(id);

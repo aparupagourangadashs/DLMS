@@ -13,10 +13,10 @@ import { notFound } from "next/navigation";
 
 // Pages that still show sample content; the others below read the learner's own data.
 const pages = {
-  certificates: StudentCertificates, communities: StudentCommunities, exams: StudentExams,
-  memberships: StudentMemberships, "my-purchases": StudentPurchases, "refer-and-earn": StudentReferrals,
+  communities: StudentCommunities,
+  memberships: StudentMemberships,
 };
-const livePages = ["announcements", "calendar", "help", "my-learning"];
+const livePages = ["announcements", "calendar", "help", "my-learning", "exams", "certificates", "my-purchases", "memberships", "refer-and-earn"];
 type StudentPage = keyof typeof pages;
 function isStudentPage(value: string): value is StudentPage { return Object.hasOwn(pages, value); }
 export const dynamicParams = false;
@@ -44,6 +44,26 @@ export default async function Page({ params }: { params: Promise<{ page: string 
   if (page === "announcements") {
     const user = await pageLearner();
     return <StudentAnnouncements initial={await listMyAnnouncements(user.id)} />;
+  }
+  if (page === "exams") {
+    await pageLearner();
+    return <StudentExams />;
+  }
+  if (page === "certificates") {
+    await pageLearner();
+    return <StudentCertificates />;
+  }
+  if (page === "my-purchases") {
+    await pageLearner();
+    return <StudentPurchases />;
+  }
+  if (page === "memberships") {
+    await pageLearner();
+    return <StudentMemberships />;
+  }
+  if (page === "refer-and-earn") {
+    await pageLearner();
+    return <StudentReferrals />;
   }
   if (!isStudentPage(page)) notFound();
   const Screen = pages[page];

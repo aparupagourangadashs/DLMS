@@ -197,11 +197,14 @@ export const unusedAssets: Prisma.AssetWhereInput = { lessons: { none: {} }, ban
 export async function assetUsage(ids: string[]): Promise<Map<string, number>> {
     const usage = new Map<string, number>(ids.map((id) => [id, 0]));
     if (ids.length === 0) return usage;
-    const [lessons, banners, events, blogs] = await Promise.all([
+    const [lessons, banners, events, blogs, courses, books, people] = await Promise.all([
         prisma.moduleContent.groupBy({ by: ["assetId"], where: { assetId: { in: ids } }, _count: { _all: true } }),
         prisma.banner.groupBy({ by: ["imageAssetId"], where: { imageAssetId: { in: ids } }, _count: { _all: true } }),
         prisma.event.groupBy({ by: ["imageAssetId"], where: { imageAssetId: { in: ids } }, _count: { _all: true } }),
         prisma.blog.groupBy({ by: ["coverAssetId"], where: { coverAssetId: { in: ids } }, _count: { _all: true } }),
+        prisma.course.findMany({ where: { imageUrl: { contains: "/api/assets/" } }, select: { imageUrl: true } }),
+        prisma.book.findMany({ where: { imageUrl: { contains: "/api/assets/" } }, select: { imageUrl: true } }),
+        prisma.person.findMany({ where: { imageUrl: { contains: "/api/assets/" } }, select: { imageUrl: true } }),
     ]);
     const add = (id: string | null, count: number) => {
         if (id) usage.set(id, (usage.get(id) ?? 0) + count);
@@ -210,6 +213,10 @@ export async function assetUsage(ids: string[]): Promise<Map<string, number>> {
     for (const g of banners) add(g.imageAssetId, g._count._all);
     for (const g of events) add(g.imageAssetId, g._count._all);
     for (const g of blogs) add(g.coverAssetId, g._count._all);
+    for (const row of [...courses, ...books, ...people]) {
+        const match = /^\/api\/assets\/([^/]+)\/file$/.exec(row.imageUrl ?? "");
+        if (match) usage.set(match[1], (usage.get(match[1]) ?? 0) + 1);
+    }
     return usage;
 }
 

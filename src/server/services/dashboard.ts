@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { AttendanceSummary, DashboardOverview, EnrolmentSeries } from "@/lib/admin/dashboard";
+import type { ActivitySummary, AttendanceSummary, DashboardOverview, EnrolmentSeries } from "@/lib/admin/dashboard";
 import { addDays, istDayRange, istToday, toIst } from "@/lib/ist";
 import { prisma } from "@/server/db";
 
@@ -81,9 +81,55 @@ async function enrolmentSeries(actor: DashboardActor, today: string): Promise<En
     return { weekStarts, signups: tally(users.map((u) => u.createdAt)), enrolments: tally(enrolments.map((e) => e.enrolledAt)) };
 }
 
+async function activitySummary(actor: DashboardActor, today: string): Promise<ActivitySummary> {
+    const from = addDays(today, -9);
+    const to = istDayRange(today).end;
+    const rows = await prisma.userActivity.findMany({
+        where: {
+            occurredAt: { gte: istDayRange(from).start, lt: to },
+            user: isScoped(actor) ? { learnerProfile: { branchId: { in: actor.branchIds } } } : {},
+        },
+        select: { userId: true, kind: true, durationSec: true, occurredAt: true },
+    });
+    const trendMap = new Map<string, { activeUsers: Set<string>; minutes: number; views: number }>();
+    for (let i = 0; i < 10; i += 1) {
+        trendMap.set(addDays(from, i), { activeUsers: new Set(), minutes: 0, views: 0 });
+    }
+    for (const row of rows) {
+        const day = toIst(row.occurredAt).date;
+        const entry = trendMap.get(day);
+        if (!entry) continue;
+        entry.activeUsers.add(row.userId);
+        entry.minutes += row.durationSec;
+        if (row.kind === "PAGE_VIEW") entry.views += 1;
+    }
+    const trend = [...trendMap].map(([date, entry]) => ({
+        date,
+        activeUsers: entry.activeUsers.size,
+        minutes: Math.round(entry.minutes / 60),
+        views: entry.views,
+    }));
+    const last = trend.at(-1);
+    const durations = rows.filter((row) => row.durationSec > 0).map((row) => row.durationSec);
+    const totalViews = trend.reduce((sum, row) => sum + row.views, 0);
+    const averageTimeSec = durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : null;
+    return {
+        dailyActiveUsers: last?.activeUsers ?? 0,
+        averageTimeSec,
+        totalViews,
+        trend,
+    };
+}
+
 /** The dashboard's date-independent figures. A part the caller may not read is not computed. */
-export async function getDashboardOverview(actor: DashboardActor, include: { attendance: boolean; series: boolean }, now = new Date()): Promise<DashboardOverview> {
+export async function getDashboardOverview(actor: DashboardActor, include: { attendance: boolean; series: boolean; activity?: boolean }, now = new Date()): Promise<DashboardOverview> {
     const today = istToday(now);
-    const [attendance, series] = await Promise.all([include.attendance ? attendanceSummary(actor, today, now) : null, include.series ? enrolmentSeries(actor, today) : null]);
-    return { today, attendance, series };
+    const [attendance, series, activity] = await Promise.all([
+        include.attendance ? attendanceSummary(actor, today, now) : null,
+        include.series ? enrolmentSeries(actor, today) : null,
+        include.activity ? activitySummary(actor, today) : null,
+    ]);
+    return include.activity
+        ? { today, attendance, series, activity }
+        : { today, attendance, series };
 }

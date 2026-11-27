@@ -147,6 +147,6 @@ verified by a test; no personal data in logs.
 | Contact | W1 | **Done** (2026-11-25); email, phone, address and map link from Site Settings |
 | Account handoff | W1 / W3 | Handoff links from Site Settings (**Done** for W1); native links wait for D2/D9 |
 | Terms, Privacy | W1 | **Done** (2026-11-25); shows the latest published version, keeps the notice when none |
-| Verify certificate (new) | W4 | Todo |
+| Verify certificate (new) | W4 | **Done** (2026-11-27); public code verification reports active, revoked or expired credentials |
 | Blogs (new) | W5 / B2b | **Done** (2026-11-26); list with paging and article pages render from the database, Markdown shown safely, drafts and hidden articles are 404; SEO, sitemap and caching stay with the W5 row below |
 | SEO, performance, accessibility | W5 | Todo |

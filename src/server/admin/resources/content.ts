@@ -28,7 +28,7 @@ export type ContentAdapter<T extends Base, W, O, D> = {
     withStatus(status: PublishStatus): W;
     and(parts: W[]): W;
     orderBy(query: ListQuery): O;
-    parse(input: unknown, existing?: T): { data: D; status: PublishStatus };
+    parse(input: unknown, existing?: T, ctx?: ResourceContext): Promise<{ data: D; status: PublishStatus }> | { data: D; status: PublishStatus };
     toRow(item: T): Row;
     label(item: T): string;
 };
@@ -60,7 +60,7 @@ export function contentResource<T extends Base, W, O, D>(adapter: ContentAdapter
     }
 
     async function create(input: unknown, ctx: ResourceContext) {
-        const { data, status } = adapter.parse(input);
+        const { data, status } = await adapter.parse(input, undefined, ctx);
         const item = await adapter.create(data);
         await writeAudit({ actorId: ctx.user.id, action: action("create"), entity: adapter.entity, entityId: item.id, after: { name: adapter.label(item), status }, ip: ctx.ip });
         return adapter.toRow(item);
@@ -68,7 +68,7 @@ export function contentResource<T extends Base, W, O, D>(adapter: ContentAdapter
 
     async function update(id: string, input: unknown, ctx: ResourceContext) {
         const existing = await load(id);
-        const { data, status } = adapter.parse(input, existing);
+        const { data, status } = await adapter.parse(input, existing, ctx);
         const item = await adapter.update(id, data, existing);
         await writeAudit({
             actorId: ctx.user.id,

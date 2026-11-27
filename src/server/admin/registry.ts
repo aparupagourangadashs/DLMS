@@ -30,5 +30,5 @@ export type ResourceDef = {
   create?(input: unknown, ctx: ResourceContext): Promise<Row>;
   update?(id: string, input: unknown, ctx: ResourceContext): Promise<Row>;
   remove?(id: string, ctx: ResourceContext): Promise<void>;
-  actions?: Record<string, (id: string, ctx: ResourceContext) => Promise<Row>>;
+  actions?: Record<string, (id: string, ctx: ResourceContext, input?: unknown) => Promise<Row>>;
 };

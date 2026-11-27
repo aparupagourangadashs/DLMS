@@ -11,6 +11,7 @@ export type AttendanceSummary = {
 
 /** Eight weekly buckets, oldest first; each starts on a Monday (IST). */
 export type EnrolmentSeries = { weekStarts: string[]; signups: number[]; enrolments: number[] };
+export type ActivitySummary = { dailyActiveUsers: number; averageTimeSec: number | null; totalViews: number; trend: Array<{ date: string; activeUsers: number; minutes: number; views: number }> };
 
 /** The parts a staff member may not read are null. */
-export type DashboardOverview = { today: string; attendance: AttendanceSummary | null; series: EnrolmentSeries | null };
+export type DashboardOverview = { today: string; attendance: AttendanceSummary | null; series: EnrolmentSeries | null; activity?: ActivitySummary | null };

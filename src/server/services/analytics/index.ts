@@ -7,6 +7,7 @@ import "server-only";
 import { branchStatistics, courseEnrollments, productEnrollments } from "./enrolments";
 import { attendance, batchAttendance, batchProgress, inactiveLearners, learnerProgress, moduleProgress, sessionLog, trainerSummary } from "./learning";
 import { leadSources, storageConsumption } from "./other";
+import { assessmentAttempts, batchAssessment, issuedCertificates, membershipEnrollments, userTime, walletRecharges } from "./b8";
 import { branchesFor, daysBetween, type Query, type ReportActor, type Runner } from "./shared";
 
 export type { ReportActor } from "./shared";
@@ -14,17 +15,23 @@ export type { ReportActor } from "./shared";
 const runners: Record<string, Runner> = {
     "sales-enrollment/product-enrollments": productEnrollments,
     "sales-enrollment/course-enrollments": courseEnrollments,
+    "sales-enrollment/membership-enrollments": membershipEnrollments,
     "batch-progress/batch-progress": batchProgress,
     "batch-progress/learner-progress": learnerProgress,
     "batch-progress/attendance": attendance,
     "batch-progress/batch-attendance": batchAttendance,
     "batch-progress/module-progress": moduleProgress,
+    "batch-progress/issued-certificates": issuedCertificates,
+    "batch-progress/assessment-attempts": assessmentAttempts,
+    "batch-progress/batch-assessment": batchAssessment,
     "batch-progress/inactive-learners": inactiveLearners,
     "marketing-analytics/lead-sources": leadSources,
     "trainer/trainer-summary": trainerSummary,
     "trainer/session-log": sessionLog,
     "more/branch-statistics": branchStatistics,
     "more/storage-consumption": storageConsumption,
+    "more/wallet-recharges": walletRecharges,
+    "more/user-time": userTime,
 };
 
 export type ReportInput = { from?: string; to?: string; branch?: string; course?: string; status?: string; q?: string; sort?: string; dir?: string; page?: number; pageSize?: number };

@@ -11,6 +11,7 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { apiClient } from "@/lib/api/client";
 import { StudentAvatar } from "./StudentAvatar";
 
 const icons: Record<string, LucideIcon> = {
@@ -26,7 +27,7 @@ const navColors: Record<string, ColorKey> = {
 };
 
 // Pages that read the learner's own records. The rest still show sample content and carry a notice saying so.
-const livePaths = ["/student", "/student/my-learning", "/student/calendar", "/student/announcements", "/student/help"];
+const livePaths = ["/student", "/student/my-learning", "/student/calendar", "/student/announcements", "/student/help", "/student/exams", "/student/certificates", "/student/my-purchases", "/student/memberships", "/student/refer-and-earn"];
 // The three reading previews are sample content; any other course page is the learner's own.
 const sampleSlugs = courses.map((course) => course.slug);
 
@@ -35,6 +36,14 @@ export function StudentShell({ children, userName }: { children: React.ReactNode
   const livePage = livePaths.includes(path) || path.startsWith("/student/settings/") || (path.startsWith("/student/learning/") && !sampleSlugs.includes(path.split("/")[3]));
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [experience, setExperience] = useState<Array<{ label: string; slug: string; href?: string; visible: boolean }>>([]);
+  const [experienceVisibility, setExperienceVisibility] = useState({ password: true, preferences: true, profile: true });
+  useEffect(() => {
+    apiClient.get<{ items: Array<{ label: string; slug: string; href?: string; visible: boolean }>; password: boolean; preferences: boolean; profile: boolean }>("/api/student/experience").then(({ data }) => {
+      setExperience(data.items);
+      setExperienceVisibility({ password: data.password, preferences: data.preferences, profile: data.profile });
+    }).catch(() => setExperience([]));
+  }, []);
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1024px)");
     const onChange = () => {
@@ -49,19 +58,30 @@ export function StudentShell({ children, userName }: { children: React.ReactNode
   }, []);
   function navigation(mobile = false) {
     const iconOnly = collapsed && !mobile;
+    const navItems = experience.length
+      ? experience.filter((item) => item.visible).map((item) => ({
+          slug: item.slug,
+          label: item.label,
+          href: item.href,
+        }))
+      : studentNav.filter((item) => item.slug !== "announcements").map((item) => ({
+          slug: item.slug,
+          label: item.label,
+          href: undefined,
+        }));
     return (
       <nav id={mobile ? undefined : "student-desktop-navigation"} aria-label={mobile ? "Mobile student navigation" : "Student navigation"}>
         <ul className="space-y-1">
-          {studentNav.filter((item) => item.slug !== "announcements").map((item) => {
-            const Icon = icons[item.slug];
-            const color = palette[navColors[item.slug]];
-            const href = studentHref(item.slug);
+          {navItems.map((item) => {
+            const Icon = icons[item.slug] ?? LifeBuoy;
+            const color = palette[navColors[item.slug] ?? "slate"];
+            const href = item.href ?? studentHref(item.slug);
             const active = item.slug === "" ? path === href
               : item.slug === "my-learning" ? path === href || path.startsWith("/student/learning/")
                 : item.slug === "settings/profile" ? path.startsWith("/student/settings/") : path === href;
             return (
               <li key={item.slug}>
-                <Link href={href} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined}
+                <Link href={href} target={item.href ? "_blank" : undefined} rel={item.href ? "noopener noreferrer" : undefined} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined}
                   aria-label={iconOnly ? item.label : undefined} title={iconOnly ? item.label : undefined}
                   className={cn("student-nav-link group relative flex min-h-11 items-center gap-3 rounded-xl border py-1.5 text-sm font-medium transition-colors",
                     iconOnly ? "justify-center px-1" : "px-2.5",
@@ -101,10 +121,10 @@ export function StudentShell({ children, userName }: { children: React.ReactNode
               </button>
             )}>
               {(close) => <div><div className="student-account-identity m-1 mb-2 rounded-xl p-3"><p className="text-sm font-semibold">{userName}</p><p className="mt-1 text-xs text-muted">Signed in</p></div><nav aria-label="Student account links">{[
-                { href: "/student/help", label: "Help Centre", Icon: LifeBuoy },
-                { href: "/student/settings/preferences", label: "Preferences", Icon: Settings },
-                { href: "/student/settings/profile", label: "Profile", Icon: UserRound },
-              ].map(({ href, label, Icon }) => <Link key={href} href={href} onClick={close} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent-soft"><Icon className="size-4 text-accent" aria-hidden="true" />{label}</Link>)}<button type="button" onClick={() => void signOut({ redirectTo: "/login" })} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent-soft"><LogOut className="size-4 text-accent" aria-hidden="true" />Sign out</button></nav></div>}
+                { href: "/student/help", label: "Help Centre", Icon: LifeBuoy, visible: true },
+                { href: "/student/settings/preferences", label: "Preferences", Icon: Settings, visible: experienceVisibility.preferences },
+                { href: "/student/settings/profile", label: "Profile", Icon: UserRound, visible: experienceVisibility.profile },
+              ].filter((item) => item.visible).map(({ href, label, Icon }) => <Link key={href} href={href} onClick={close} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent-soft"><Icon className="size-4 text-accent" aria-hidden="true" />{label}</Link>)}<button type="button" onClick={() => void signOut({ redirectTo: "/login" })} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent-soft"><LogOut className="size-4 text-accent" aria-hidden="true" />Sign out</button></nav></div>}
             </Popover>
           </div>
         </div>

@@ -77,6 +77,12 @@ model User {
   managedEvents       Event[]                  @relation("EventManager")
   blogs               Blog[]                   @relation("BlogAuthor")
   notifications       InAppNotification[]
+  activities          UserActivity[]
+  communityMemberships CommunityMember[]
+  communityPosts       CommunityPost[]
+  communityReports     CommunityReport[]
+  evaluatedSubmissions Submission[]            @relation("SubmissionEvaluator")
+  gradeBands          GradeBand[]
 
   @@index([kind, status])
   @@index([role])
@@ -173,6 +179,22 @@ model LearnerProfile {
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  assessmentRegistrations AssessmentRegistration[]
+  assessmentAttempts      Attempt[]
+  assessmentSubmissions   Submission[]
+  feedbackResponses       FeedbackResponse[]
+  certificates            Certificate[]
+  orders                  Order[]
+  memberships             Membership[]
+  referralCode            ReferralCode?
+  referralCredits         ReferralTransaction[] @relation("ReferralReferrer")
+  referralReferrals       ReferralTransaction[] @relation("ReferralReferee")
+  creditLedger            CreditLedger[]
+  promoRedemptions        PromoRedemption[]
+  cheques                 Cheque[]
+  abandonedCarts          AbandonedCart[]
+  campaignRecipients      CampaignRecipient[]
+  notificationLogs        NotificationLog[]
 
   @@index([status, createdAt])
   @@index([branchId])
@@ -332,6 +354,8 @@ model Course {
   batches    Batch[]
   enrolments Enrolment[]
   modules    CourseModule[]
+  assessments AssessmentCourse[]
+  feedbackForms FeedbackForm[]
 
   @@index([categoryId, status, sortOrder])
   @@index([status, sortOrder])
@@ -627,6 +651,7 @@ model Segment {
   updatedAt   DateTime    @updatedAt
 
   members SegmentMember[]
+  campaigns Campaign[]
 }
 
 model SegmentMember {
@@ -638,6 +663,672 @@ model SegmentMember {
 
   @@id([segmentId, userId])
   @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// B5: Commerce
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUND_PARTIAL
+  REFUND_FULL
+  EXPIRED
+}
+
+enum OrderItemKind {
+  COURSE
+  EVENT
+  MEMBERSHIP
+  ASSESSMENT
+  FEE
+  REFUND
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORISED
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+enum MembershipInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  LIFETIME
+}
+
+enum PromoKind {
+  SINGLE_USE
+  MULTI_USE
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum PromoStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  DISABLED
+}
+
+enum ReferralStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+  CANCELLED
+}
+
+enum ChequeStatus {
+  RECEIVED
+  DEPOSITED
+  CLEARED
+  BOUNCED
+  CANCELLED
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  number         String      @unique @db.VarChar(30)
+  learnerId      String
+  status         OrderStatus @default(DRAFT)
+  currency       String      @default("INR") @db.Char(3)
+  subtotalMinor  Int         @default(0)
+  discountMinor  Int         @default(0)
+  taxMinor       Int         @default(0)
+  feeMinor       Int         @default(0)
+  totalMinor     Int         @default(0)
+  promoCodeId    String?
+  expiresAt      DateTime?
+  paidAt         DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  learner      LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Restrict)
+  promoCode    PromoCode?     @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  items        OrderItem[]
+  payments     Payment[]
+  refunds      Refund[]
+  invoice      Invoice?
+  enrolments   Enrolment[]
+  memberships  Membership[]
+  redemptions  PromoRedemption[]
+  referrals    ReferralTransaction[]
+  cheques      Cheque[]
+
+  @@index([learnerId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([promoCodeId])
+}
+
+model OrderItem {
+  id          String        @id @default(cuid())
+  orderId     String
+  kind        OrderItemKind
+  productId   String?
+  name        String        @db.VarChar(300)
+  quantity    Int           @default(1)
+  unitMinor   Int           @default(0)
+  discountMinor Int         @default(0)
+  taxMinor    Int           @default(0)
+  totalMinor  Int           @default(0)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([kind, productId])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  provider          String        @default("RAZORPAY") @db.VarChar(40)
+  providerOrderId   String        @unique @db.VarChar(100)
+  providerPaymentId String?       @unique @db.VarChar(100)
+  status            PaymentStatus @default(CREATED)
+  method            String?       @db.VarChar(40)
+  amountMinor       Int
+  currency          String        @default("INR") @db.Char(3)
+  rawEventRef       String?       @db.VarChar(191)
+  verifiedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  events PaymentEvent[]
+
+  @@index([orderId, status])
+  @@index([providerPaymentId])
+}
+
+model PaymentEvent {
+  id          String   @id @default(cuid())
+  paymentId   String?
+  provider    String   @db.VarChar(40)
+  eventId     String   @unique @db.VarChar(191)
+  type        String   @db.VarChar(100)
+  payload     Json
+  processedAt DateTime @default(now())
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([provider, type])
+  @@index([paymentId])
+}
+
+model Refund {
+  id           String   @id @default(cuid())
+  orderId      String
+  amountMinor  Int
+  reason       String   @db.Text
+  providerRef  String?  @db.VarChar(100)
+  processedById String?
+  processedAt  DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, processedAt])
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  number      String   @unique @db.VarChar(40)
+  issuedAt    DateTime @default(now())
+  pdfAssetId  String?
+  taxJson     Json     @default("{}")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([issuedAt])
+}
+
+model MembershipPlan {
+  id          String             @id @default(cuid())
+  name        String             @unique @db.VarChar(200)
+  description String?            @db.Text
+  priceMinor  Int               @default(0)
+  currency    String             @default("INR") @db.Char(3)
+  interval    MembershipInterval @default(MONTHLY)
+  benefits    Json               @default("[]")
+  status      PublishStatus      @default(DRAFT)
+  sortOrder   Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  memberships Membership[]
+
+  @@index([status, sortOrder])
+}
+
+model Membership {
+  id        String           @id @default(cuid())
+  learnerId String
+  planId    String
+  orderId   String?
+  status    MembershipStatus @default(PENDING)
+  startsAt  DateTime
+  endsAt    DateTime?
+  cancelledAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  learner LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  plan    MembershipPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  order   Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([learnerId, status, endsAt])
+  @@index([planId, status])
+  @@index([orderId])
+}
+
+model PromoCode {
+  id               String      @id @default(cuid())
+  code             String      @unique @db.VarChar(50)
+  kind             PromoKind
+  discountType     DiscountType
+  value            Int
+  minSpendMinor    Int?
+  capMinor         Int?
+  appliesTo        Json        @default("[]")
+  startsAt         DateTime?
+  expiresAt        DateTime?
+  visibleOnWebsite Boolean     @default(false)
+  visibleInApp     Boolean     @default(false)
+  systemLimit      Int?
+  perUserLimit     Int?
+  status           PromoStatus @default(DRAFT)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  redemptions PromoRedemption[]
+  orders      Order[]
+
+  @@index([status, expiresAt])
+  @@index([startsAt, expiresAt])
+}
+
+model PromoRedemption {
+  id         String   @id @default(cuid())
+  promoCodeId String
+  orderId    String
+  learnerId  String
+  redeemedAt DateTime @default(now())
+
+  promoCode PromoCode      @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  learner   LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([promoCodeId, orderId])
+  @@index([learnerId, redeemedAt])
+}
+
+model ReferralCode {
+  id        String   @id @default(cuid())
+  learnerId String   @unique
+  code      String   @unique @db.VarChar(40)
+  createdAt DateTime @default(now())
+
+  learner LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+}
+
+model ReferralTransaction {
+  id          String         @id @default(cuid())
+  referrerId  String
+  refereeId   String?
+  orderId     String?
+  creditMinor Int            @default(0)
+  status      ReferralStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  referrer LearnerProfile  @relation("ReferralReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  LearnerProfile? @relation("ReferralReferee", fields: [refereeId], references: [id], onDelete: SetNull)
+  order    Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([referrerId, status])
+  @@index([refereeId])
+  @@index([orderId])
+}
+
+model CreditLedger {
+  id          String   @id @default(cuid())
+  learnerId   String
+  creditMinor Int
+  kind        String   @db.VarChar(40)
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  learner LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([learnerId, createdAt])
+  @@index([referenceId])
+}
+
+model Cheque {
+  id           String       @id @default(cuid())
+  learnerName  String       @db.VarChar(200)
+  learnerId    String?
+  parentName   String?      @db.VarChar(200)
+  bank         String       @db.VarChar(200)
+  chequeNo     String       @db.VarChar(40)
+  amountMinor  Int
+  chequeDate   DateTime     @db.Date
+  status       ChequeStatus @default(RECEIVED)
+  orderId      String?
+  remark       String?      @db.Text
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  learner LearnerProfile? @relation(fields: [learnerId], references: [id], onDelete: SetNull)
+  order   Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  history ChequeStatusHistory[]
+
+  @@index([learnerId])
+  @@index([status, chequeDate])
+  @@index([bank, chequeNo])
+  @@index([orderId])
+}
+
+model ChequeStatusHistory {
+  id        String   @id @default(cuid())
+  chequeId  String
+  fromStatus ChequeStatus?
+  toStatus   ChequeStatus
+  remark     String   @db.Text
+  changedById String
+  changedAt  DateTime @default(now())
+
+  cheque Cheque @relation(fields: [chequeId], references: [id], onDelete: Cascade)
+
+  @@index([chequeId, changedAt])
+}
+
+model AbandonedCart {
+  id          String   @id @default(cuid())
+  learnerId   String?
+  email       String?  @db.VarChar(254)
+  itemsJson   Json
+  subtotalMinor Int    @default(0)
+  lastSeenAt  DateTime @default(now())
+  recoveredAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  learner LearnerProfile? @relation(fields: [learnerId], references: [id], onDelete: SetNull)
+
+  @@index([learnerId, lastSeenAt])
+  @@index([email, lastSeenAt])
+}
+
+// ---------------------------------------------------------------------------
+// B7: Engagement and communications
+// ---------------------------------------------------------------------------
+
+enum CommunityLayout {
+  MESSAGE
+  FEED
+}
+
+enum CommunityStatus {
+  ACTIVE
+  HIDDEN
+  ARCHIVED
+}
+
+enum CommunityMemberRole {
+  MEMBER
+  MODERATOR
+}
+
+enum CommunityMemberStatus {
+  ACTIVE
+  REMOVED
+  BLOCKED
+}
+
+enum CommunityPostStatus {
+  VISIBLE
+  HIDDEN
+  REMOVED
+}
+
+enum CommunityReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+  SMS
+  PUSH
+}
+
+enum NotificationLogStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  OPTED_OUT
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum WalletChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+  AI
+}
+
+enum WalletKind {
+  CREDIT
+  DEBIT
+}
+
+model Community {
+  id          String          @id @default(cuid())
+  name        String          @unique @db.VarChar(200)
+  description String          @db.Text
+  layout      CommunityLayout @default(MESSAGE)
+  batchId     String?
+  status      CommunityStatus @default(ACTIVE)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  members CommunityMember[]
+  posts   CommunityPost[]
+
+  @@index([status, sortOrder])
+  @@index([batchId])
+}
+
+model CommunityMember {
+  communityId String
+  userId      String
+  role        CommunityMemberRole   @default(MEMBER)
+  status      CommunityMemberStatus @default(ACTIVE)
+  joinedAt    DateTime              @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, userId])
+  @@index([userId, status])
+}
+
+model CommunityPost {
+  id          String             @id @default(cuid())
+  communityId String
+  authorId    String
+  parentId    String?
+  body        String             @db.Text
+  pinned      Boolean            @default(false)
+  status      CommunityPostStatus @default(VISIBLE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    CommunityPost?  @relation("CommunityReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   CommunityPost[] @relation("CommunityReplies")
+  reports   CommunityReport[]
+
+  @@index([communityId, status, pinned, createdAt])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model CommunityReport {
+  id         String                @id @default(cuid())
+  postId     String
+  reporterId String
+  reason     String                @db.VarChar(500)
+  status     CommunityReportStatus @default(OPEN)
+  createdAt  DateTime              @default(now())
+
+  post     CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter User          @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([postId, status])
+  @@index([reporterId])
+}
+
+model MessageTemplate {
+  id                 String   @id @default(cuid())
+  channel            NotificationChannel
+  name               String   @db.VarChar(100)
+  subject            String?  @db.VarChar(200)
+  body               String   @db.Text
+  replyTo            String?  @db.VarChar(254)
+  unsubscribeText    String?  @db.VarChar(200)
+  providerTemplateId String?  @db.VarChar(200)
+  approvalStatus     String   @default("NOT_SUBMITTED") @db.VarChar(30)
+  variables          Json     @default("[]")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  campaigns Campaign[]
+
+  @@unique([channel, name])
+  @@index([channel, approvalStatus])
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String         @db.VarChar(200)
+  type        String         @default("PROMOTIONAL") @db.VarChar(40)
+  channel     NotificationChannel
+  templateId  String
+  segmentId   String?
+  status      CampaignStatus @default(DRAFT)
+  scheduledAt DateTime?
+  sentCount   Int            @default(0)
+  createdById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  template  MessageTemplate    @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  recipients CampaignRecipient[]
+  segment   Segment?           @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledAt])
+  @@index([segmentId])
+  @@index([templateId])
+}
+
+model CampaignRecipient {
+  id         String   @id @default(cuid())
+  campaignId String
+  learnerId  String
+  status     NotificationLogStatus @default(QUEUED)
+  providerRef String? @db.VarChar(191)
+  error      String? @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  learner  LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, learnerId])
+  @@index([learnerId, status])
+}
+
+model NotificationLog {
+  id             String               @id @default(cuid())
+  channel        NotificationChannel
+  recipient      String               @db.VarChar(254)
+  learnerId      String?
+  templateId     String?
+  relatedType    String?              @db.VarChar(40)
+  relatedId      String?              @db.VarChar(191)
+  status         NotificationLogStatus @default(QUEUED)
+  providerMessageId String?           @db.VarChar(191)
+  error          String?              @db.Text
+  createdAt      DateTime             @default(now())
+
+  learner LearnerProfile? @relation(fields: [learnerId], references: [id], onDelete: SetNull)
+
+  @@index([channel, status, createdAt])
+  @@index([learnerId, createdAt])
+  @@index([templateId])
+}
+
+model SystemNotificationSetting {
+  id          String   @id @default(cuid())
+  eventFamily String   @db.VarChar(40)
+  eventKey    String   @db.VarChar(60)
+  channels    Json     @default("[]")
+  enabled     Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([eventFamily, eventKey])
+  @@index([enabled])
+}
+
+model WalletAccount {
+  id        String   @id @default(cuid())
+  channel   WalletChannel
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  transactions WalletTransaction[]
+
+  @@unique([channel])
+}
+
+model WalletTransaction {
+  id          String       @id @default(cuid())
+  accountId   String
+  kind        WalletKind
+  amount      Int
+  balanceAfter Int
+  referenceId String?
+  description String       @db.VarChar(500)
+  createdAt   DateTime     @default(now())
+
+  account WalletAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt])
+  @@index([referenceId])
+}
+
+enum UserActivityKind {
+  LOGIN
+  PAGE_VIEW
+  LESSON_START
+  LESSON_COMPLETE
+  DOWNLOAD
+  COMMUNITY_POST
+  EXAM_SUBMIT
+  CERTIFICATE_VIEW
+}
+
+model UserActivity {
+  id          String           @id @default(cuid())
+  userId      String
+  kind        UserActivityKind
+  path        String           @db.VarChar(300)
+  relatedId   String?          @db.VarChar(191)
+  durationSec Int              @default(0)
+  occurredAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+  @@index([kind, occurredAt])
+  @@index([occurredAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -708,6 +1399,7 @@ model Batch {
   enrolments    Enrolment[]
   sessions      Session[]
   announcements AnnouncementBatch[]
+  modules       BatchModule[]
 
   @@index([courseId, status])
   @@index([status, startDate])
@@ -740,6 +1432,7 @@ model Enrolment {
   accessEndsAt    DateTime?       @db.Date
   progressPercent Int             @default(0)
   createdById     String?
+  orderId         String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -747,6 +1440,7 @@ model Enrolment {
   course         Course           @relation(fields: [courseId], references: [id], onDelete: Restrict)
   batch          Batch?           @relation(fields: [batchId], references: [id], onDelete: SetNull)
   lessonProgress LessonProgress[]
+  order          Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
   @@index([courseId, status])
@@ -896,6 +1590,7 @@ model Module {
 
   contents ModuleContent[]
   courses  CourseModule[]
+  batches  BatchModule[]
 
   @@index([status])
 }
@@ -932,6 +1627,21 @@ model CourseModule {
 
   @@id([courseId, moduleId])
   @@index([moduleId])
+}
+
+// Modules chosen for one batch override the course-wide course modules.
+// Repeated module ids are not allowed; order is used by the learner course player.
+model BatchModule {
+  batchId   String
+  moduleId  String
+  sortOrder Int    @default(0)
+
+  batch  Batch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+
+  @@id([batchId, moduleId])
+  @@index([moduleId])
+  @@index([batchId, sortOrder])
 }
 
 // A lesson the learner has marked complete, per enrolment.
@@ -994,6 +1704,9 @@ model Asset {
   banners    Banner[]
   events     Event[]
   blogs      Blog[]
+  submissions Submission[]
+  certificateTemplates CertificateTemplate[]
+  certificates Certificate[]
 
   @@index([status, createdAt])
   @@index([type])
@@ -1131,6 +1844,324 @@ model Blog {
   @@index([status, publishedAt])
   @@index([authorId])
   @@index([coverAssetId])
+}
+
+// ---------------------------------------------------------------------------
+// B6: Assessments and credentials
+// ---------------------------------------------------------------------------
+
+enum QuestionType {
+  MCQ
+  MULTI
+  TEXT
+  FILE
+}
+
+enum AssessmentKind {
+  ASSIGNMENT
+  CUSTOM_LINK
+  EXAM
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+  CANCELLED
+}
+
+enum SubmissionEvaluationStatus {
+  NOT_EVALUATED
+  EVALUATED
+}
+
+enum FeedbackQuestionType {
+  RATING
+  TEXT
+  CHOICE
+}
+
+enum FeedbackFormStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CertificateTemplateStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum CertificateAutomation {
+  MANUAL
+  COURSE_COMPLETION
+  EXAM_PASSED
+}
+
+enum CertificateStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model QuestionBank {
+  id          String     @id @default(cuid())
+  code        String     @unique @db.VarChar(20)
+  name        String     @db.VarChar(200)
+  difficulty  String     @db.VarChar(20)
+  exam        String     @db.VarChar(200)
+  subject     String     @db.VarChar(200)
+  topic       String     @db.VarChar(200)
+  description String     @db.Text
+  status      PublishStatus @default(DRAFT)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  questions   Question[]
+  assessments Assessment[]
+
+  @@index([status, difficulty])
+  @@index([subject, topic])
+}
+
+model Question {
+  id          String       @id @default(cuid())
+  bankId      String
+  type        QuestionType
+  prompt      String       @db.Text
+  options     Json
+  answer      Json?
+  marks       Int          @default(1)
+  explanation String?      @db.Text
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  bank QuestionBank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@index([bankId, sortOrder])
+}
+
+model Assessment {
+  id              String         @id @default(cuid())
+  name            String         @db.VarChar(200)
+  kind            AssessmentKind
+  status          PublishStatus  @default(DRAFT)
+  priceMinor      Int?
+  maxAttempts     Int            @default(1)
+  opensAt         DateTime?
+  closesAt        DateTime?
+  durationMinutes Int?
+  totalMarks      Int            @default(0)
+  passPercent     Int            @default(40)
+  bankId          String?
+  linkUrl         String?        @db.VarChar(500)
+  instructions    String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  bank          QuestionBank?           @relation(fields: [bankId], references: [id], onDelete: SetNull)
+  courses       AssessmentCourse[]
+  registrations AssessmentRegistration[]
+  attempts      Attempt[]
+  submissions   Submission[]
+
+  @@index([status, kind])
+  @@index([bankId])
+  @@index([opensAt, closesAt])
+}
+
+model AssessmentCourse {
+  assessmentId String
+  courseId     String
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([assessmentId, courseId])
+  @@index([courseId])
+}
+
+model AssessmentRegistration {
+  id           String   @id @default(cuid())
+  assessmentId String
+  learnerId    String
+  createdAt    DateTime @default(now())
+
+  assessment Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  learner    LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, learnerId])
+  @@index([learnerId])
+}
+
+model Attempt {
+  id             String        @id @default(cuid())
+  assessmentId   String
+  learnerId      String
+  startedAt      DateTime      @default(now())
+  submittedAt    DateTime?
+  status         AttemptStatus @default(IN_PROGRESS)
+  answers        Json          @default("{}")
+  autoScore      Int?
+  durationSeconds Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  assessment Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  learner    LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  submission Submission?
+
+  @@index([assessmentId, learnerId, status])
+  @@index([learnerId, startedAt])
+}
+
+model Submission {
+  id               String                    @id @default(cuid())
+  attemptId        String                    @unique
+  assessmentId     String
+  learnerId        String
+  fileAssetId      String?
+  text             String?                   @db.Text
+  submittedAt      DateTime                  @default(now())
+  evaluationStatus SubmissionEvaluationStatus @default(NOT_EVALUATED)
+  marks            Int?
+  total            Int                       @default(0)
+  evaluatedById    String?
+  evaluatedAt      DateTime?
+  feedback         String?                   @db.Text
+  late             Boolean                   @default(false)
+
+  attempt     Attempt          @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  assessment  Assessment       @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  learner     LearnerProfile   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  fileAsset   Asset?           @relation(fields: [fileAssetId], references: [id], onDelete: SetNull)
+  evaluatedBy User?           @relation("SubmissionEvaluator", fields: [evaluatedById], references: [id], onDelete: SetNull)
+
+  @@index([assessmentId, evaluationStatus])
+  @@index([learnerId, submittedAt])
+  @@index([evaluatedById])
+}
+
+model GradeBand {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(30)
+  minPercent Int
+  maxPercent Int
+  remark    String   @db.VarChar(80)
+  sortOrder Int      @default(0)
+  createdById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([sortOrder])
+  @@index([createdById])
+}
+
+model FeedbackForm {
+  id          String            @id @default(cuid())
+  name        String            @db.VarChar(200)
+  type        String            @db.VarChar(40)
+  courseId    String?
+  sessionName String?           @db.VarChar(200)
+  template    String            @default("Blank") @db.VarChar(40)
+  description String?           @db.Text
+  status      FeedbackFormStatus @default(DRAFT)
+  version     Int               @default(1)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  course    Course?            @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  questions FeedbackQuestion[]
+  responses FeedbackResponse[]
+
+  @@index([status, createdAt])
+  @@index([courseId])
+}
+
+model FeedbackQuestion {
+  id       String               @id @default(cuid())
+  formId   String
+  prompt   String               @db.VarChar(500)
+  type     FeedbackQuestionType
+  required Boolean              @default(false)
+  options  Json                 @default("[]")
+  sortOrder Int                 @default(0)
+
+  form FeedbackForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId, sortOrder])
+}
+
+model FeedbackResponse {
+  id          String   @id @default(cuid())
+  formId      String
+  learnerId   String?
+  answers     Json
+  submittedAt DateTime @default(now())
+
+  form    FeedbackForm     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  learner LearnerProfile? @relation(fields: [learnerId], references: [id], onDelete: SetNull)
+
+  @@index([formId, submittedAt])
+  @@index([learnerId])
+}
+
+model CertificateTemplate {
+  id              String                   @id @default(cuid())
+  name            String                   @db.VarChar(200)
+  serialPrefix    String                   @db.VarChar(20)
+  description     String?                  @db.Text
+  status          CertificateTemplateStatus @default(DRAFT)
+  expiryRule      String                   @default("LIFETIME") @db.VarChar(20)
+  expiryDays      Int?
+  expiryDate      DateTime?                @db.Date
+  designSource    String                   @default("BUILDER") @db.VarChar(20)
+  layout          String                   @default("LANDSCAPE") @db.VarChar(20)
+  heading         String?                  @db.VarChar(200)
+  body            String?                  @db.Text
+  signatory       String?                  @db.VarChar(200)
+  templateAssetId String?
+  customFields    Json                     @default("{}")
+  automation      CertificateAutomation   @default(MANUAL)
+  courseId        String?
+  examAssessmentId String?
+  threshold       Int                      @default(100)
+  notifyConfig    Json                     @default("{}")
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  templateAsset Asset?        @relation(fields: [templateAssetId], references: [id], onDelete: SetNull)
+  certificates  Certificate[]
+
+  @@index([status])
+  @@index([templateAssetId])
+  @@index([automation])
+}
+
+model Certificate {
+  id               String            @id @default(cuid())
+  templateId       String
+  learnerId        String
+  serial           String            @unique @db.VarChar(60)
+  issuedAt         DateTime          @default(now())
+  expiresAt        DateTime?
+  status           CertificateStatus @default(ACTIVE)
+  fileAssetId      String?
+  verificationCode String            @unique @db.VarChar(40)
+  revokedAt        DateTime?
+  revokedReason    String?           @db.VarChar(500)
+
+  template  CertificateTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  learner   LearnerProfile      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  fileAsset Asset?              @relation(fields: [fileAssetId], references: [id], onDelete: SetNull)
+
+  @@index([learnerId, status, issuedAt])
+  @@index([templateId, status])
+  @@index([expiresAt])
 }
 
 // ---------------------------------------------------------------------------

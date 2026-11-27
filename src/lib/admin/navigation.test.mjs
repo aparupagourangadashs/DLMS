@@ -16,8 +16,8 @@ test("all sections and their pages are alphabetical by displayed name", () => {
   }
   assert.equal(adminNav.find((section) => section.slug === "products").pages[0].label, "Courses");
   const routes = adminNav.flatMap((section) => section.pages.map((page) => pageHref(section.slug, page.slug)));
-  assert.equal(routes.length, 61);
-  assert.equal(new Set(routes).size, 61);
+  assert.equal(routes.length, 62);
+  assert.equal(new Set(routes).size, 62);
 });
 
 test("alphabetization preserves section landing pages and Home fallback", () => {

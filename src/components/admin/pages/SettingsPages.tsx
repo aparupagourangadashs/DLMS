@@ -7,8 +7,9 @@ import { Field, inputClass, Select } from "@/components/ui/Field";
 import { StatCard } from "@/components/ui/StatCard";
 import { TableHeading, TableScroll } from "@/components/ui/Table";
 import { cardCycle, palette, type ColorKey } from "@/lib/colors";
+import { apiClient, ApiError } from "@/lib/api/client";
 import { Activity, ArrowDown, ArrowUp, Banknote, CalendarDays, CheckCircle2, CircleDollarSign, CreditCard, Eye, EyeOff, FileText, Globe2, GripVertical, Layers3, Link2, Plus, Save, Settings2, ShieldCheck, Trash2, Users, Wallet, type LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DemoNotice, PageHeader } from "../PageHeader";
 
@@ -176,7 +177,7 @@ export function InternationalSellingPage() {
   );
 }
 
-type SidebarItem = { label: string; visible: boolean; custom?: boolean; url?: string };
+type SidebarItem = { label: string; visible: boolean; custom?: boolean; url?: string; href?: string };
 const defaultSidebar: SidebarItem[] = [
   { label: "Overview", visible: true },
   { label: "My Courses", visible: true },
@@ -192,6 +193,30 @@ export function LearnerExperiencePage() {
   const [newUrl, setNewUrl] = useState("");
   const [message, setMessage] = useState("");
   const [visibility, setVisibility] = useState({ classRecords: true, overview: true, password: true, preferences: true, profile: true });
+  useEffect(() => {
+    apiClient.get<{
+      items: SidebarItem[];
+      classRecords: boolean;
+      overview: boolean;
+      password: boolean;
+      preferences: boolean;
+      profile: boolean;
+    }>("/api/admin/b3b/learner-experience").then(({ data }) => {
+      setItems(data.items.map((item) => ({ label: item.label, visible: item.visible, custom: Boolean(item.href), url: item.href })));
+      setVisibility({ classRecords: data.classRecords, overview: data.overview, password: data.password, preferences: data.preferences, profile: data.profile });
+    }).catch(() => setMessage("Could not load the saved learner experience."));
+  }, []);
+  const saveExperience = async () => {
+    try {
+      await apiClient.put("/api/admin/b3b/learner-experience", {
+        items: items.map((item) => ({ label: item.label, slug: item.custom ? "" : item.label.toLowerCase().replaceAll(" ", "-"), href: item.url, visible: item.visible })),
+        ...visibility,
+      });
+      notifySaved("Learner experience");
+    } catch (cause) {
+      setMessage(cause instanceof ApiError ? cause.message : "Could not save the learner experience.");
+    }
+  };
   const move = (index: number, offset: number) => setItems((current) => {
     const next = [...current];
     const target = index + offset;
@@ -214,8 +239,8 @@ export function LearnerExperiencePage() {
 
   return (
     <>
-      <PageHeader title="Learner Experience" description="Arrange learner navigation and control which profile areas are visible." status="ready" actions={<SaveButton onSave={() => notifySaved("Learner experience")} />} />
-      <DemoNotice>Ordering, visibility, and custom items are an in-page preview; they are not published to learner accounts.</DemoNotice>
+      <PageHeader title="Learner Experience" description="Arrange learner navigation and control which profile areas are visible." status="ready" actions={<SaveButton onSave={() => void saveExperience()} />} />
+      <DemoNotice>Ordering, visibility, and custom HTTPS items are saved and read by the learner shell.</DemoNotice>
       <SettingsSummary items={[
         { label: "Visible sidebar items", value: String(items.filter((item) => item.visible).length), hint: `${items.length} configured`, icon: Eye, color: "blue" },
         { label: "Custom destinations", value: String(items.filter((item) => item.custom).length), hint: "HTTPS links in the preview", icon: Link2, color: "violet" },
@@ -274,36 +299,48 @@ export function LearnerExperiencePage() {
 }
 
 const fieldEntities = ["Learner", "Instructor", "Course", "Batch", "Certificate", "Question", "Announcement", "Enquiry"];
-type CustomField = { id: number; name: string; type: string; required: boolean; entity: string; placement: string };
-const seedFields: CustomField[] = [
-  { id: 1, name: "Preferred language", type: "Dropdown", required: true, entity: "Learner", placement: "Signup" },
-  { id: 2, name: "Spiritual name", type: "Text", required: false, entity: "Learner", placement: "Offline admission" },
-  { id: 3, name: "Instructor speciality", type: "Text", required: false, entity: "Instructor", placement: "Signup" },
-  { id: 4, name: "Course level", type: "Dropdown", required: true, entity: "Course", placement: "Signup" },
-];
-
+type CustomField = { id: string | number; name: string; type: string; required: boolean; entity: string; placement: string; options?: string[] };
 export function CustomFieldsSettingsPage() {
   const [entity, setEntity] = useState("Learner");
   const [placement, setPlacement] = useState("Signup");
-  const [fields, setFields] = useState(seedFields);
+  const [fields, setFields] = useState<CustomField[]>([]);
   const [name, setName] = useState("");
   const [type, setType] = useState("Text");
   const [required, setRequired] = useState(false);
+  const [options, setOptions] = useState("");
   const [error, setError] = useState("");
+  useEffect(() => {
+    apiClient.get<CustomField[]>("/api/admin/b3b/custom-fields").then(({ data }) => setFields(data)).catch(() => setError("Could not load custom fields."));
+  }, []);
   const scopedFields = fields.filter((field) => field.entity === entity && field.placement === placement);
-  const add = (event: React.FormEvent) => {
+  const add = async (event: React.FormEvent) => {
     event.preventDefault();
     const clean = name.trim();
     if (!clean) { setError("Field label is required."); return; }
     if (fields.some((field) => field.entity === entity && field.placement === placement && field.name.toLowerCase() === clean.toLowerCase())) { setError("This scope already has a field with that label."); return; }
-    setFields((current) => [...current, { id: Date.now(), name: clean, type, required, entity, placement }]);
-    setName("");
-    setError("");
+    try {
+      await apiClient.post("/api/admin/b3b/custom-fields", {
+        name: clean,
+        type,
+        required,
+        entity,
+        placement,
+        options: type === "Dropdown" ? options.split(/\r?\n/).map((value) => value.trim()).filter(Boolean) : [],
+      });
+      const result = await apiClient.get<CustomField[]>("/api/admin/b3b/custom-fields");
+      setFields(result.data);
+      setName("");
+      setOptions("");
+      setError("");
+      toast.success("Custom field saved");
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "Could not save the custom field.");
+    }
   };
   return (
     <>
       <PageHeader title="Custom Fields" description="Define extra fields for supported entities and form placements." status="ready" actions={<SaveButton onSave={() => notifySaved("Custom fields")} />} />
-      <DemoNotice>Field definitions are demo-only and do not change signup, admission, or entity forms.</DemoNotice>
+      <DemoNotice>Field definitions are saved to the database. Signup and offline-admission form integration is applied to the learner entity by consuming these definitions.</DemoNotice>
       <SettingsSummary items={[
         { label: "Configured fields", value: String(fields.length), hint: "Across supported entities", icon: FileText, color: "violet" },
         { label: `${entity} · ${placement}`, value: String(scopedFields.length), hint: "In the selected scope", icon: Users, color: "blue" },
@@ -323,13 +360,19 @@ export function CustomFieldsSettingsPage() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
         <Card>
           <CardIconHeader icon={FileText} title={`${entity} fields`} description={`${placement} placement · ${scopedFields.length} fields`} tone="blue" />
-          {scopedFields.length ? <ol className="grid gap-2 p-4 sm:grid-cols-2">{scopedFields.map((field, index) => <li key={field.id} className={`flex min-w-0 flex-wrap items-center gap-2 rounded-xl border p-3 ${palette[cardCycle[index % cardCycle.length]].tile}`}><GripVertical className="size-4 shrink-0 text-muted" aria-hidden="true" /><span className="min-w-0 flex-1"><strong className="block break-words text-sm text-foreground">{field.name}</strong><span className="text-xs text-muted">{field.type} · {field.required ? "Required" : "Optional"}</span></span><Button size="sm" variant="soft-info" aria-label={`Move ${field.name} up`} disabled={!index} onClick={() => setFields((current) => { const ids = scopedFields.map((item) => item.id);[ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]; return [...current].sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); })}><ArrowUp className="size-4" aria-hidden="true" /></Button><Button size="sm" variant="soft-danger" aria-label={`Remove ${field.name}`} onClick={() => setFields((current) => current.filter((item) => item.id !== field.id))}><Trash2 className="size-4" aria-hidden="true" /></Button></li>)}</ol> : <p className="p-5 text-sm text-muted">No fields for this entity and placement yet.</p>}
+          {scopedFields.length ? <ol className="grid gap-2 p-4 sm:grid-cols-2">{scopedFields.map((field, index) => <li key={field.id} className={`flex min-w-0 flex-wrap items-center gap-2 rounded-xl border p-3 ${palette[cardCycle[index % cardCycle.length]].tile}`}>
+            <GripVertical className="size-4 shrink-0 text-muted" aria-hidden="true" />
+            <span className="min-w-0 flex-1"><strong className="block break-words text-sm text-foreground">{field.name}</strong><span className="text-xs text-muted">{field.type} · {field.required ? "Required" : "Optional"}</span></span>
+            <Button size="sm" variant="soft-info" aria-label={`Move ${field.name} up`} disabled={!index} onClick={() => void apiClient.patch(`/api/admin/b3b/custom-fields/${field.id}`, { ...field, name: field.name, sortOrder: index - 1 }).then(async () => { const result = await apiClient.get<CustomField[]>("/api/admin/b3b/custom-fields"); setFields(result.data); })}><ArrowUp className="size-4" aria-hidden="true" /></Button>
+            <Button size="sm" variant="soft-danger" aria-label={`Remove ${field.name}`} onClick={async () => { await apiClient.delete(`/api/admin/b3b/custom-fields/${field.id}`); setFields((current) => current.filter((item) => item.id !== field.id)); }}><Trash2 className="size-4" aria-hidden="true" /></Button>
+          </li>)}</ol> : <p className="p-5 text-sm text-muted">No fields for this entity and placement yet.</p>}
         </Card>
         <Card className="p-5">
           <IconTileHeading icon={Plus} tone="violet">Add field</IconTileHeading>
           <form className="space-y-3" onSubmit={add}>
             <label><span className={labelClass}>Field label</span><input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></label>
             <Field id="custom-field-type" label="Field type"><Select id="custom-field-type" value={type} onValueChange={setType} options={["Text", "Number", "Date", "Dropdown", "Phone", "Email", "Checkbox"].map((option) => ({ value: option, label: option }))} /></Field>
+            {type === "Dropdown" ? <label><span className={labelClass}>Dropdown choices (one per line)</span><textarea className={`${inputClass} min-h-24`} value={options} onChange={(event) => setOptions(event.target.value)} /></label> : null}
             <Toggle label="Required" checked={required} onChange={setRequired} />
             <Button type="submit" variant="gold"><Plus className="size-4" aria-hidden="true" /> Add field</Button>
           </form>
@@ -340,7 +383,7 @@ export function CustomFieldsSettingsPage() {
   );
 }
 
-type GradeBand = { id: number; name: string; min: number; max: number; remark: string };
+type GradeBand = { id: number | string; name: string; min: number; max: number; remark: string };
 const initialGrades: GradeBand[] = [
   { id: 1, name: "A+", min: 90, max: 100, remark: "Distinction" },
   { id: 2, name: "A", min: 75, max: 89, remark: "First class" },
@@ -352,6 +395,11 @@ const initialGrades: GradeBand[] = [
 export function GradingSystemSettingsPage() {
   const [grades, setGrades] = useState(initialGrades);
   const [error, setError] = useState("");
+  useEffect(() => {
+    apiClient.get<{ id: string; name: string; min: number; max: number; remark: string }[]>("/api/admin/grading").then(({ data }) => {
+      if (data.length) setGrades(data.map((grade) => ({ id: grade.id, name: grade.name, min: grade.min, max: grade.max, remark: grade.remark })));
+    }).catch(() => setError("Could not load the saved grade bands."));
+  }, []);
   const sorted = useMemo(() => [...grades].sort((a, b) => a.min - b.min), [grades]);
   const passingThreshold = Math.min(...grades.filter((grade) => grade.name !== "Not passed").map((grade) => grade.min), 100);
   const validation = (): string => {
@@ -369,16 +417,22 @@ export function GradingSystemSettingsPage() {
     }
     return "";
   };
-  const update = (id: number, key: keyof GradeBand, value: string) => setGrades((current) => current.map((grade) => grade.id === id ? { ...grade, [key]: key === "min" || key === "max" ? Number(value) : value } : grade));
-  const save = () => {
+  const update = (id: number | string, key: keyof GradeBand, value: string) => setGrades((current) => current.map((grade) => grade.id === id ? { ...grade, [key]: key === "min" || key === "max" ? Number(value) : value } : grade));
+  const save = async () => {
     const result = validation();
     setError(result);
-    if (!result) notifySaved("Grading system");
+    if (result) return;
+    try {
+      await apiClient.put<{ id: string; name: string; min: number; max: number; remark: string }[]>("/api/admin/grading", { bands: grades.map(({ name, min, max, remark }) => ({ name, min, max, remark })) });
+      notifySaved("Grading system");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save the grading system.");
+    }
   };
   return (
     <>
       <PageHeader title="Grading System" description="Set percentage bands for assessment outcomes." status="ready" actions={<SaveButton onSave={save} />} />
-      <DemoNotice>Validation requires whole-number bands covering 0–100 without gaps or overlaps. Changes are not applied to assessments.</DemoNotice>
+      <DemoNotice>Grade bands are saved in the database. Past assessment results are not regraded automatically.</DemoNotice>
       <SettingsSummary items={[
         { label: "Grade bands", value: String(grades.length), hint: "Assessment outcomes", icon: Layers3, color: "violet" },
         { label: "Score coverage", value: validation() ? "Needs review" : "0–100%", hint: validation() ? "Fix gaps or overlaps before saving" : "Continuous, non-overlapping bands", icon: CheckCircle2, color: validation() ? "amber" : "emerald" },

@@ -117,16 +117,16 @@ export async function WebsiteInfoPage({ slug }: { slug: string }) {
     if (slug === "our-team" || slug === "our-advisory-board-members") return <PeoplePage board={slug === "our-advisory-board-members"} />;
 
     const prabhupada = slug === "srila-prabhupada";
+    const copy = prabhupada ? settings.prabhupada : settings.institution;
     return <>
-        <WebsiteIntro eyebrow={prabhupada ? "Our inspiration" : "About the institution"} title={prabhupada ? "A legacy of sharing wisdom." : "Rooted in wisdom. Open to the world."} description={prabhupada ? "Remembering Srila Prabhupada's contribution to making the bhakti tradition accessible around the world." : "ISKCON Bhagavata Mahavidyalaya · A space for shastric learning and reflection."} />
+        <WebsiteIntro eyebrow={copy.eyebrow} title={copy.title} description={copy.description} />
         <section className="web-section web-container web-about-grid">
             <div className="web-about-symbol" aria-hidden="true">{prabhupada ? <Heart size={95} strokeWidth={0.8} /> : <BookOpen size={95} strokeWidth={0.8} />}<span>STUDY · REFLECT · SERVE</span></div>
             <div className="web-prose">
-                <h2>{prabhupada ? "Knowledge shared with compassion." : "A meaningful relationship with learning."}</h2>
-                <p>{prabhupada ? "A. C. Bhaktivedanta Swami Prabhupada founded the International Society for Krishna Consciousness in 1966. Through his teaching, translations and writing, he introduced readers around the world to the Bhagavad-gita and the bhakti tradition." : "This new public portal brings course discovery, publications and institutional information into a welcoming, connected experience. Its purpose is simple: help a visitor find a thoughtful next step."}</p>
-                <p>{prabhupada ? "This original introductory note is not a reproduced biography or quotation. An institution-approved chronology, archival photographs and further reading can be added to develop this section." : "Explore guided pathways, self-paced learning and family study. Academic standards, instructor details, certificates and schedules must be confirmed for each actual offering."}</p>
-                <h2>Read with attention. Reflect with care.</h2>
-                <p>We have designed the experience around clear information, accessible navigation and respect for each learner&apos;s starting point.</p>
+                <h2>{copy.introHeading}</h2>
+                <p>{copy.intro}</p>
+                <h2>{copy.closingHeading}</h2>
+                <p>{copy.closing}</p>
                 <div className="web-about-values"><span><Leaf size={19} aria-hidden="true" />Thoughtful practice</span><span><Heart size={19} aria-hidden="true" />A spirit of service</span></div>
                 <Link href="/website/bhagavata-mahavidyalaya" className="web-btn">Explore structured learning<ArrowRight size={16} aria-hidden="true" /></Link>
             </div>

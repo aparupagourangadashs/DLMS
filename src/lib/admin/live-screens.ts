@@ -11,6 +11,11 @@ export const liveScreens: ReadonlySet<string> = new Set([
     "learning/sessions",
     "learning/announcements",
     "learning/module-library",
+    "learning/question-bank",
+    "learning/assessments",
+    "learning/submissions",
+    "learning/feedback-forms",
+    "learning/certificates",
     "products/events",
     "learning/asset-library",
     "learning/session-recordings",
@@ -35,4 +40,5 @@ export const liveScreens: ReadonlySet<string> = new Set([
     "analytics/trainer",
     "analytics/more",
     "settings/audit-log",
+    "products/memberships",
 ]);

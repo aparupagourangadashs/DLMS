@@ -10,7 +10,7 @@ export default async function AdminHomePage() {
   const user = await pageStaff();
   const canSeeSessions = can(user.role, "sessions:read");
   const [overview, holidayBranches] = await Promise.all([
-    getDashboardOverview(user, { attendance: canSeeSessions, series: can(user.role, "learners:read") && can(user.role, "enrolments:read") }),
+    getDashboardOverview(user, { attendance: canSeeSessions, series: can(user.role, "learners:read") && can(user.role, "enrolments:read"), activity: can(user.role, "learners:read") }),
     canSeeSessions ? listHolidayBranches(user) : { branches: [], required: false },
   ]);
   return (

@@ -33,6 +33,24 @@ const settingsSchema = z.object({
         })).max(6),
     }),
     communityFigures: z.array(z.object({ value: z.string().trim().min(1).max(20), label: z.string().trim().min(1).max(40), color: z.enum(figureColors) })).max(8),
+    institution: z.object({
+        eyebrow: z.string().trim().min(1).max(80),
+        title: z.string().trim().min(1).max(200),
+        description: z.string().trim().min(1).max(500),
+        introHeading: z.string().trim().min(1).max(200),
+        intro: z.string().trim().min(1).max(5000),
+        closingHeading: z.string().trim().min(1).max(200),
+        closing: z.string().trim().min(1).max(5000),
+    }),
+    prabhupada: z.object({
+        eyebrow: z.string().trim().min(1).max(80),
+        title: z.string().trim().min(1).max(200),
+        description: z.string().trim().min(1).max(500),
+        introHeading: z.string().trim().min(1).max(200),
+        intro: z.string().trim().min(1).max(5000),
+        closingHeading: z.string().trim().min(1).max(200),
+        closing: z.string().trim().min(1).max(5000),
+    }),
 });
 
 export const readSiteSettings = getSiteSettings;

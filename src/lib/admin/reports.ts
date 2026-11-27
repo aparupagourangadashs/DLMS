@@ -26,7 +26,7 @@ export const reportPages: Record<string, ReportMeta[]> = {
         waits("payments-received", "Payments Received", "Settled payments by reference.", "Payments (phase B5)"),
         { key: "course-enrollments", title: "Course Wise Enrollments", description: "Enrolments for each course: new in the period, active now, completed and all together.", filters: { range: true, branch: true, course: true }, defaultSort: { key: "total", dir: "desc" } },
         waits("event-enrollments", "Event Enrollments", "Registrations and attendees for each event.", "Event tickets (phase B5)"),
-        waits("membership-enrollments", "Membership Enrollments", "New, renewed and expired memberships.", "Memberships (phase B5)"),
+        { key: "membership-enrollments", title: "Membership Enrollments", description: "New, active, expired and cancelled memberships.", filters: { range: true }, defaultSort: { key: "memberships", dir: "desc" } },
         waits("gst-report", "GST Report", "Taxable value, GST and totals by invoice.", "Payments and the GST format (phase B5, decision D6)"),
     ],
     "batch-progress": [
@@ -36,9 +36,9 @@ export const reportPages: Record<string, ReportMeta[]> = {
         { key: "attendance", title: "Attendance Report", description: "Expected and present learners for each class that has attendance marked.", filters: { range: true, branch: true, course: true }, defaultSort: { key: "date", dir: "desc" } },
         { key: "batch-attendance", title: "Batch Attendance", description: "Classes, expected and present learners, and attendance for each batch.", filters: { range: true, branch: true, course: true }, defaultSort: { key: "classes", dir: "desc" } },
         { key: "module-progress", title: "Module Progress", description: "For each module: learners who have it, lessons completed and progress.", filters: { branch: true, course: true }, defaultSort: { key: "learners", dir: "desc" } },
-        waits("batch-assessment", "Batch Assessment", "Assessment assignments, submissions and passes.", "Assessments (phase B6)"),
-        waits("assessment-attempts", "Assessment Attempts", "Score and time spent for each attempt.", "Assessments (phase B6)"),
-        waits("issued-certificates", "Issued Certificates", "Certificates issued for each template.", "Certificates (phase B6)"),
+        { key: "batch-assessment", title: "Batch Assessment", description: "Assessment submissions and evaluated passes by batch.", filters: { range: true, branch: true, course: true }, defaultSort: { key: "submitted", dir: "desc" } },
+        { key: "assessment-attempts", title: "Assessment Attempts", description: "Learner exam attempts, scores and duration.", filters: { range: true, branch: true, course: true }, defaultSort: { key: "score", dir: "desc" } },
+        { key: "issued-certificates", title: "Issued Certificates", description: "Certificates issued for each template.", filters: { range: true, course: true }, defaultSort: { key: "issued", dir: "desc" } },
         { key: "inactive-learners", title: "Inactive Learners", description: "Learners with an active enrolment and no sign-in or lesson for 14 days or more.", filters: { branch: true, course: true }, defaultSort: { key: "inactiveDays", dir: "desc" } },
     ],
     "marketing-analytics": [
@@ -55,8 +55,8 @@ export const reportPages: Record<string, ReportMeta[]> = {
         { key: "storage-consumption", title: "Storage Consumption", description: "Files stored for each asset type, and what was added in the period.", filters: { range: true }, defaultSort: { key: "size", dir: "desc" } },
         waits("bandwidth", "Bandwidth Consumption", "Data transferred and requests.", "A download log (not built yet)"),
         waits("scheduled-tasks", "Scheduled Tasks", "Queued, completed and failed background tasks.", "The background job worker (phase B7)"),
-        waits("user-time", "User-time Statistics", "Active users and time spent.", "Activity tracking (later in phase B8)"),
-        waits("wallet-recharges", "Wallet Recharges", "Recharge amounts and credits.", "The Utility Wallet (phase B7)"),
+        { key: "user-time", title: "User-time Statistics", description: "Active users, tracked minutes and views.", filters: { range: true }, defaultSort: { key: "date", dir: "desc" } },
+        { key: "wallet-recharges", title: "Wallet Recharges", description: "Recharge and debit amounts by notification channel.", filters: { range: true }, defaultSort: { key: "credits", dir: "desc" } },
     ],
 };
 
